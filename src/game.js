@@ -654,7 +654,10 @@ export class Game {
     const g = new THREE.Group();
     const upos = p.offsets.map(([dq, dr]) => unitPos(dq, dr));
     p.numbers.forEach((n, i) => {
-      const directions = [upos[i - 1], upos[i + 1]].filter(Boolean).map((neighbor) => ({
+      // connectors only toward consecutive numbers inside the piece (pieces are cut by position,
+      // so neighbouring tiles of a piece need not be consecutive numbers)
+      const at = (m) => { const j = p.numbers.indexOf(m); return j < 0 ? null : upos[j]; };
+      const directions = [at(n - 1), at(n + 1)].filter(Boolean).map((neighbor) => ({
         x: neighbor.x - upos[i].x,
         y: neighbor.y - upos[i].y,
       }));
