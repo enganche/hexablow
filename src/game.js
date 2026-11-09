@@ -41,21 +41,13 @@ const HEX_GEO = new THREE.ShapeGeometry(roundedHexShape(1, 0.18), 6);
 const outline = roundedHexShape(0.96);
 outline.holes.push(new THREE.Path(roundedHexShape(0.84).getPoints(6)));
 const OUTLINE_GEO = new THREE.ShapeGeometry(outline, 6);
-const BAR_GEO = new THREE.CapsuleGeometry(0.082, 0.16, 4, 8);
-BAR_GEO.rotateZ(Math.PI / 2);
-const PIN_GEO = new THREE.ShapeGeometry(new THREE.Shape([
-  new THREE.Vector2(-0.13, 0.12), new THREE.Vector2(0.13, 0.12),
-  new THREE.Vector2(0.13, 0.05), new THREE.Vector2(0.06, 0.05),
-  new THREE.Vector2(0.06, -0.02), new THREE.Vector2(0.11, -0.08),
-  new THREE.Vector2(0.025, -0.08), new THREE.Vector2(0, -0.2),
-  new THREE.Vector2(-0.025, -0.08), new THREE.Vector2(-0.11, -0.08),
-  new THREE.Vector2(-0.06, -0.02), new THREE.Vector2(-0.06, 0.05),
-  new THREE.Vector2(-0.13, 0.05),
-]));
 
 const WAX_MAT = new THREE.MeshBasicMaterial({ vertexColors: true });
-function waxSurface(top, bottom) {
-  const geometry = HEX_GEO.clone();
+
+const TILE_BODY_GEO = new THREE.ShapeGeometry(roundedHexShape(1, 0));
+
+function waxSurface(top, bottom, shape = HEX_GEO) {
+  const geometry = shape.clone();
   const positions = geometry.attributes.position;
   const colors = new Float32Array(positions.count * 3);
   const upper = new THREE.Color(top);
@@ -68,13 +60,13 @@ function waxSurface(top, bottom) {
   return geometry;
 }
 
-const WAX_RIM = waxSurface(0xffebae, 0xf6c96e);
-const WAX_WALL = waxSurface(0xc88e3d, 0xffe3a0);
-const WAX_FLOOR = waxSurface(0xe5b056, 0xffdfa1);
-const TILE_BEVEL = waxSurface(0xffeb98, 0xd89117);
-const TILE_FACE = waxSurface(0xffe574, 0xf8b72e);
-const GIVEN_BEVEL = waxSurface(0xffc067, 0xa85215);
-const GIVEN_FACE = waxSurface(0xf5ac50, 0xdf7f2a);
+const WAX_RIM = waxSurface(0xfbe3ad, 0xf5d596, TILE_BODY_GEO);
+const WAX_WALL = waxSurface(0xdfb479, 0xfce4b3);
+const WAX_FLOOR = waxSurface(0xe9be7f, 0xfce1aa);
+const TILE_FACE = waxSurface(0xf8b565, 0xe58b37, TILE_BODY_GEO);
+const TILE_RIM = waxSurface(0xffc785, 0xc8742c, TILE_BODY_GEO);
+const FINISH_FACE = waxSurface(0xdbacd2, 0xb478af, TILE_BODY_GEO);
+const FINISH_RIM = waxSurface(0xebc4e2, 0x995c95, TILE_BODY_GEO);
 const LABEL_GEO = new THREE.PlaneGeometry(1.5, 1.5);
 
 const matCache = new Map();
@@ -121,7 +113,7 @@ function hexLayer(geometry, material, radius, y, z) {
 function makeSocket() {
   const group = new THREE.Group();
   group.add(
-    hexLayer(WAX_RIM, WAX_MAT, 0.99, 0, 0),
+    hexLayer(WAX_RIM, WAX_MAT, 1, 0, 0),
     hexLayer(WAX_WALL, WAX_MAT, 0.87, 0, 0.02),
     hexLayer(WAX_FLOOR, WAX_MAT, 0.80, -0.035, 0.04)
   );
@@ -129,40 +121,48 @@ function makeSocket() {
 }
 
 /** Layered profile for the orthographic camera. The numbers stay dynamic. */
-function makeTile(n, given) {
+const TILE_TOP_LIFT = 0.115;
+const TILE_FACE_Y = TILE_TOP_LIFT + 0.027;
+const TILE_ROW_DEPTH = 0.035;
+const pathSegment = new THREE.Shape();
+pathSegment.moveTo(-0.5, 0.30);
+pathSegment.lineTo(0.08, 0.30);
+pathSegment.quadraticCurveTo(0.24, 0.20, 0.5, 0.20);
+pathSegment.lineTo(0.5, -0.20);
+pathSegment.quadraticCurveTo(0.24, -0.20, 0.08, -0.30);
+pathSegment.lineTo(-0.5, -0.30);
+pathSegment.closePath();
+
+const PATH_SEGMENT_GEO = new THREE.ShapeGeometry(pathSegment, 8);
+const STRAIGHT_PATH_GEO = new THREE.PlaneGeometry(1, 0.42);
+
+function makeTile(n, directions, isFinish = false) {
   const group = new THREE.Group();
   const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n));
   label.scale.setScalar(0.66);
-  label.position.set(0, given ? -0.10 : 0, 0.5);
+  label.position.set(0, TILE_TOP_LIFT, 0.5);
   group.add(
-    hexLayer(HEX_GEO, basicMat(0x68340e, 0.18), 0.94, -0.11, 0.08),
-    hexLayer(HEX_GEO, basicMat(given ? 0xa45418 : 0xc48112), 0.91, -0.06, 0.12),
-    hexLayer(given ? GIVEN_BEVEL : TILE_BEVEL, WAX_MAT, 0.91, 0, 0.16),
-    hexLayer(given ? GIVEN_FACE : TILE_FACE, WAX_MAT, 0.84, 0.015, 0.20),
+    hexLayer(HEX_GEO, basicMat(0x68340e, 0.12), 0.97, -0.08, 0.08),
+    hexLayer(TILE_BODY_GEO, basicMat(isFinish ? 0x9f6399 : 0xc37632), 1, 0, 0.14),
+    hexLayer(isFinish ? FINISH_RIM : TILE_RIM, WAX_MAT, 1, TILE_TOP_LIFT, 0.16),
+    hexLayer(isFinish ? FINISH_FACE : TILE_FACE, WAX_MAT, 0.92, TILE_FACE_Y, 0.20),
     label
   );
-  if (given) {
-    const pin = new THREE.Mesh(PIN_GEO, basicMat(0x77380e));
-    pin.scale.setScalar(0.77);
-    pin.position.set(0, 0.46, 0.22);
-    pin.rotation.z = -Math.PI / 5;
-    group.add(pin);
+  const material = basicMat(isFinish ? 0xaa6da5 : 0xdd8b3d);
+  group.add(hexLayer(TILE_BODY_GEO, material, 0.72, TILE_FACE_Y, 0.201));
+  for (const { x, y } of directions) {
+    const segment = new THREE.Mesh(y === 0 ? STRAIGHT_PATH_GEO : PATH_SEGMENT_GEO, material);
+    // A downhill link must clear the foreground tile's face at the seam.
+    const depth = 0.203 + Math.max(0, -y) * TILE_ROW_DEPTH;
+    segment.position.set(x / 4, TILE_TOP_LIFT + y / 4, depth);
+    segment.scale.x = Math.hypot(x, y) / 2;
+    segment.rotation.z = Math.atan2(y, x);
+    group.add(segment);
   }
   return group;
 }
 
-/** Short bridge over the gap between the two tile faces. */
-function makeBar(a, b) {
-  const bar = new THREE.Group();
-  const base = new THREE.Mesh(BAR_GEO, basicMat(0xba7014));
-  const face = new THREE.Mesh(BAR_GEO, basicMat(0xf8b343));
-  face.scale.set(0.91, 0.74, 1);
-  face.position.z = 0.01;
-  bar.add(base, face);
-  bar.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, 0.24);
-  bar.rotation.z = Math.atan2(b.y - a.y, b.x - a.x);
-  return bar;
-}
+
 
 // unit position helpers: y flipped so world is y-up
 const unitPos = (q, r) => {
@@ -359,36 +359,24 @@ export class Game {
     }
   }
 
-  /** Rebuild given + placed tiles and connectors. `popNumbers`: numbers to animate in. */
+  /** Rebuild board tiles and animate new placements. */
   _buildContent(popNumbers) {
     this._clear(this.contentGroup);
     this.tileGroups.clear();
     const pos = new Map();
-    for (const [n, c] of Object.entries(this.level.givens)) pos.set(Number(n), { c, given: true });
-    for (const [n, c] of this.placed) pos.set(n, { c, given: false });
+    for (const [n, c] of Object.entries(this.level.givens)) pos.set(Number(n), c);
+    for (const [n, c] of this.placed) pos.set(n, c);
 
-    // bars first (drawn under tile labels via z), then tiles
-    const N = this.level.cells.length;
-    for (let n = 1; n < N; n++) {
-      const a = pos.get(n);
-      const b = pos.get(n + 1);
-      if (!a || !b || !areAdjacent(a.c, b.c)) continue;
-      const sa = this._cellScreen(a.c[0], a.c[1]);
-      const sb = this._cellScreen(b.c[0], b.c[1]);
-      const bar = makeBar(
-        { x: 0, y: 0 },
-        { x: (sb.x - sa.x) / this.R, y: -(sb.y - sa.y) / this.R }
-      );
-      const holder = new THREE.Group();
-      holder.add(bar);
-      holder.position.copy(this._w(sa.x, sa.y));
-      holder.scale.setScalar(this.R);
-      this.contentGroup.add(holder);
-    }
-    for (const [n, { c, given }] of pos) {
+    for (const [n, c] of pos) {
       const s = this._cellScreen(c[0], c[1]);
-      const t = makeTile(n, given);
-      t.position.copy(this._w(s.x, s.y));
+      const directions = [];
+      for (const neighbor of [pos.get(n - 1), pos.get(n + 1)]) {
+        if (neighbor && areAdjacent(c, neighbor)) {
+          directions.push(unitPos(neighbor[0] - c[0], neighbor[1] - c[1]));
+        }
+      }
+      const t = makeTile(n, directions, n === this.level.cells.length);
+      t.position.copy(this._w(s.x, s.y, (s.y - this.boardScreenY) * TILE_ROW_DEPTH));
       t.scale.setScalar(this.R);
       this.contentGroup.add(t);
       this.tileGroups.set(n, t);
@@ -429,12 +417,13 @@ export class Game {
   _makePieceGroup(p) {
     const g = new THREE.Group();
     const upos = p.offsets.map(([dq, dr]) => unitPos(dq, dr));
-    for (let i = 0; i < p.numbers.length - 1; i++) {
-      g.add(makeBar(upos[i], upos[i + 1]));
-    }
     p.numbers.forEach((n, i) => {
-      const t = makeTile(n, false);
-      t.position.set(upos[i].x, upos[i].y, 0);
+      const directions = [upos[i - 1], upos[i + 1]].filter(Boolean).map((neighbor) => ({
+        x: neighbor.x - upos[i].x,
+        y: neighbor.y - upos[i].y,
+      }));
+      const t = makeTile(n, directions);
+      t.position.set(upos[i].x, upos[i].y, -upos[i].y * TILE_ROW_DEPTH);
       g.add(t);
     });
     return g;
