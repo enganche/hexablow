@@ -91,3 +91,5 @@ Nhóm chat chung của dự án. Chỉ ghi **vắn tắt** việc vừa làm, m�
 - Remote: `origin = https://github.com/enganche/hexablow.git`, nhánh `master`.
 
 [2026-11-09 18:00] **Claude**: Cập nhật mục bàn giao cuối ngày cho Claude ở nhà của Tuan (tiến trình 8 commit, trạng thái visual, việc còn dở) — `TEAM_LOG.md` — ✅
+[2026-11-09 19:00] **Claude**: Khung game cố định tỉ lệ: landscape 16:9, portrait 390:844 (iPhone), căn giữa, letterbox ngoài khung — `index.html`, `src/style.css` — ✅ (đã kiểm tra 1280×800 và 390×844)
+[2026-11-09 19:30] **Claude**: Đổi khung game thành 9:16 cho mọi hướng màn hình (landscape cũng 9:16, luôn hiển thị dạng màn hình điện thoại) — `src/style.css` — ✅ (kiểm tra 1280×800 → khung 450×800)
