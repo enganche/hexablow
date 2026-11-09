@@ -17,7 +17,7 @@ A calm, tactile number-path puzzle on a hex grid. The player completes a continu
 
 ## 2. Core mechanic (kept from reference — MVP-locked)
 - Board: set of hex cells (pointy-top, axial coords). Some cells are **blocked** (decor/obstacle). Some numbers are **givens** (locked).
-- Tray: remaining numbers. Consecutive numbers whose positions are not given are grouped into **chains** (e.g. 48-49-50) shown as one multi-hex piece with fixed shape.
+- Tray: remaining numbers, **mostly single tiles**; occasionally two consecutive numbers come pre-joined as a 2-tile piece (≈15–25% of missing numbers, never in the first levels). Givens are spread along the whole path (~50% of cells early → ~33% later, at most 1–4 missing numbers in a row), and N is always given. Pieces are stored per level in `levels.json` (`pieces`).
 - Goal: place every tray piece so that for all n, cell(n) is adjacent (6-neighbourhood) to cell(n+1), every playable cell is filled, and the result equals the unique solution.
 - Adjacent consecutive numbers show a **connector bar**.
 - Lose condition (normal mode): 3 mistakes (hearts) → level fails (retry / revive by rewarded ad).

@@ -118,17 +118,17 @@ const unitPos = (q, r) => {
 };
 
 // ---- Level helpers ----
-/** Split solution into tray pieces: runs of consecutive numbers that are not givens. */
+/**
+ * Tray pieces. Levels ship an explicit `pieces` list (mostly single tiles,
+ * a few pairs — like the reference game). Fallback: every missing number
+ * is its own single tile.
+ */
 function buildPieces(level) {
   const N = level.cells.length;
-  const pieces = [];
-  let run = [];
-  for (let n = 1; n <= N + 1; n++) {
-    if (n <= N && !level.givens[n]) run.push(n);
-    else if (run.length) {
-      pieces.push(run);
-      run = [];
-    }
+  let pieces = level.pieces;
+  if (!pieces) {
+    pieces = [];
+    for (let n = 1; n <= N; n++) if (!level.givens[n]) pieces.push([n]);
   }
   return pieces.map((numbers, i) => {
     const first = level.solution[numbers[0]];

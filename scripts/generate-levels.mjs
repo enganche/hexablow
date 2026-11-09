@@ -1,7 +1,9 @@
-// Generates src/levels.json.
-// For each level: build a hex region, find a Hamiltonian path (the solution),
-// then pick the fewest "given" numbers that still leave a UNIQUE solution
-// (verified by an exhaustive solver). Run: npm run levels
+// Generates src/levels.json, modelled on the first 10 levels of the reference game:
+//  * the solution path is REGULAR (few turns: spirals / snakes), not a random scribble;
+//  * givens are spread evenly (alternating early on, gaps of up to 2-3 later), 1 and N given;
+//  * the tray is single tiles (pairs only rarely, and not in early levels);
+//  * every level must be solvable by pure logic (no guessing), checked by `logicSolve`.
+// Run: npm run levels
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -28,7 +30,6 @@ function shuffle(arr, rand) {
   }
   return a;
 }
-
 function hexRegion(radius) {
   const cells = [];
   for (let q = -radius; q <= radius; q++)
@@ -36,17 +37,40 @@ function hexRegion(radius) {
       if (Math.abs(q + r) <= radius) cells.push([q, r]);
   return cells;
 }
+const minus = (region, holes) => {
+  const h = new Set(holes.map(([q, r]) => key(q, r)));
+  return region.filter(([q, r]) => !h.has(key(q, r)));
+};
+const parse = (k) => k.split(',').map(Number);
+const dirIdx = (a, b) => {
+  const [aq, ar] = parse(a);
+  const [bq, br] = parse(b);
+  return DIRS.findIndex(([dq, dr]) => dq === bq - aq && dr === br - ar);
+};
+const turnCost = (d1, d2) => {
+  const t = Math.abs(d1 - d2) % 6;
+  return Math.min(t, 6 - t);
+};
+/** number of direction changes along a path of [q,r] cells (lower = more regular) */
+function pathTurns(path) {
+  let turns = 0, prev = -1;
+  for (let i = 1; i < path.length; i++) {
+    const d = dirIdx(key(...path[i - 1]), key(...path[i]));
+    if (prev >= 0 && d !== prev) turns++;
+    prev = d;
+  }
+  return turns;
+}
 
-// ---------- Hamiltonian path (random DFS, Warnsdorff order, connectivity prune) ----------
-function findPath(cells, rand, budget = 400000) {
+// ---------- Hamiltonian path (random DFS, Warnsdorff + straightness, connectivity prune) ----------
+function findPath(cells, rand, budget = 300000) {
   const set = new Set(cells.map(([q, r]) => key(q, r)));
   const N = cells.length;
-  const nbrs = (k) => {
-    const [q, r] = k.split(',').map(Number);
-    return DIRS.map(([dq, dr]) => key(q + dq, r + dr)).filter((x) => set.has(x));
-  };
   const adj = new Map();
-  for (const k of set) adj.set(k, nbrs(k));
+  for (const k of set) {
+    const [q, r] = parse(k);
+    adj.set(k, DIRS.map(([dq, dr]) => key(q + dq, r + dr)).filter((x) => set.has(x)));
+  }
   let nodes = 0;
   const visited = new Set();
   const path = [];
@@ -64,9 +88,13 @@ function findPath(cells, rand, budget = 400000) {
   const dfs = (cur) => {
     if (path.length === N) return true;
     if (++nodes > budget) return false;
+    const prev = path.length > 1 ? dirIdx(path[path.length - 2], cur) : -1;
     const opts = adj.get(cur).filter((n) => !visited.has(n));
-    const scored = shuffle(opts, rand).map((n) => ({ n, d: adj.get(n).filter((m) => !visited.has(m)).length }));
-    scored.sort((a, b) => a.d - b.d);
+    const scored = shuffle(opts, rand).map((n) => ({
+      n,
+      s: adj.get(n).filter((m) => !visited.has(m)).length + (prev < 0 ? 0 : turnCost(prev, dirIdx(cur, n)) * 0.7),
+    }));
+    scored.sort((a, b) => a.s - b.s);
     for (const { n } of scored) {
       visited.add(n);
       path.push(n);
@@ -85,118 +113,166 @@ function findPath(cells, rand, budget = 400000) {
     path.length = 0;
     visited.add(s);
     path.push(s);
-    if (dfs(s)) return path.map((k) => k.split(',').map(Number));
+    if (dfs(s)) return path.map(parse);
   }
   return null;
 }
 
-// ---------- Solver: count solutions (stops at `limit`) ----------
-// givens: Map number -> [q,r]. Number 1 and N must be given.
-function countSolutions(cells, givens, limit = 2, budget = 3000000) {
+// ---------- Logic solver: arc-consistency + singles (what a human can deduce) ----------
+// Returns true iff the level is fully solved by propagation alone (=> unique, no guessing).
+function logicSolve(cells, givens) {
   const N = cells.length;
-  const set = new Set(cells.map(([q, r]) => key(q, r)));
-  const givenKeys = new Set([...givens.values()].map(([q, r]) => key(q, r)));
-  const sortedGiven = [...givens.keys()].sort((a, b) => a - b);
-  const nextGiven = new Array(N + 2).fill(null); // first given number >= n
-  for (let n = N; n >= 1; n--) nextGiven[n] = givens.has(n) ? n : nextGiven[n + 1];
+  const keys = cells.map(([q, r]) => key(q, r));
+  const cellSet = new Set(keys);
+  const adj = new Map();
+  for (const k of keys) {
+    const [q, r] = parse(k);
+    adj.set(k, new Set(DIRS.map(([dq, dr]) => key(q + dq, r + dr)).filter((x) => cellSet.has(x))));
+  }
+  const givenKey = new Map([...givens].map(([n, c]) => [n, key(c[0], c[1])]));
+  const takenByGiven = new Set(givenKey.values());
+  const freeCells = keys.filter((k) => !takenByGiven.has(k));
+  const gnums = [...givens.keys()].sort((a, b) => a - b);
 
-  let count = 0;
-  let nodes = 0;
-  let exceeded = false;
-  const visited = new Set();
-
-  const step = (n, cell) => {
-    if (count >= limit || exceeded) return;
-    if (n === N) { count++; return; }
-    if (++nodes > budget) { exceeded = true; return; }
-    const m = n + 1;
-    if (givens.has(m)) {
-      const t = givens.get(m);
-      if (hexDistance(cell, t) === 1 && !visited.has(key(t[0], t[1]))) {
-        visited.add(key(t[0], t[1]));
-        step(m, t);
-        visited.delete(key(t[0], t[1]));
-      }
-      return;
+  const dom = new Map();
+  for (let n = 1; n <= N; n++) {
+    if (givens.has(n)) continue;
+    const lo = [...gnums].reverse().find((g) => g < n);
+    const hi = gnums.find((g) => g > n);
+    const d = new Set();
+    for (const k of freeCells) {
+      const c = parse(k);
+      if (lo !== undefined && hexDistance(c, givens.get(lo)) > n - lo) continue;
+      if (hi !== undefined && hexDistance(c, givens.get(hi)) > hi - n) continue;
+      d.add(k);
     }
-    const g = nextGiven[m];
-    for (const [dq, dr] of DIRS) {
-      const c = [cell[0] + dq, cell[1] + dr];
-      const k = key(c[0], c[1]);
-      if (!set.has(k) || visited.has(k) || givenKeys.has(k)) continue;
-      if (g !== null && hexDistance(c, givens.get(g)) > g - m) continue;
-      visited.add(k);
-      step(m, c);
-      visited.delete(k);
-    }
+    dom.set(n, d);
+  }
+  const neighbourOk = (k, m) => {
+    if (m < 1 || m > N) return true;
+    if (givens.has(m)) return adj.get(k).has(givenKey.get(m));
+    for (const x of dom.get(m)) if (adj.get(k).has(x)) return true;
+    return false;
   };
 
-  const start = givens.get(1);
-  visited.add(key(start[0], start[1]));
-  step(1, start);
-  return { count, exceeded };
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [n, d] of dom) {
+      for (const k of [...d]) {
+        if (!neighbourOk(k, n - 1) || !neighbourOk(k, n + 1)) { d.delete(k); changed = true; }
+      }
+      if (d.size === 0) return false;
+    }
+    for (const [n, d] of dom) {
+      if (d.size !== 1) continue;
+      const [k] = d;
+      for (const [m, e] of dom) if (m !== n && e.delete(k)) changed = true;
+    }
+    for (const k of freeCells) {
+      const owners = [...dom].filter(([, d]) => d.has(k)).map(([n]) => n);
+      if (owners.length === 0) return false;
+      if (owners.length === 1 && dom.get(owners[0]).size > 1) {
+        dom.set(owners[0], new Set([k]));
+        changed = true;
+      }
+    }
+  }
+  return [...dom.values()].every((d) => d.size === 1);
+}
+
+// ---------- Givens: evenly spread, then topped up until logic-solvable ----------
+function makeGivens(cells, sol, N, maxGap, rand) {
+  const g = new Map([[1, sol.get(1)]]);
+  let n = 1;
+  for (;;) {
+    let m = 1;
+    while (m < maxGap && rand() < 0.4) m++; // number of missing values until the next given
+    n += m + 1;
+    if (n >= N) break;
+    g.set(n, sol.get(n));
+  }
+  g.set(N, sol.get(N));
+  let guard = 0;
+  while (!logicSolve(cells, g) && guard++ < N) {
+    const ks = [...g.keys()].sort((a, b) => a - b);
+    let best = null;
+    for (let i = 0; i + 1 < ks.length; i++) {
+      const gap = ks[i + 1] - ks[i] - 1;
+      if (gap >= 1 && (!best || gap > best.gap)) best = { a: ks[i], gap };
+    }
+    if (!best) return null;
+    const m = best.a + Math.ceil((best.gap + 1) / 2);
+    g.set(m, sol.get(m));
+  }
+  return logicSolve(cells, g) ? g : null;
 }
 
 // ---------- Level builder ----------
 function buildLevel(spec) {
-  const { id, region, pond = [], seed, minGivens } = spec;
+  const { id, region, pond = [], seed, maxGap, ratio, pairProb = 0, difficulty = 'normal' } = spec;
   const pondKeys = new Set(pond.map(([q, r]) => key(q, r)));
   const cells = region.filter(([q, r]) => !pondKeys.has(key(q, r)));
   const N = cells.length;
 
-  for (let attempt = 0; attempt < 400; attempt++) {
-    const rand = mulberry32(seed * 1000 + attempt);
-    const path = findPath(cells, rand);
-    if (!path) continue;
-    const sol = new Map(path.map((c, i) => [i + 1, c]));
-
-    const givens = new Map([[1, sol.get(1)], [N, sol.get(N)]]);
-    const ok = (g) => {
-      const res = countSolutions(cells, g);
-      return !res.exceeded && res.count === 1;
-    };
-
-    // add givens until unique
-    let guard = 0;
-    while (!ok(givens) && guard++ < N) {
-      const free = shuffle([...sol.keys()].filter((n) => !givens.has(n)), rand);
-      givens.set(free[0], sol.get(free[0]));
-    }
-    if (!ok(givens)) continue;
-
-    // greedily drop givens while still unique, down to minGivens
-    for (const n of shuffle([...givens.keys()].filter((n) => n !== 1 && n !== N), rand)) {
-      if (givens.size <= minGivens) break;
-      const trial = new Map(givens);
-      trial.delete(n);
-      if (ok(trial)) givens.delete(n);
-    }
-    if (givens.size < minGivens) {
-      // pad back up so easy levels stay easy
-      const free = shuffle([...sol.keys()].filter((n) => !givens.has(n)), rand);
-      while (givens.size < minGivens && free.length) {
-        const n = free.pop();
-        givens.set(n, sol.get(n));
-      }
-    }
-
-    const givensObj = {};
-    for (const n of [...givens.keys()].sort((a, b) => a - b)) givensObj[n] = givens.get(n);
-    const solutionObj = {};
-    for (let n = 1; n <= N; n++) solutionObj[n] = sol.get(n);
-    console.log(`level ${id}: ${N} cells, ${givens.size} givens (attempt ${attempt})`);
-    return { id, name: `Level ${id}`, cells, blocked: pond, givens: givensObj, solution: solutionObj };
+  // candidate paths, most regular (fewest turns) first
+  const cands = [];
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const path = findPath(cells, mulberry32(seed * 1000 + attempt));
+    if (path) cands.push({ path, turns: pathTurns(path) });
   }
-  throw new Error(`could not build level ${id}`);
+  cands.sort((a, b) => a.turns - b.turns);
+  if (!cands.length) throw new Error(`no path for level ${id}`);
+
+  let pick = null;
+  for (let i = 0; i < Math.min(cands.length, 12); i++) {
+    const sol = new Map(cands[i].path.map((c, j) => [j + 1, c]));
+    const givens = makeGivens(cells, sol, N, maxGap, mulberry32(seed * 77 + i));
+    if (!givens) continue;
+    if (!pick || givens.size < pick.givens.size) pick = { sol, givens, turns: cands[i].turns };
+    if (givens.size <= Math.ceil(N * ratio)) break;
+  }
+  if (!pick) throw new Error(`could not build level ${id}`);
+  const { sol, givens, turns } = pick;
+
+  // tray: single tiles, pairs only occasionally
+  const rand = mulberry32(seed * 31);
+  const pieces = [];
+  let run = [];
+  const flush = () => {
+    for (let i = 0; i < run.length; ) {
+      if (i + 1 < run.length && rand() < pairProb) { pieces.push([run[i], run[i + 1]]); i += 2; }
+      else { pieces.push([run[i]]); i += 1; }
+    }
+    run = [];
+  };
+  for (let m = 1; m <= N; m++) { if (givens.has(m)) flush(); else run.push(m); }
+  flush();
+
+  const givensObj = {};
+  for (const m of [...givens.keys()].sort((a, b) => a - b)) givensObj[m] = givens.get(m);
+  const solutionObj = {};
+  for (let m = 1; m <= N; m++) solutionObj[m] = sol.get(m);
+  const pairs = pieces.filter((p) => p.length > 1).length;
+  console.log(`level ${id}: ${N} cells, ${givens.size} givens (${Math.round((givens.size / N) * 100)}%), ` +
+    `${pieces.length} pieces (${pairs} pairs), ${turns} turns, logic-solvable`);
+  return { id, name: `Level ${id}`, difficulty, cells, blocked: pond, givens: givensObj, pieces, solution: solutionObj };
 }
 
-// ---------- The 5 levels ----------
+// ---------- The 10 levels (ramp copied from the reference's first levels) ----------
+// maxGap = longest stretch of missing numbers; ratio = target share of given cells.
+const flower3 = minus(hexRegion(3), [[3, 0], [0, 3], [-3, 3], [-3, 0], [0, -3], [3, -3]]);
 const specs = [
-  { id: 1, region: hexRegion(1), seed: 1, minGivens: 3 },
-  { id: 2, region: hexRegion(2), seed: 2, minGivens: 5 },
-  { id: 3, region: hexRegion(2), pond: [[0, 0], [1, 0], [0, 1]], seed: 3, minGivens: 4 },
-  { id: 4, region: hexRegion(3), pond: [[1, -1], [2, -2], [1, 0], [0, 1], [-1, 1]], seed: 4, minGivens: 5 },
-  { id: 5, region: hexRegion(3), pond: [[0, 0], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]], seed: 5, minGivens: 4 },
+  { id: 1, region: hexRegion(1), seed: 21, maxGap: 1, ratio: 0.6 },
+  { id: 2, region: hexRegion(2), seed: 22, maxGap: 1, ratio: 0.55 },
+  { id: 3, region: hexRegion(2), pond: [[0, 0]], seed: 23, maxGap: 1, ratio: 0.55 },
+  { id: 4, region: hexRegion(3), seed: 24, maxGap: 2, ratio: 0.5 },
+  { id: 5, region: hexRegion(3), pond: [[-1, -1], [0, -1], [-1, 0]], seed: 25, maxGap: 2, ratio: 0.48 },
+  { id: 6, region: flower3, pond: [[1, 0], [1, 1]], seed: 26, maxGap: 2, ratio: 0.46 },
+  { id: 7, region: hexRegion(3), pond: [[-2, 0], [-2, 1], [2, -1], [2, 0]], seed: 27, maxGap: 3, ratio: 0.44 },
+  { id: 8, region: hexRegion(2), seed: 28, maxGap: 3, ratio: 0.42, pairProb: 0.15, difficulty: 'hard' },
+  { id: 9, region: hexRegion(3), seed: 29, maxGap: 3, ratio: 0.42, pairProb: 0.15 },
+  { id: 10, region: hexRegion(4), pond: [[0, -3], [1, -3], [0, -2], [2, 0], [3, 0], [2, 1], [-3, 2], [-2, 2]], seed: 30, maxGap: 3, ratio: 0.42, pairProb: 0.15, difficulty: 'hard' },
 ];
 
 const levels = specs.map(buildLevel);

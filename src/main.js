@@ -60,7 +60,7 @@ const game = new Game($('game'), {
     const last = levelIndex === levels.length - 1;
     showResult({
       title: last ? 'All levels complete!' : 'Level complete!',
-      text: last ? 'You finished all 5 levels.' : `Nice work on ${levels[levelIndex].name}.`,
+      text: last ? `You finished all ${levels.length} levels.` : `Nice work on ${levels[levelIndex].name}.`,
       button: last ? 'Play again' : 'Next level',
       onClick: () => startLevel(last ? 0 : levelIndex + 1),
     });
