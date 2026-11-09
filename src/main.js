@@ -66,6 +66,7 @@ const game = new Game($('game'), {
     });
   },
   onFail: () => {
+    tut.stop();
     showResult({
       title: 'Out of hearts',
       text: 'Give it another try.',
@@ -75,11 +76,69 @@ const game = new Game($('game'), {
   },
 });
 
+// ---- Level 1 tutorial: place the missing numbers in order, guided by a bee + hand ----
+const tut = {
+  el: $('tutorial'),
+  active: false,
+  steps: [],
+  texts: {
+    first: 'Drag 2 next to 1',
+    next: '{n} goes after {p}',
+    last: '{n} goes between {p} and {s}',
+  },
+  start(level) {
+    this.steps = level.id === 1 ? Object.keys(level.solution).map(Number).filter((n) => !level.givens[n]) : [];
+    this.active = this.steps.length > 0;
+    this.el.classList.toggle('hidden', !this.active);
+    this.t0 = performance.now();
+    if (this.active && !this.running) {
+      this.running = true;
+      this.tick();
+    }
+  },
+  stop() {
+    this.active = false;
+    this.running = false;
+    this.el.classList.add('hidden');
+  },
+  tick() {
+    if (!this.active) { this.running = false; return; }
+    this.render();
+    requestAnimationFrame(() => this.tick());
+  },
+  render() {
+    const todo = this.steps.filter((n) => !game.placed.has(n));
+    if (!todo.length) return this.stop();
+    const n = todo[0];
+    const info = game.tutorialInfo(n);
+    if (!info) return; // mid-drag
+    const done = this.steps.length - todo.length;
+    const key = done === 0 ? 'first' : todo.length === 1 ? 'last' : 'next';
+    const text = this.texts[key].replace('{n}', n).replace('{p}', n - 1).replace('{s}', n + 1);
+    if ($('tut-text').textContent !== text) $('tut-text').textContent = text;
+    const place = (el, p) => { el.style.left = `${p.x}px`; el.style.top = `${p.y}px`; };
+    place($('tut-from'), info.from);
+    place($('tut-to'), info.to);
+    // the hand loops from the tray tile to the target cell
+    const k = (((performance.now() - this.t0) % 1800) / 1800);
+    const e = Math.min(1, k / 0.7);
+    const s = e * e * (3 - 2 * e);
+    const x = info.from.x + (info.to.x - info.from.x) * s;
+    const y = info.from.y + (info.to.y - info.from.y) * s;
+    const hand = $('tut-hand');
+    hand.style.transform = `translate(${x - 14}px, ${y - 4}px)`;
+    hand.style.opacity = k > 0.9 ? String((1 - k) * 10) : '1';
+    // keep the bubble clear of the board: just under the HUD
+    $('tut-bubble').style.top = `${info.hudBottom + 6}px`;
+  },
+};
+
 function startLevel(i) {
   levelIndex = i;
   saveLevelIndex(i);
   $('level-name').textContent = levels[i].name;
   game.loadLevel(levels[i]);
+  tut.start(levels[i]);
 }
 
 // ---- Settings ----

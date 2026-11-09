@@ -231,3 +231,62 @@ body {
   outline: 2px solid var(--teal-dark);
   outline-offset: 2px;
 }
+
+/* ---- Level 1 tutorial ---- */
+#tutorial {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+#tutorial.hidden {
+  display: none;
+}
+.tut-ring {
+  position: absolute;
+  width: 84px;
+  height: 84px;
+  margin: -42px 0 0 -42px;
+  border-radius: 50%;
+  border: 4px solid #f5c84b;
+  box-shadow: 0 0 0 4px rgba(245, 200, 75, 0.35);
+  animation: tut-pulse 1.1s ease-in-out infinite;
+}
+@keyframes tut-pulse {
+  50% {
+    transform: scale(1.15);
+    opacity: 0.6;
+  }
+}
+#tut-hand {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 40px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+  will-change: transform;
+}
+#tut-bubble {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 2px solid #f5c84b;
+  border-radius: 18px;
+  box-shadow: 0 6px 16px rgba(60, 50, 38, 0.2);
+}
+#tut-bee {
+  font-size: 34px;
+  line-height: 1;
+}
+#tut-text {
+  margin: 0;
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1.25;
+}

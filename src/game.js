@@ -480,6 +480,22 @@ export class Game {
     if (this.level) this._layout();
   }
 
+  /** Tutorial helper: screen points (px, y-down) for the tray piece holding number n and its target cell. */
+  tutorialInfo(n) {
+    const p = this.pieces.find((x) => x.numbers[0] === n);
+    if (!p || !this.level || this.dragPiece === p) return null;
+    const piv = this._trayPivot(p);
+    const u = unitPos(p.offsets[0][0], p.offsets[0][1]);
+    const to = this.level.solution[n];
+    return {
+      from: { x: piv.x + u.x * this.Rt, y: piv.y - u.y * this.Rt },
+      to: this._cellScreen(to[0], to[1]),
+      R: this.R,
+      Rt: this.Rt,
+      hudBottom: document.getElementById('hud')?.getBoundingClientRect().bottom || 96,
+    };
+  }
+
   refreshHints() {
     this._updateHighlights(this._dragCells || null);
   }
