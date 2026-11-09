@@ -63,8 +63,10 @@ function waxSurface(top, bottom, shape = HEX_GEO) {
 const WAX_RIM = waxSurface(0xfbe3ad, 0xf5d596, TILE_BODY_GEO);
 const WAX_WALL = waxSurface(0xdfb479, 0xfce4b3);
 const WAX_FLOOR = waxSurface(0xe9be7f, 0xfce1aa);
-const TILE_FACE = waxSurface(0xf8b565, 0xe58b37, TILE_BODY_GEO);
-const TILE_RIM = waxSurface(0xffc785, 0xc8742c, TILE_BODY_GEO);
+const CONNECTED_FACE = waxSurface(0xa3df21, 0x73bd08, TILE_BODY_GEO);
+const CONNECTED_RIM = waxSurface(0xb9ed49, 0x62a009, TILE_BODY_GEO);
+const TILE_FACE = waxSurface(0xffc247, 0xff9a2e, TILE_BODY_GEO);
+const TILE_RIM = waxSurface(0xffd882, 0xf79122, TILE_BODY_GEO);
 const FINISH_FACE = waxSurface(0xdbacd2, 0xb478af, TILE_BODY_GEO);
 const FINISH_RIM = waxSurface(0xebc4e2, 0x995c95, TILE_BODY_GEO);
 const LABEL_GEO = new THREE.PlaneGeometry(1.5, 1.5);
@@ -88,13 +90,17 @@ function labelMaterial(n) {
     const c = document.createElement('canvas');
     c.width = c.height = size;
     const g = c.getContext('2d');
-    g.fillStyle = '#482009';
+    g.fillStyle = '#7a3d12';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     const digits = String(n).length;
-    const fs = digits >= 3 ? 52 : digits === 2 ? 64 : 76;
-    g.font = `800 ${fs}px "Nunito", ui-rounded, system-ui, sans-serif`;
-    g.fillText(String(n), size / 2, size / 2 + 4);
+    const fs = digits >= 3 ? 70 : digits === 2 ? 88 : 104;
+    g.font = `900 ${fs}px "Nunito", ui-rounded, system-ui, sans-serif`;
+    g.strokeStyle = '#7a3d12';
+    g.lineJoin = 'round';
+    g.lineWidth = 6;
+    g.strokeText(String(n), size / 2, size / 2 + 5);
+    g.fillText(String(n), size / 2, size / 2 + 5);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
@@ -136,29 +142,18 @@ pathSegment.closePath();
 const PATH_SEGMENT_GEO = new THREE.ShapeGeometry(pathSegment, 8);
 const STRAIGHT_PATH_GEO = new THREE.PlaneGeometry(1, 0.42);
 
-function makeTile(n, directions, isFinish = false) {
+function makeTile(n, directions, isFinish = false, connected = false) {
   const group = new THREE.Group();
   const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n));
-  label.scale.setScalar(0.66);
+  label.scale.setScalar(0.72);
   label.position.set(0, TILE_TOP_LIFT, 0.5);
   group.add(
-    hexLayer(HEX_GEO, basicMat(0x68340e, 0.12), 0.97, -0.08, 0.08),
-    hexLayer(TILE_BODY_GEO, basicMat(isFinish ? 0x9f6399 : 0xc37632), 1, 0, 0.14),
-    hexLayer(isFinish ? FINISH_RIM : TILE_RIM, WAX_MAT, 1, TILE_TOP_LIFT, 0.16),
-    hexLayer(isFinish ? FINISH_FACE : TILE_FACE, WAX_MAT, 0.92, TILE_FACE_Y, 0.20),
+    hexLayer(HEX_GEO, basicMat(0xb5651a, 0.10), 0.97, -0.08, 0.08),
+    hexLayer(TILE_BODY_GEO, basicMat(connected ? 0x62a009 : isFinish ? 0x9f6399 : 0xea8a22), 1, 0, 0.14),
+    hexLayer(connected ? CONNECTED_RIM : isFinish ? FINISH_RIM : TILE_RIM, WAX_MAT, 1, TILE_TOP_LIFT, 0.16),
+    hexLayer(connected ? CONNECTED_FACE : isFinish ? FINISH_FACE : TILE_FACE, WAX_MAT, 0.92, TILE_FACE_Y, 0.20),
     label
   );
-  const material = basicMat(isFinish ? 0xaa6da5 : 0xdd8b3d);
-  group.add(hexLayer(TILE_BODY_GEO, material, 0.72, TILE_FACE_Y, 0.201));
-  for (const { x, y } of directions) {
-    const segment = new THREE.Mesh(y === 0 ? STRAIGHT_PATH_GEO : PATH_SEGMENT_GEO, material);
-    // A downhill link must clear the foreground tile's face at the seam.
-    const depth = 0.203 + Math.max(0, -y) * TILE_ROW_DEPTH;
-    segment.position.set(x / 4, TILE_TOP_LIFT + y / 4, depth);
-    segment.scale.x = Math.hypot(x, y) / 2;
-    segment.rotation.z = Math.atan2(y, x);
-    group.add(segment);
-  }
   return group;
 }
 
@@ -367,6 +362,22 @@ export class Game {
     for (const [n, c] of Object.entries(this.level.givens)) pos.set(Number(n), c);
     for (const [n, c] of this.placed) pos.set(n, c);
 
+    // Green tiles: a run of consecutive, adjacent numbers (2+ tiles) that contains at least one
+    // tile the player placed. Runs made only of starting givens stay default colour.
+    const linked = new Set();
+    const lastN = this.level.cells.length;
+    let run = [];
+    const flush = () => {
+      if (run.length > 1 && run.some((n) => this.placed.has(n))) run.forEach((n) => linked.add(n));
+      run = [];
+    };
+    for (let n = 1; n <= lastN; n++) {
+      if (!pos.has(n)) { flush(); continue; }
+      if (run.length && !areAdjacent(pos.get(n), pos.get(n - 1))) flush();
+      run.push(n);
+    }
+    flush();
+
     for (const [n, c] of pos) {
       const s = this._cellScreen(c[0], c[1]);
       const directions = [];
@@ -375,7 +386,9 @@ export class Game {
           directions.push(unitPos(neighbor[0] - c[0], neighbor[1] - c[1]));
         }
       }
-      const t = makeTile(n, directions, n === this.level.cells.length);
+      const last = this.level.cells.length;
+      const connected = n !== last && linked.has(n);
+      const t = makeTile(n, [], n === last, connected);
       t.position.copy(this._w(s.x, s.y, (s.y - this.boardScreenY) * TILE_ROW_DEPTH));
       t.scale.setScalar(this.R);
       this.contentGroup.add(t);
