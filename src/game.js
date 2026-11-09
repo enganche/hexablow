@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { axialToPixel, pixelToAxial, key, areAdjacent } from './hex.js';
+import { axialToPixel, pixelToAxial, key, areAdjacent, DIRS } from './hex.js';
 
 // ---- Honeycomb palette ----
 const COLORS = {
@@ -107,6 +107,214 @@ function labelMaterial(n) {
     labelCache.set(n, new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
   }
   return labelCache.get(n);
+}
+
+// Water: full-size sharp hex so neighbouring water cells touch, with a painted ripple texture.
+const WATER_GEO = (() => {
+  const g = new THREE.ShapeGeometry(roundedHexShape(1, 0));
+  const pos = g.attributes.position;
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    uv[i * 2] = (pos.getX(i) + 1) / 2;
+    uv[i * 2 + 1] = (pos.getY(i) + 1) / 2;
+  }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return g;
+})();
+const WATER_MAT = new THREE.MeshBasicMaterial({ color: 0x2fc5cc });
+
+// Seamless caustic-style water texture (tiling Voronoi cells with soft light seams),
+// sampled in board space so neighbouring water cells continue the same pattern.
+const WATER_TILE_UNITS = 4.2;
+let waterTexMat = null;
+function waterTextureMaterial() {
+  if (waterTexMat) return waterTexMat;
+  const S = 512, N = 5, cell = S / N;
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const pts = [];
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) {
+      pts.push({ x: (i + 0.15 + rnd() * 0.7) * cell, y: (j + 0.15 + rnd() * 0.7) * cell, t: rnd() });
+    }
+  }
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  const img = g.createImageData(S, S);
+  const mix = (a, b, t) => a + (b - a) * t;
+  const sstep = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+  const deep = [38, 176, 205], mid = [58, 198, 222], seam = [150, 232, 244];
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      let d1 = 1e9, d2 = 1e9, near = null;
+      const TAU = Math.PI * 2;
+      // wobble the sample point (periodic, so the tile stays seamless) for rounder, organic cells
+      const wx = x + 12 * Math.sin((TAU * 3 * y) / S) + 6 * Math.sin((TAU * 5 * x) / S + 1);
+      const wy = y + 12 * Math.sin((TAU * 2 * x) / S + 2) + 6 * Math.sin((TAU * 4 * y) / S);
+      const gi = Math.floor(wx / cell), gj = Math.floor(wy / cell);
+      for (let dj = -1; dj <= 1; dj++) {
+        for (let di = -1; di <= 1; di++) {
+          const ci = gi + di, cj = gj + dj;
+          const p = pts[((cj + N) % N) * N + ((ci + N) % N)];
+          const px = p.x + Math.floor(ci / N) * S, py = p.y + Math.floor(cj / N) * S;
+          const d = Math.hypot(wx - px, wy - py);
+          if (d < d1) { d2 = d1; d1 = d; near = p; } else if (d < d2) d2 = d;
+        }
+      }
+      const e = (d2 - d1) / cell;
+      const body = mix(0, 1, near.t);
+      const inner = sstep(0.0, 0.55, d1 / cell); // darker toward cell rim
+      let r = mix(mid[0], deep[0], body * 0.8 + inner * 0.25);
+      let gg = mix(mid[1], deep[1], body * 0.8 + inner * 0.25);
+      let b = mix(mid[2], deep[2], body * 0.8 + inner * 0.25);
+      const halo = 0.42 * (1 - sstep(0.0, 0.5, e));
+      const line = 1 - sstep(0.0, 0.2, e);
+      const k = Math.max(halo, line * 0.55);
+      r = mix(r, seam[0], k); gg = mix(gg, seam[1], k); b = mix(b, seam[2], k);
+      const o = (y * S + x) * 4;
+      img.data[o] = r; img.data[o + 1] = gg; img.data[o + 2] = b; img.data[o + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  // a few white glints on seams
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  for (let n = 0; n < 14; n++) {
+    const p = pts[Math.floor(rnd() * pts.length)];
+    g.beginPath();
+    g.ellipse((p.x + cell * 0.45) % S, (p.y + cell * 0.2) % S, 5 + rnd() * 5, 2 + rnd() * 2, rnd() * 3, 0, Math.PI * 2);
+    g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  waterTexMat = new THREE.MeshBasicMaterial({ map: tex });
+  return waterTexMat;
+}
+function waterCellGeo(q, r) {
+  const g = WATER_GEO.clone();
+  const p = unitPos(q, r);
+  const pos = g.attributes.position;
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    uv[i * 2] = (p.x + pos.getX(i)) / WATER_TILE_UNITS;
+    uv[i * 2 + 1] = (p.y + pos.getY(i)) / WATER_TILE_UNITS;
+  }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return g;
+}
+
+// Decoration sprites (lily pad / lotus) drawn once on canvases, with a soft ripple ring.
+const decorCache = new Map();
+function decorMaterial(kind) {
+  if (decorCache.has(kind)) return decorCache.get(kind);
+  const S = 256, m = S / 2;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  // ripple ring
+  g.strokeStyle = 'rgba(255,255,255,0.45)';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.ellipse(m, m + 12, 92, 66, 0, 0, Math.PI * 2);
+  g.stroke();
+  const pad = (x, y, r, rot) => {
+    g.save();
+    g.translate(x, y);
+    g.scale(1, 0.72);
+    g.rotate(rot);
+    g.fillStyle = '#2f9a3a';
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.arc(0, 0, r, 0.35, Math.PI * 2 - 0.35);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#58c25a';
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.arc(0, -r * 0.08, r * 0.82, 0.4, Math.PI * 2 - 0.4);
+    g.closePath();
+    g.fill();
+    g.restore();
+  };
+  if (kind === 'lotus') {
+    pad(m + 8, m + 30, 58, 0.5);
+    const petal = (rot, len, color) => {
+      g.save();
+      g.translate(m + 8, m + 14);
+      g.rotate(rot);
+      g.fillStyle = color;
+      g.beginPath();
+      g.ellipse(0, -len * 0.5, len * 0.28, len * 0.5, 0, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    };
+    for (const r of [-1.1, 1.1, -0.6, 0.6]) petal(r, 48, '#f47fae');
+    petal(0, 54, '#ffa3c8');
+    g.fillStyle = '#ffd95a';
+    g.beginPath();
+    g.arc(m + 8, m + 8, 9, 0, Math.PI * 2);
+    g.fill();
+  } else {
+    pad(m, m + 6, 52, kind === 'padB' ? 2.4 : 0.8);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+  decorCache.set(kind, mat);
+  return mat;
+}
+// Sunken shore: a darker band only along the two upper edges (i = 1, 2) that touch land,
+// like the far wall of a pool seen from an isometric camera. Bands join with mitred ends.
+const SHORE_MAT = new THREE.MeshBasicMaterial({ color: 0x17a2b3, side: THREE.DoubleSide });
+const SHORE_W = 0.2;
+const SHORE_EDGES = new Set([1, 2]);
+const shoreCache = new Map();
+/** endA / endB: -1 shorten (convex corner), 0 square, +1 extend (concave corner). */
+function shoreGeo(i, endA, endB) {
+  const k = `${i}|${endA}|${endB}`;
+  if (shoreCache.has(k)) return shoreCache.get(k);
+  const rad = (d) => (d * Math.PI) / 180;
+  const a = new THREE.Vector2(Math.cos(rad(60 * i - 30)), Math.sin(rad(60 * i - 30)));
+  const b = new THREE.Vector2(Math.cos(rad(60 * i + 30)), Math.sin(rad(60 * i + 30)));
+  const n = new THREE.Vector2(Math.cos(rad(60 * i)), Math.sin(rad(60 * i)));
+  const d = b.clone().sub(a).normalize();
+  const m = SHORE_W * Math.tan(rad(30));
+  const a2 = a.clone().addScaledVector(n, -SHORE_W).addScaledVector(d, -endA * m);
+  const b2 = b.clone().addScaledVector(n, -SHORE_W).addScaledVector(d, endB * m);
+  const geo = new THREE.ShapeGeometry(new THREE.Shape([a, b, b2, a2]));
+  shoreCache.set(k, geo);
+  return geo;
+}
+let waveBase = null;
+function waveMaterial() {
+  if (!waveBase) {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 64;
+    const g = c.getContext('2d');
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 13;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(24, 34);
+    g.bezierCurveTo(60, 6, 92, 6, 128, 34);
+    g.bezierCurveTo(164, 62, 196, 62, 232, 34);
+    g.stroke();
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    waveBase = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false });
+  }
+  return waveBase.clone();
+}
+const WAVE_GEO = new THREE.PlaneGeometry(1.35, 0.34);
+function waterDecor(q, r) {
+  const h = ((q * 73856093) ^ (r * 19349663)) >>> 0;
+  const v = h % 8;
+  if (v === 0) return 'lotus';
+  if (v === 1) return 'padA';
+  if (v === 2) return 'padB';
+  return null;
 }
 
 function hexLayer(geometry, material, radius, y, z) {
@@ -335,6 +543,7 @@ export class Game {
 
   _buildBoard() {
     this._clear(this.boardGroup);
+    this.waves = [];
     this.cellKeys = new Set(this.level.cells.map(([q, r]) => key(q, r)));
     this.blockedKeys = new Set(this.level.blocked.map(([q, r]) => key(q, r)));
     const addCell = (q, r, model) => {
@@ -346,10 +555,24 @@ export class Game {
     for (const [q, r] of this.level.cells) addCell(q, r, makeSocket());
     for (const [q, r] of this.level.blocked) {
       const water = new THREE.Group();
-      water.add(
-        hexLayer(HEX_GEO, basicMat(COLORS.waterEdge), 0.95, 0, 0),
-        hexLayer(HEX_GEO, basicMat(COLORS.water), 0.86, 0, 0.05)
-      );
+      water.add(hexLayer(waterCellGeo(q, r), waterTextureMaterial(), 1.005, 0, 0));
+      const decor = waterDecor(q, r);
+      if (decor) water.add(hexLayer(LABEL_GEO, decorMaterial(decor), 1, 0, 0.05));
+      const dir = (j) => DIRS[((j % 6) + 6) % 6];
+      const isWater = (dq, dr) => this.blockedKeys.has(key(q + dq, r + dr));
+      const endType = (i, j) => {
+        const [jq, jr] = dir(j);
+        if (!isWater(jq, jr)) return SHORE_EDGES.has(((j % 6) + 6) % 6) ? -1 : 0;
+        // neighbour across the other edge is water: does its edge facing our land cell get a band?
+        const [iq, ir] = dir(i);
+        const k = DIRS.findIndex(([a, b]) => a === iq - jq && b === ir - jr);
+        return SHORE_EDGES.has(k) ? 1 : 0;
+      };
+      for (const i of SHORE_EDGES) {
+        const [dq, dr] = DIRS[i];
+        if (isWater(dq, dr)) continue;
+        water.add(hexLayer(shoreGeo(i, endType(i, i - 1), endType(i, i + 1)), SHORE_MAT, 1.005, 0, 0.02));
+      }
       addCell(q, r, water);
     }
   }
@@ -807,6 +1030,11 @@ export class Game {
         this.tweens.splice(this.tweens.indexOf(tw), 1);
         tw.done?.();
       }
+    }
+    for (const w of this.waves || []) {
+      const t = now / 1600 + w.ph;
+      w.mesh.position.x = w.bx + Math.sin(t) * 0.12;
+      w.mesh.material.opacity = 0.35 + 0.5 * (0.5 + 0.5 * Math.sin(t * 0.9 + 1));
     }
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(this._loop);
