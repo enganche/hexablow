@@ -33,3 +33,6 @@ Nhóm chat chung của dự án. Chỉ ghi **vắn tắt** việc vừa làm, m�
 [2026-11-09 00:00] **Claude**: Tạo file log chung này theo yêu cầu của Tuan — `TEAM_LOG.md` — ✅
 [2026-11-09 00:00] **Tuan**: Thêm Codex vào team phụ trách art & model game — ✅
 [2026-11-09 00:00] **Claude**: 🙋 @Codex chào mừng! Đọc `GDD.md` trước; cho biết định dạng model bạn xuất (glb/gltf?) và thư mục asset để mình nối vào `src/`.
+[2026-11-09 12:28] **Codex**: Nhận bàn giao art & 3D; đề xuất xuất `.glb` vào `assets/models/`, giữ số ô do game vẽ để @Claude tích hợp — `GDD.md`, `src/game.js` — ✅
+[2026-11-09 13:38] **Codex**: Dựng model tổ ong trong Three.js: hốc sáp, quân mật ong, ô ghim, cầu nối và viền đích kéo; build và thử Level 1 — `src/game.js` — ✅
+[2026-11-09 13:47] **Codex**: @Claude bộ model tổ ong đã tích hợp trực tiếp bằng hình học Three.js và số vẽ động trong `src/game.js`. Build và đặt quân bằng chạm ở Level 1 đã qua; còn kiểm tra kéo-thả trên điện thoại — ✅

@@ -1,21 +1,13 @@
 import * as THREE from 'three';
 import { axialToPixel, pixelToAxial, key, areAdjacent } from './hex.js';
 
-// ---- Palette (simple, flat) ----
+// ---- Honeycomb palette ----
 const COLORS = {
-  bg: 0xf7f1e6,
-  cell: 0xfffdf8,
-  cellEdge: 0xe6dcc8,
-  tile: 0x2fb8a8,
-  tileBase: 0x1f8f82,
-  given: 0xf2994a,
-  givenBase: 0xc9762b,
+  bg: 0xfff4df,
   water: 0x8fd8ea,
   waterEdge: 0x6cc3d9,
-  bar: 0x147d72,
-  barGiven: 0xa85f1c,
   hint: 0xf5c84b,
-  ghostOk: 0x2fb8a8,
+  ghostOk: 0x75d7b1,
   ghostBad: 0xef6f6c,
 };
 
@@ -46,7 +38,43 @@ function roundedHexShape(radius = 1, corner = 0.18) {
   return s;
 }
 const HEX_GEO = new THREE.ShapeGeometry(roundedHexShape(1, 0.18), 6);
-const BAR_GEO = new THREE.PlaneGeometry(1, 1);
+const outline = roundedHexShape(0.96);
+outline.holes.push(new THREE.Path(roundedHexShape(0.84).getPoints(6)));
+const OUTLINE_GEO = new THREE.ShapeGeometry(outline, 6);
+const BAR_GEO = new THREE.CapsuleGeometry(0.082, 0.16, 4, 8);
+BAR_GEO.rotateZ(Math.PI / 2);
+const PIN_GEO = new THREE.ShapeGeometry(new THREE.Shape([
+  new THREE.Vector2(-0.13, 0.12), new THREE.Vector2(0.13, 0.12),
+  new THREE.Vector2(0.13, 0.05), new THREE.Vector2(0.06, 0.05),
+  new THREE.Vector2(0.06, -0.02), new THREE.Vector2(0.11, -0.08),
+  new THREE.Vector2(0.025, -0.08), new THREE.Vector2(0, -0.2),
+  new THREE.Vector2(-0.025, -0.08), new THREE.Vector2(-0.11, -0.08),
+  new THREE.Vector2(-0.06, -0.02), new THREE.Vector2(-0.06, 0.05),
+  new THREE.Vector2(-0.13, 0.05),
+]));
+
+const WAX_MAT = new THREE.MeshBasicMaterial({ vertexColors: true });
+function waxSurface(top, bottom) {
+  const geometry = HEX_GEO.clone();
+  const positions = geometry.attributes.position;
+  const colors = new Float32Array(positions.count * 3);
+  const upper = new THREE.Color(top);
+  const lower = new THREE.Color(bottom);
+  const shade = new THREE.Color();
+  for (let i = 0; i < positions.count; i++) {
+    shade.copy(lower).lerp(upper, (positions.getY(i) + 1) / 2).toArray(colors, i * 3);
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geometry;
+}
+
+const WAX_RIM = waxSurface(0xffebae, 0xf6c96e);
+const WAX_WALL = waxSurface(0xc88e3d, 0xffe3a0);
+const WAX_FLOOR = waxSurface(0xe5b056, 0xffdfa1);
+const TILE_BEVEL = waxSurface(0xffeb98, 0xd89117);
+const TILE_FACE = waxSurface(0xffe574, 0xf8b72e);
+const GIVEN_BEVEL = waxSurface(0xffc067, 0xa85215);
+const GIVEN_FACE = waxSurface(0xf5ac50, 0xdf7f2a);
 const LABEL_GEO = new THREE.PlaneGeometry(1.5, 1.5);
 
 const matCache = new Map();
@@ -68,7 +96,7 @@ function labelMaterial(n) {
     const c = document.createElement('canvas');
     c.width = c.height = size;
     const g = c.getContext('2d');
-    g.fillStyle = '#fff';
+    g.fillStyle = '#482009';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     const digits = String(n).length;
@@ -83,32 +111,57 @@ function labelMaterial(n) {
   return labelCache.get(n);
 }
 
-/** One number tile in unit space: base (shadow), face, label. */
-function makeTile(n, given) {
-  const g = new THREE.Group();
-  const base = new THREE.Mesh(HEX_GEO, basicMat(given ? COLORS.givenBase : COLORS.tileBase));
-  base.scale.setScalar(0.92);
-  base.position.set(0, -0.1, 0.1);
-  const face = new THREE.Mesh(HEX_GEO, basicMat(given ? COLORS.given : COLORS.tile));
-  face.scale.setScalar(0.92);
-  face.position.set(0, 0, 0.2);
-  const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n));
-  label.scale.setScalar(0.62);
-  label.position.set(0, 0, 0.5);
-  g.add(base, face, label);
-  return g;
+function hexLayer(geometry, material, radius, y, z) {
+  const layer = new THREE.Mesh(geometry, material);
+  layer.scale.setScalar(radius);
+  layer.position.set(0, y, z);
+  return layer;
 }
 
-/** Connector bar between two unit-space points (y-up). */
-function makeBar(a, b, color) {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  const m = new THREE.Mesh(BAR_GEO, basicMat(color));
-  m.scale.set(len, 0.2, 1);
-  m.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, 0.35);
-  m.rotation.z = Math.atan2(dy, dx);
-  return m;
+function makeSocket() {
+  const group = new THREE.Group();
+  group.add(
+    hexLayer(WAX_RIM, WAX_MAT, 0.99, 0, 0),
+    hexLayer(WAX_WALL, WAX_MAT, 0.87, 0, 0.02),
+    hexLayer(WAX_FLOOR, WAX_MAT, 0.80, -0.035, 0.04)
+  );
+  return group;
+}
+
+/** Layered profile for the orthographic camera. The numbers stay dynamic. */
+function makeTile(n, given) {
+  const group = new THREE.Group();
+  const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n));
+  label.scale.setScalar(0.66);
+  label.position.set(0, given ? -0.10 : 0, 0.5);
+  group.add(
+    hexLayer(HEX_GEO, basicMat(0x68340e, 0.18), 0.94, -0.11, 0.08),
+    hexLayer(HEX_GEO, basicMat(given ? 0xa45418 : 0xc48112), 0.91, -0.06, 0.12),
+    hexLayer(given ? GIVEN_BEVEL : TILE_BEVEL, WAX_MAT, 0.91, 0, 0.16),
+    hexLayer(given ? GIVEN_FACE : TILE_FACE, WAX_MAT, 0.84, 0.015, 0.20),
+    label
+  );
+  if (given) {
+    const pin = new THREE.Mesh(PIN_GEO, basicMat(0x77380e));
+    pin.scale.setScalar(0.77);
+    pin.position.set(0, 0.46, 0.22);
+    pin.rotation.z = -Math.PI / 5;
+    group.add(pin);
+  }
+  return group;
+}
+
+/** Short bridge over the gap between the two tile faces. */
+function makeBar(a, b) {
+  const bar = new THREE.Group();
+  const base = new THREE.Mesh(BAR_GEO, basicMat(0xba7014));
+  const face = new THREE.Mesh(BAR_GEO, basicMat(0xf8b343));
+  face.scale.set(0.91, 0.74, 1);
+  face.position.z = 0.01;
+  bar.add(base, face);
+  bar.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, 0.24);
+  bar.rotation.z = Math.atan2(b.y - a.y, b.x - a.x);
+  return bar;
 }
 
 // unit position helpers: y flipped so world is y-up
@@ -289,21 +342,21 @@ export class Game {
     this._clear(this.boardGroup);
     this.cellKeys = new Set(this.level.cells.map(([q, r]) => key(q, r)));
     this.blockedKeys = new Set(this.level.blocked.map(([q, r]) => key(q, r)));
-    const mk = (q, r, fill, edge) => {
+    const addCell = (q, r, model) => {
       const s = this._cellScreen(q, r);
-      const g = new THREE.Group();
-      const e = new THREE.Mesh(HEX_GEO, basicMat(edge));
-      e.scale.setScalar(0.95);
-      const f = new THREE.Mesh(HEX_GEO, basicMat(fill));
-      f.scale.setScalar(0.86);
-      f.position.z = 0.05;
-      g.add(e, f);
-      g.position.copy(this._w(s.x, s.y));
-      g.scale.setScalar(this.R);
-      this.boardGroup.add(g);
+      model.position.copy(this._w(s.x, s.y));
+      model.scale.setScalar(this.R);
+      this.boardGroup.add(model);
     };
-    for (const [q, r] of this.level.cells) mk(q, r, COLORS.cell, COLORS.cellEdge);
-    for (const [q, r] of this.level.blocked) mk(q, r, COLORS.water, COLORS.waterEdge);
+    for (const [q, r] of this.level.cells) addCell(q, r, makeSocket());
+    for (const [q, r] of this.level.blocked) {
+      const water = new THREE.Group();
+      water.add(
+        hexLayer(HEX_GEO, basicMat(COLORS.waterEdge), 0.95, 0, 0),
+        hexLayer(HEX_GEO, basicMat(COLORS.water), 0.86, 0, 0.05)
+      );
+      addCell(q, r, water);
+    }
   }
 
   /** Rebuild given + placed tiles and connectors. `popNumbers`: numbers to animate in. */
@@ -322,11 +375,9 @@ export class Game {
       if (!a || !b || !areAdjacent(a.c, b.c)) continue;
       const sa = this._cellScreen(a.c[0], a.c[1]);
       const sb = this._cellScreen(b.c[0], b.c[1]);
-      const bothGiven = a.given && b.given;
       const bar = makeBar(
         { x: 0, y: 0 },
-        { x: (sb.x - sa.x) / this.R, y: -(sb.y - sa.y) / this.R },
-        bothGiven ? COLORS.barGiven : COLORS.bar
+        { x: (sb.x - sa.x) / this.R, y: -(sb.y - sa.y) / this.R }
       );
       const holder = new THREE.Group();
       holder.add(bar);
@@ -379,7 +430,7 @@ export class Game {
     const g = new THREE.Group();
     const upos = p.offsets.map(([dq, dr]) => unitPos(dq, dr));
     for (let i = 0; i < p.numbers.length - 1; i++) {
-      g.add(makeBar(upos[i], upos[i + 1], COLORS.bar));
+      g.add(makeBar(upos[i], upos[i + 1]));
     }
     p.numbers.forEach((n, i) => {
       const t = makeTile(n, false);
@@ -680,10 +731,10 @@ export class Game {
   _updateHighlights(drag) {
     this._clear(this.hlGroup);
     const settings = this.hooks.getSettings();
-    const add = (q, r, color, opacity, z) => {
+    const add = (q, r, color, opacity, z, outline = false) => {
       const s = this._cellScreen(q, r);
-      const m = new THREE.Mesh(HEX_GEO, basicMat(color, opacity));
-      m.scale.setScalar(this.R * 0.88);
+      const m = new THREE.Mesh(outline ? OUTLINE_GEO : HEX_GEO, basicMat(color, opacity));
+      m.scale.setScalar(this.R * (outline ? 1 : 0.88));
       m.position.copy(this._w(s.x, s.y, z));
       this.hlGroup.add(m);
     };
@@ -694,7 +745,7 @@ export class Game {
     if (drag) {
       const ok = this._fits(drag.cells);
       for (const [q, r] of drag.cells) {
-        if (this.cellKeys.has(key(q, r))) add(q, r, ok ? COLORS.ghostOk : COLORS.ghostBad, 0.35, this.R * 0.18);
+        if (this.cellKeys.has(key(q, r))) add(q, r, ok ? COLORS.ghostOk : COLORS.ghostBad, 0.95, this.R * 0.25, true);
       }
     }
   }
