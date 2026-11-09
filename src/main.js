@@ -139,3 +139,48 @@ window.addEventListener('pointerdown', () => audio.unlock(), { once: false });
 window.__hexablow = { game, levels, startLevel };
 
 startLevel(levelIndex);
+
+// ---- Debug level picker: press ` (backtick) to toggle ----
+const dbg = document.createElement('div');
+dbg.id = 'debug-levels';
+dbg.style.cssText =
+  'position:fixed;top:8px;left:8px;z-index:50;background:rgba(60,30,8,.92);color:#fff4df;' +
+  'padding:10px;border-radius:12px;font:600 13px/1.3 system-ui,sans-serif;max-width:260px;';
+function renderDebug() {
+  dbg.innerHTML = '<div style="margin-bottom:6px;opacity:.8">DEBUG · levels (` to close)</div>';
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:4px;';
+  levels.forEach((l, i) => {
+    const b = document.createElement('button');
+    b.textContent = l.id;
+    b.title = `${l.cells.length} cells`;
+    b.style.cssText =
+      'padding:6px 0;border:0;border-radius:6px;cursor:pointer;font:inherit;' +
+      (i === levelIndex ? 'background:#f5c84b;color:#482009;' : 'background:#8a5a2b;color:#fff4df;');
+    b.onclick = () => {
+      result.classList.add('hidden');
+      startLevel(i);
+      renderDebug();
+    };
+    grid.appendChild(b);
+  });
+  dbg.appendChild(grid);
+  const info = document.createElement('div');
+  info.style.cssText = 'margin-top:6px;opacity:.8';
+  info.textContent = `Now: ${levels[levelIndex].name} · ${levels[levelIndex].cells.length} cells`;
+  dbg.appendChild(info);
+}
+dbg.style.display = 'none';
+document.body.appendChild(dbg);
+window.addEventListener('keydown', (e) => {
+  if (e.key === '`' || e.code === 'Backquote') {
+    e.preventDefault();
+    dbg.style.display = dbg.style.display === 'none' ? '' : 'none';
+    if (dbg.style.display !== 'none') renderDebug();
+  } else if (dbg.style.display !== 'none' && (e.key === '[' || e.key === ']')) {
+    const i = Math.max(0, Math.min(levels.length - 1, levelIndex + (e.key === ']' ? 1 : -1)));
+    result.classList.add('hidden');
+    startLevel(i);
+    renderDebug();
+  }
+});
