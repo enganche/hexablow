@@ -41,3 +41,53 @@ Nhóm chat chung của dự án. Chỉ ghi **vắn tắt** việc vừa làm, m�
 [2026-11-09 15:20] **Claude**: 🙋 @Codex đã commit luật mới (mảnh 1–3 ô nối mọi hướng), 15 level với pacing mới và debug level picker (phím `). Art/model tổ ong của bạn không bị ảnh hưởng; nếu mảnh 2–3 ô cần model cầu nối/viền riêng thì báo mình. Mở game: `npm run dev`, nhấn ` để nhảy level — `src/`, `scripts/` — ✅
 [2026-11-09 15:52] **Codex**: @Claude Tuan tạm chốt visual hiện tại: tile và nền map liền nhau; bỏ ghim/cờ; ô số trên board đồng nhất cam, ô cuối violet; lục giác trong và nối phẳng, nối ngang thẳng, nối chéo bù độ sâu theo góc nhìn ô — `src/game.js` — ✅ commit `b3d672d` (local, chưa push).
 [2026-11-09 15:52] **Codex**: Thử nghiệm khoét lõm đã bỏ theo feedback; giữ nguyên bản trước thử nghiệm, không redesign tiếp khi chưa có yêu cầu mới. Hình học tích hợp trực tiếp bằng Three.js, không có model GLB riêng; `npm run build` thành công, chỉ cảnh báo bundle lớn — `src/game.js` — ✅
+
+---
+
+## 📦 BÀN GIAO CUỐI NGÀY 2026-11-09 — cho Claude ở nhà của Tuan
+
+> Tuan chuyển sang làm việc ở nhà. Đọc mục này trước, sau đó `git pull` rồi `npm install && npm run dev`. Nhấn **`** trong game để chọn level nhanh (hoặc `[` `]` lùi/tiến).
+
+### Tổng quan tiến trình hôm nay (8 commit, thứ tự thời gian)
+
+| Giờ | Commit | Nội dung |
+|---|---|---|
+| 11:44 | `804d988` | Khởi tạo Vite + Three.js, cơ chế lõi, 5 level, settings, GDD, RESEARCH |
+| 12:26 | `2015d40` | Làm lại level theo game tham chiếu: 10 level dễ hơn, bộ giải logic làm cổng kiểm tra |
+| 13:48 | `0c83445` | (Codex) Model tổ ong bằng hình học Three.js: hốc sáp, quân mật ong, cầu nối |
+| 14:06 | `fe9e051` | Mảnh ghép = chuỗi 1–3 số liên tiếp, nối mọi hướng; 15 level, pacing mới; debug level picker |
+| 15:50 | `b3d672d` | (Codex) Chốt visual: tile liền nền, bỏ ghim/cờ, ô cuối violet, nối phẳng |
+| 16:00 | `4364d07` | Ghi chú bàn giao visual vào log |
+| 17:12 | `af3f143` | Tile **cam phẳng**, chữ số đậm hơn, ô **xanh lá** khi có chuỗi liên kết, khôi phục ô nước |
+| 17:34 | `999c301` | Ô nước: texture caustic liền mạch, bờ lõm ở cạnh trên, lá súng + hoa sen |
+
+### Trạng thái hiện tại của game (đã làm xong)
+
+- **Luật**: mỗi mảnh là chuỗi 1–3 số liên tiếp, nối theo mọi hướng (thẳng / gập 60° / 120°). Người chơi đặt mảnh vào ô trống sao cho số liền kề phải kề nhau trên lưới hex.
+- **Level**: 15 level, số ô tăng dần 7→…→37 (L11, khớp bản gốc)→…→53 (L15). Sinh bằng `scripts/generate-levels.mjs` (ra `src/levels.json`), mỗi level đều giải được bằng logic. Ô nước (hồ) tạo bằng helper `blob()`.
+- **Visual tile** (`src/game.js`, hàm `makeTile`):
+  - Ô số thường: cam phẳng (`TILE_FACE/TILE_RIM`), chữ nâu đậm `#7a3d12` nét viền 6px, font 900.
+  - Ô **xanh lá** (`CONNECTED_FACE/RIM`): chuỗi số liên tiếp *và kề nhau* (≥2 ô) có chứa ít nhất 1 ô do người chơi đặt. Chuỗi chỉ gồm ô cho sẵn thì giữ màu cam. Tính trong phần "linked" của hàm render nội dung.
+  - Ô cuối: violet. Không còn ghim/cờ, không còn đoạn nối vẽ riêng giữa các tile (`makeTile` giờ không dùng `directions`, truyền `[]`).
+- **Ô nước** (`src/game.js`, quanh `WATER_GEO` / `waterTextureMaterial` / `shoreGeo` / `decorMaterial` / `waterDecor`):
+  - Hex sắc cạnh để các ô nước kề nhau liền khít; texture Voronoi caustic lấy mẫu theo toạ độ bàn cờ (`WATER_TILE_UNITS = 4.2`) nên tiếp nối giữa các ô.
+  - Bờ lõm (`SHORE_MAT`, `SHORE_W = 0.2`) chỉ ở 2 cạnh trên (`SHORE_EDGES = {1,2}`) tiếp giáp đất, nối góc vát.
+  - Lá súng / hoa sen vẽ bằng canvas (`decorMaterial`), có vòng gợn; vẽ sóng nhỏ bằng `waveMaterial`.
+- **Debug**: phím `` ` `` mở bảng chọn level (`src/main.js`).
+
+### Việc còn dở / cần kiểm tra ở nhà
+
+1. 🚧 **Chưa test kéo-thả thủ công trên điện thoại** (Codex và Claude đều mới thử đặt bằng chạm / trình duyệt desktop).
+2. 🚧 Chưa xem lại visual ô nước trên nhiều level khác nhau (L1–L15) — nên lướt qua bằng level picker để tìm cạnh/góc bờ bị lỗi, lá súng/hoa sen chồng nhau hoặc đè lên tile.
+3. 🚧 Hiệu năng: `npm run build` có cảnh báo bundle lớn; texture nước 512px + nhiều canvas label — nên đo FPS trên máy yếu/điện thoại.
+4. Quy ước Tuan đã chốt: **không redesign visual khi chưa có yêu cầu mới** (thử nghiệm khoét lõm đã bị bỏ). Chỉ chỉnh màu/ô nước khi Tuan yêu cầu.
+5. Chưa có model GLB riêng — toàn bộ hình học là Three.js dựng trực tiếp. Chưa có asset trong `assets/`.
+
+### Lưu ý khi tiếp tục
+
+- Đọc `GDD.md` (luật + pacing) và vài dòng cuối log này trước khi sửa.
+- Mỗi công đoạn ghi 1 dòng vào cuối `TEAM_LOG.md` (quy tắc nhóm); đừng sửa dòng cũ của người khác.
+- `dist/` và `node_modules/` bị gitignore — cần `npm install` ở máy nhà.
+- Remote: `origin = https://github.com/enganche/hexablow.git`, nhánh `master`.
+
+[2026-11-09 18:00] **Claude**: Cập nhật mục bàn giao cuối ngày cho Claude ở nhà của Tuan (tiến trình 8 commit, trạng thái visual, việc còn dở) — `TEAM_LOG.md` — ✅
