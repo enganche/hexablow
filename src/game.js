@@ -442,6 +442,7 @@ export class Game {
     this.H = 0;
 
     this._bind();
+    this._initScrollbar();
     this.resize();
     this._last = performance.now();
     this._loop = this._loop.bind(this);
@@ -694,7 +695,67 @@ export class Game {
     };
   }
 
+  // ---------- tray scrollbar ----------
+  _initScrollbar() {
+    const track = document.createElement('div');
+    track.id = 'tray-scroll';
+    const thumb = document.createElement('div');
+    thumb.id = 'tray-scroll-thumb';
+    track.appendChild(thumb);
+    (this.canvas.parentElement || document.body).appendChild(track);
+    this.sbTrack = track;
+    this.sbThumb = thumb;
+
+    let drag = null;
+    thumb.addEventListener('pointerdown', (e) => {
+      if (this.locked) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try { thumb.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      drag = { id: e.pointerId, x: e.clientX, scroll: this.scroll };
+      thumb.classList.add('active');
+    });
+    thumb.addEventListener('pointermove', (e) => {
+      if (!drag || drag.id !== e.pointerId) return;
+      const travel = track.clientWidth - thumb.offsetWidth;
+      if (travel <= 0) return;
+      this.scroll = clamp(drag.scroll + ((e.clientX - drag.x) / travel) * this.maxScroll, 0, this.maxScroll);
+      this._positionTray();
+    });
+    const end = (e) => {
+      if (!drag || drag.id !== e.pointerId) return;
+      drag = null;
+      thumb.classList.remove('active');
+    };
+    thumb.addEventListener('pointerup', end);
+    thumb.addEventListener('pointercancel', end);
+    // tap on the track: jump so the thumb centres on the tap
+    track.addEventListener('pointerdown', (e) => {
+      if (e.target !== track || this.locked) return;
+      const r = track.getBoundingClientRect();
+      const travel = track.clientWidth - thumb.offsetWidth;
+      if (travel <= 0) return;
+      const t = (e.clientX - r.left - thumb.offsetWidth / 2) / travel;
+      this.scroll = clamp(t * this.maxScroll, 0, this.maxScroll);
+      this._positionTray();
+    });
+  }
+
+  _updateScrollbar() {
+    if (!this.sbTrack) return;
+    const show = this.maxScroll > 1 && this.pieces.length > 0;
+    this.sbTrack.style.display = show ? 'block' : 'none';
+    if (!show) return;
+    const tw = this.sbTrack.clientWidth;
+    const frac = clamp(this.W / this.totalTrayW, 0.1, 1);
+    const thumbW = Math.max(36, tw * frac);
+    const travel = tw - thumbW;
+    this.sbThumb.style.width = `${thumbW}px`;
+    this.sbThumb.style.transform = `translateX(${(this.scroll / this.maxScroll) * travel}px)`;
+  }
+
   _positionTray(animate = false) {
+    this._updateScrollbar();
     for (const p of this.pieces) {
       if (p === this.dragPiece) continue;
       const s = this._trayPivot(p);

@@ -49,6 +49,44 @@ body {
   touch-action: none;
 }
 
+/* ---- tray scrollbar ---- */
+#tray-scroll {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 4px;
+  height: 14px;
+  display: none;
+  border-radius: 7px;
+  touch-action: none;
+  z-index: 5;
+}
+#tray-scroll::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(120, 90, 50, 0.18);
+  pointer-events: none;
+}
+#tray-scroll-thumb {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(120, 90, 50, 0.55);
+  touch-action: none;
+  cursor: grab;
+}
+#tray-scroll-thumb.active {
+  background: rgba(120, 90, 50, 0.8);
+  cursor: grabbing;
+}
+
 /* ---- HUD ---- */
 #hud {
   position: absolute;
