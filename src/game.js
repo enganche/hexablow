@@ -510,7 +510,7 @@ export class Game {
     const trayBottomPad = 18;
     this.trayCenterY = H - trayBottomPad - trayH / 2;
     this.trayTop = H - trayBottomPad - trayH;
-    const areaTop = hud + 8;
+    const areaTop = hud + 8 + (this.topReserve || 0); // topReserve: room for the tutorial bubble
     const areaBottom = this.trayTop - 14;
 
     // board extents in unit space
