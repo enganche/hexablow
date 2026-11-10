@@ -42,6 +42,10 @@ const HEX_GEO = new THREE.ShapeGeometry(roundedHexShape(1, 0.18), 6);
 const outline = roundedHexShape(0.96);
 outline.holes.push(new THREE.Path(roundedHexShape(0.84).getPoints(6)));
 const OUTLINE_GEO = new THREE.ShapeGeometry(outline, 6);
+// wrong-move pulse: a ring hugging the outside of a placed tile
+const TILE_RING = roundedHexShape(1.1);
+TILE_RING.holes.push(new THREE.Path(roundedHexShape(0.98).getPoints(6)));
+const TILE_RING_GEO = new THREE.ShapeGeometry(TILE_RING, 6);
 
 const WAX_MAT = new THREE.MeshBasicMaterial({ vertexColors: true });
 
@@ -982,18 +986,35 @@ export class Game {
   }
 
   _wrong(p, dragged, anchor) {
-    this.hooks.onMistake?.();
-    this.hearts -= 1;
-    this.hooks.onHearts(this.hearts, true);
-    if (dragged) this._returnPiece(p);
-    else this._shake(p);
-    // flash the attempted cells red briefly
-    const cells = this._pieceCells(p, anchor);
-    this._flash(cells);
-    if (this.hearts <= 0) {
-      this.locked = true;
-      setTimeout(() => this.hooks.onFail(), 450);
+    // 1) the piece stays on the map while the consecutive number pulses red
+    this.locked = true;
+    if (this.dragPiece !== p) {
+      this.trayGroup.remove(p.group);
+      this.dragGroup.add(p.group);
+      this.dragPiece = p;
     }
+    const s = this._cellScreen(anchor[0], anchor[1]);
+    const from = p.group.position.clone();
+    const to = this._w(s.x, s.y);
+    const fromScale = p.group.scale.x;
+    this._tween(140, (k) => {
+      const e = easeOut(k);
+      p.group.position.lerpVectors(from, to, e);
+      p.group.scale.setScalar(fromScale + (this.R - fromScale) * e);
+    });
+    const hold = Math.max(this._flashNeighbors(p, this._pieceCells(p, anchor)), 450);
+    // 2) then the heart is lost and the piece goes back to the list
+    this._tween(hold, () => {}, () => {
+      this.hooks.onMistake?.();
+      this.hearts -= 1;
+      this.hooks.onHearts(this.hearts, true);
+      this._returnPiece(p);
+      if (this.hearts <= 0) {
+        setTimeout(() => this.hooks.onFail(), 450);
+      } else {
+        this.locked = false;
+      }
+    });
   }
 
   _shake(p) {
@@ -1032,6 +1053,53 @@ export class Game {
         m.material.dispose();
       });
     });
+  }
+
+  /** Soft red pulse on the map cells holding the numbers consecutive to the wrongly dropped piece. */
+  _flashNeighbors(p, cells) {
+    // the consecutive numbers (n-1 / n+1) of the dropped piece that already sit on the map;
+    // for 2/3-cell pieces only the first number that has any is used
+    const known = new Map();
+    for (const [n, c] of Object.entries(this.level.givens)) known.set(Number(n), c);
+    for (const [n, c] of this.placed) known.set(n, c);
+    let best = [];
+    for (const [i, n] of p.numbers.entries()) {
+      const m = [n - 1, n + 1].find((x) => !p.numbers.includes(x) && known.has(x));
+      if (m !== undefined) {
+        best = [known.get(m), cells[i]]; // always exactly one pair: the neighbour on the map + the dropped tile
+        break;
+      }
+    }
+    if (!best.length) return 0;
+    const meshes = [];
+    for (const [q, r] of best) {
+      const s = this._cellScreen(q, r);
+      // drawn on top of everything (the dropped piece sits above the map)
+      const mat = () => new THREE.MeshBasicMaterial({ color: COLORS.ghostBad, transparent: true, opacity: 0, depthTest: false });
+      const fill = new THREE.Mesh(HEX_GEO, mat());
+      fill.scale.setScalar(this.R * 0.96);
+      fill.position.copy(this._w(s.x, s.y, this.R * 0.3));
+      fill.position.y += this.R * TILE_TOP_LIFT * 0.5;
+      const ring = new THREE.Mesh(TILE_RING_GEO, mat());
+      ring.scale.setScalar(this.R);
+      ring.position.copy(this._w(s.x, s.y, this.R * 0.31));
+      ring.position.y += this.R * TILE_TOP_LIFT * 0.5; // tile top is lifted above its base
+      fill.renderOrder = ring.renderOrder = 50;
+      this.contentGroup.add(fill, ring);
+      meshes.push(fill, ring);
+    }
+    // two quick pulses, starting right away together with the piece snapping in
+    const DUR = 560;
+    this._tween(DUR, (k) => {
+      const a = Math.pow(Math.cos(k * Math.PI * 1.5), 2) * Math.min(1, k * 10) * (1 - k * 0.3);
+      meshes.forEach((m, i) => (m.material.opacity = (i % 2 ? 1 : 0.55) * a));
+    }, () => {
+      meshes.forEach((m) => {
+        this.contentGroup.remove(m);
+        m.material.dispose();
+      });
+    });
+    return DUR;
   }
 
   // ---------- highlights (ghost + optional hints) ----------

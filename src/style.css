@@ -159,24 +159,125 @@ body {
 #hearts {
   display: flex;
   justify-content: center;
-  gap: 6px;
+  gap: 10px;
   margin-top: 6px;
-  min-height: 22px;
+  min-height: 40px;
+}
+.heart-wrap {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
 }
 .heart {
-  width: 22px;
-  height: 22px;
-  transition: transform 0.2s ease;
+  width: 40px;
+  height: 40px;
+  overflow: visible;
+  filter: drop-shadow(0 2px 0 rgba(160, 60, 55, 0.35));
 }
 .heart path {
   fill: var(--coral);
-  transition: fill 0.2s ease;
+  stroke: #fff;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
 }
-.heart.lost path {
+.heart-wrap.lost .heart {
+  filter: none;
+}
+.heart-wrap.lost path {
   fill: #e3dacb;
+  stroke: #f6efe2;
 }
-.heart.pop {
-  transform: scale(1.25);
+/* the heart that was just lost: swell, flash white, crack away */
+.heart-wrap.breaking .heart {
+  animation: heart-break 0.85s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+.heart-wrap.breaking path {
+  animation: heart-color 0.85s ease-out both;
+}
+@keyframes heart-break {
+  0% { transform: scale(1); }
+  12% { transform: scale(1.7) rotate(-8deg); }
+  26% { transform: scale(1.5) rotate(8deg); }
+  40% { transform: scale(1.6) rotate(-6deg); }
+  60% { transform: scale(0.8) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes heart-color {
+  0% { fill: var(--coral); }
+  14% { fill: #fff; }
+  35% { fill: #ff3b3b; }
+  100% { fill: #e3dacb; }
+}
+.heart-wrap i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--coral);
+  pointer-events: none;
+  animation: heart-shard 0.75s cubic-bezier(0.1, 0.7, 0.4, 1) 0.1s both;
+}
+.heart-wrap i:nth-child(even) {
+  background: #ff9a96;
+  width: 6px;
+  height: 6px;
+}
+@keyframes heart-shard {
+  0% { transform: translate(0, 0) scale(1.2) rotate(0); opacity: 1; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 22px)) scale(0.2) rotate(240deg); opacity: 0; }
+}
+.heart-wrap .ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 50%;
+  border: 3px solid rgba(239, 111, 108, 0.85);
+  pointer-events: none;
+  animation: heart-ring 0.6s ease-out 0.08s both;
+}
+@keyframes heart-ring {
+  0% { transform: scale(0.4); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; border-width: 1px; }
+}
+#hearts.hurt {
+  animation: hearts-shake 0.5s ease-out;
+}
+@keyframes hearts-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-7px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(3px); }
+  80% { transform: translateX(-1px); }
+}
+/* red vignette pulse over the whole board */
+#stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+  box-shadow: inset 0 0 70px 10px rgba(239, 70, 66, 0.28);
+}
+#stage.hurt-flash::after {
+  animation: hurt-vignette 0.7s ease-out;
+}
+@keyframes hurt-vignette {
+  0% { opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heart-wrap.breaking .heart, #hearts.hurt, #stage.hurt-flash::after { animation: none; }
 }
 
 .icon-btn {

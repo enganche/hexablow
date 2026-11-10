@@ -15,14 +15,37 @@ const heartsEl = $('hearts');
 const HEART_SVG =
   '<svg class="heart" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 5 6 5c2.1 0 3.6 1.1 4.5 2.6h3C14.4 6.1 15.9 5 18 5c3.3 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z"/></svg>';
 
+function heartBurst() {
+  let s = '';
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2 + Math.random() * 0.5;
+    const d = 26 + Math.random() * 18;
+    s += `<i style="--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d - 6).toFixed(1)}px"></i>`;
+  }
+  return `<b class="ring"></b>${s}`;
+}
+
 function renderHearts(left, animate) {
-  heartsEl.innerHTML = HEART_SVG.repeat(3);
-  [...heartsEl.children].forEach((h, i) => {
+  heartsEl.innerHTML = Array.from({ length: 3 }, () => `<span class="heart-wrap">${HEART_SVG}</span>`).join('');
+  [...heartsEl.children].forEach((w, i) => {
     const lost = i >= left;
-    h.classList.toggle('lost', lost);
+    w.classList.toggle('lost', lost);
     if (animate && i === left) {
-      h.classList.add('pop');
-      setTimeout(() => h.classList.remove('pop'), 220);
+      w.classList.add('breaking');
+      w.insertAdjacentHTML('beforeend', heartBurst());
+      heartsEl.classList.remove('hurt');
+      void heartsEl.offsetWidth;
+      heartsEl.classList.add('hurt');
+      const flash = $('game').parentElement;
+      flash.classList.remove('hurt-flash');
+      void flash.offsetWidth;
+      flash.classList.add('hurt-flash');
+      setTimeout(() => {
+        w.classList.remove('breaking');
+        w.querySelectorAll('i,b').forEach((n) => n.remove());
+        heartsEl.classList.remove('hurt');
+        flash.classList.remove('hurt-flash');
+      }, 900);
     }
   });
 }
