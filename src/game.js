@@ -1266,7 +1266,9 @@ export class Game {
     const plants = [];
     for (const [q, r] of level.cells) {
       if (q === houseCell[0] && r === houseCell[1]) continue;
-      const count = 2 + (rnd() < 0.45 ? 1 : 0);
+      // sparse: ~1/3 of the cells stay bare, most get a single plant, a few get two
+      const roll = rnd();
+      const count = roll < 0.35 ? 0 : roll < 0.9 ? 1 : 2;
       const placed = [];
       for (let i = 0; i < count; i++) {
         let dx = 0, dy = 0;
@@ -1275,7 +1277,7 @@ export class Game {
           const rad = 0.66 * Math.sqrt(rnd());
           dx = Math.cos(a) * rad;
           dy = Math.sin(a) * rad;
-          if (placed.every(([px, py]) => Math.hypot(px - dx, py - dy) > 0.42)) break;
+          if (placed.every(([px, py]) => Math.hypot(px - dx, py - dy) > 0.6)) break;
         }
         placed.push([dx, dy]);
         const tuft = rnd() < 0.42;
