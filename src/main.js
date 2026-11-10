@@ -4,6 +4,7 @@ import { Game } from './game.js';
 import { AudioManager, vibrate } from './audio.js';
 import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex } from './settings.js';
 import economy from './economy.json';
+import { winArt, loseArt, confetti } from './resultArt.js';
 import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
 import { loadProgress, recordWin, starsFor, totalStars, completedCount, resetProgress, coinsOf, canAfford, spend, earn, winReward } from './progress.js';
 
@@ -89,43 +90,107 @@ $('hint-btn').addEventListener('click', () => {
   renderCoins();
 });
 
-// ---- Result card ----
+// ---- Result screens: art -> map -> action ----
+const stage = $('stage');
 const result = $('result');
+const resMap = $('res-map');
 const STAR_SVG =
   '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
 let heartsLeft = 3;
+let resultTimers = [];
+const later = (fn, ms) => resultTimers.push(setTimeout(fn, ms));
 
-function showResult({ win, stars = 0, note = '', reward = 0, title, text, button, onClick, onRevive }) {
-  result.classList.toggle('win', win);
-  result.classList.toggle('fail', !win);
-  $('result-stars').innerHTML = win
-    ? Array.from({ length: 3 }, (_, i) =>
-        `<span class="star${i < stars ? ' on' : ''}" style="--i:${i}">${STAR_SVG}</span>`).join('')
-    : `<span class="broken">${HEART_SVG}</span>`;
-  $('result-title').textContent = title;
-  $('result-text').textContent = text;
-  $('result-stats').innerHTML = win
-    ? `<span>Hearts left <b>${heartsLeft}/3</b></span>${note ? ` · <span>${note}</span>` : ''}${reward ? `<div class="reward">+${reward} ${COIN}</div>` : ''}`
-    : '';
-  const close = (fn) => () => {
-    result.classList.add('hidden');
-    audio.tap();
-    fn();
-  };
-  $('result-btn').textContent = button;
-  $('result-btn').onclick = close(onClick);
-  $('result-replay').classList.toggle('hidden', !win);
-  const rev = $('result-revive');
-  rev.classList.toggle('hidden', win || !onRevive);
-  if (onRevive) {
-    rev.innerHTML = `Revive · ${economy.costs.revive} ${COIN}`;
-    rev.disabled = !canAfford(progress, economy.costs.revive);
-    rev.onclick = close(onRevive);
-  }
-  $('result-replay').onclick = close(() => startLevel(levelIndex));
-  $('result-home').onclick = close(showHome);
-  result.classList.remove('hidden');
+/** Close the result screen and give the board back to normal play. Safe to call any time. */
+function leaveResult() {
+  resultTimers.forEach(clearTimeout);
+  resultTimers = [];
+  result.classList.add('hidden');
+  result.classList.remove('show-art', 'show-map', 'show-actions');
+  stage.classList.remove('result-mode', 'lose');
+  result.querySelectorAll('.fly-coin').forEach((n) => n.remove());
+  game.exitResultView();
 }
+
+/** Rect of the map slot, in canvas px. */
+function mapRect() {
+  const r = resMap.getBoundingClientRect();
+  const c = $('game').getBoundingClientRect();
+  return { x: r.left - c.left, y: r.top - c.top, width: r.width, height: r.height };
+}
+
+function coinBurst(btn) {
+  const rb = btn.getBoundingClientRect();
+  const rr = result.getBoundingClientRect();
+  const scale = rr.width / stage.clientWidth || 1;
+  for (let i = 0; i < 12; i++) {
+    const c = document.createElement('i');
+    c.className = 'fly-coin';
+    const a = (i / 12) * Math.PI * 2;
+    const d = 60 + Math.random() * 60;
+    c.style.left = `${(rb.left + rb.width / 2 - rr.left) / scale}px`;
+    c.style.top = `${(rb.top + rb.height / 2 - rr.top) / scale}px`;
+    c.style.setProperty('--dx', `${Math.cos(a) * d}px`);
+    c.style.setProperty('--dy', `${Math.sin(a) * d - 50}px`);
+    c.style.animationDelay = `${Math.random() * 0.1}s`;
+    result.appendChild(c);
+  }
+}
+
+/**
+ * win: { win:true, title, stars, sub, reward, next, onClaim }
+ * fail: { win:false, title, sub, onRevive, onRetry, onHome }
+ */
+function showResult(o) {
+  leaveResult();
+  const btn = $('result-btn');
+  const rev = $('result-revive');
+  const home = $('result-home');
+  $('res-art').innerHTML = o.win ? winArt(o) : loseArt(o);
+  if (o.win) confetti($('res-confetti'));
+  else $('res-confetti').innerHTML = '';
+  $('res-sub').innerHTML = o.sub;
+  $('res-next').textContent = o.next ?? '';
+  btn.disabled = false;
+  if (o.win) {
+    btn.innerHTML = `<span>Claim</span><em>+${o.reward} ${COIN}</em>`;
+    btn.classList.remove('alt');
+    btn.onclick = () => {
+      btn.disabled = true;
+      audio.tap();
+      coinBurst(btn);
+      later(() => {
+        leaveResult();
+        o.onClaim();
+      }, 520);
+    };
+    rev.classList.add('hidden');
+    home.classList.add('hidden');
+  } else {
+    btn.textContent = 'Retry';
+    btn.classList.add('alt');
+    btn.onclick = () => { audio.tap(); o.onRetry(); };
+    rev.classList.remove('hidden');
+    rev.innerHTML = `<span>Revive</span><em>${economy.costs.revive} ${COIN}</em>`;
+    rev.disabled = !canAfford(progress, economy.costs.revive);
+    rev.onclick = () => { audio.tap(); o.onRevive(); };
+    home.classList.remove('hidden');
+    home.onclick = () => { audio.tap(); o.onHome(); };
+  }
+  stage.classList.add('result-mode');
+  stage.classList.toggle('lose', !o.win);
+  result.classList.remove('hidden');
+  game.enterResultView();
+  void result.offsetWidth;
+  // 1) art  2) the map, scaled to fit the slot  3) the action button
+  result.classList.add('show-art');
+  later(() => {
+    result.classList.add('show-map');
+    game.fitView(mapRect, 950);
+  }, o.win ? 1000 : 750);
+  later(() => result.classList.add('show-actions'), o.win ? 2050 : 1600);
+}
+
+let pendingWin = null;
 
 // ---- Game ----
 const game = new Game($('game'), {
@@ -145,29 +210,34 @@ const game = new Game($('game'), {
     audio.wrong();
     vibrate(settings, 60);
   },
-  onWin: () => {
+  onWinStart: () => {
     audio.win();
     vibrate(settings, [20, 40, 20]);
+    tut.stop();
     const last = levelIndex === levels.length - 1;
     const stars = Math.max(1, heartsLeft);
     const rec = recordWin(progress, levels[levelIndex].id, stars);
     const reward = winReward(stars, rec.firstClear);
-    earn(progress, reward);
+    earn(progress, reward); // saved right away, so quitting mid-celebration never loses it
     renderCoins();
-    const note = rec.firstClear ? 'First clear!' : rec.isNewBest ? '<b>New best!</b>' : `Best <b>${rec.best}★</b>`;
     // "Play" on the home screen continues from the next level
     if (levelIndex < levels.length - 1) saveLevelIndex(levelIndex + 1);
+    pendingWin = { last, stars, rec, reward, levelIdx: levelIndex };
+  },
+  onWin: () => {
+    if (!pendingWin) return;
+    const { last, stars, rec, reward, levelIdx } = pendingWin;
+    pendingWin = null;
+    const praise = ['', 'Good job!', 'Great!', 'Perfect!'][stars];
+    const note = rec.firstClear ? 'First clear!' : rec.isNewBest ? 'New best!' : `Best ${rec.best}★`;
     showResult({
       win: true,
+      title: last ? 'Garden Complete!' : 'Level Complete!',
       stars,
-      note,
       reward,
-      title: last ? 'All levels complete!' : 'Level complete!',
-      text: last
-        ? `You finished all ${levels.length} levels.`
-        : `${levels[levelIndex].name} solved. ${['', 'Good job!', 'Great!', 'Perfect!'][stars]}`,
-      button: last ? 'Play again' : 'Next level',
-      onClick: () => startLevel(last ? 0 : levelIndex + 1),
+      sub: `<b>${levels[levelIdx].name}</b> · ${praise} · ${note}`,
+      next: last ? 'You grew every garden!' : `Next: ${levels[levelIdx + 1].name}`,
+      onClaim: () => startLevel(last ? 0 : levelIdx + 1),
     });
   },
   onFail: () => {
@@ -175,15 +245,16 @@ const game = new Game($('game'), {
     showResult({
       win: false,
       title: 'Out of hearts',
-      text: 'So close! Give it another try.',
+      sub: 'So close! Give it another try.',
       onRevive: () => {
         if (spend(progress, economy.costs.revive)) {
+          leaveResult();
           game.revive();
           renderCoins();
         }
       },
-      button: 'Retry',
-      onClick: () => startLevel(levelIndex),
+      onRetry: () => startLevel(levelIndex),
+      onHome: showHome,
     });
   },
 });
@@ -246,6 +317,8 @@ const tut = {
 };
 
 function startLevel(i) {
+  pendingWin = null;
+  leaveResult();
   toolbar.classList.remove('hidden');
   renderCoins();
   levelIndex = i;
@@ -268,7 +341,7 @@ const home = $('home');
 function showHome() {
   tut.stop();
   toolbar.classList.add('hidden');
-  result.classList.add('hidden');
+  leaveResult();
   const cur = continueIndex();
   $('home-level').textContent = `${levels[cur].name} · ★ ${totalStars(progress)}/${levels.length * 3}`;
   $('play-btn').querySelector('span').textContent = completedCount(progress) === 0 && cur === 0 ? 'Play' : 'Continue';
@@ -490,7 +563,6 @@ function renderDebug() {
       'padding:6px 0;border:0;border-radius:6px;cursor:pointer;font:inherit;' +
       (i === levelIndex ? 'background:#f5c84b;color:#482009;' : 'background:#8a5a2b;color:#fff4df;');
     b.onclick = () => {
-      result.classList.add('hidden');
       startLevel(i);
       renderDebug();
     };
@@ -511,7 +583,6 @@ window.addEventListener('keydown', (e) => {
     if (dbg.style.display !== 'none') renderDebug();
   } else if (dbg.style.display !== 'none' && (e.key === '[' || e.key === ']')) {
     const i = Math.max(0, Math.min(levels.length - 1, levelIndex + (e.key === ']' ? 1 : -1)));
-    result.classList.add('hidden');
     startLevel(i);
     renderDebug();
   }

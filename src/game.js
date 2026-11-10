@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { axialToPixel, pixelToAxial, key, areAdjacent, DIRS } from './hex.js';
+import {
+  LIFT, mulberry, makeLawnCell, setLawnOpacity, spriteGeo, plantMaterial, PLANT_ANCHOR, FLOWER_KINDS,
+  houseMaterial, HOUSE_SIZE, HOUSE_ANCHOR, HOUSE_REACH,
+} from './garden.js';
 
 // ---- Honeycomb palette ----
 const COLORS = {
@@ -350,7 +354,8 @@ function makeSocket() {
 }
 
 /** Layered profile for the orthographic camera. The numbers stay dynamic. */
-const TILE_TOP_LIFT = 0.115;
+const TILE_TOP_LIFT = LIFT;
+const GARDEN_Z = 12; // lift the lawn above the board / water layer
 const TILE_FACE_Y = TILE_TOP_LIFT + 0.027;
 const TILE_ROW_DEPTH = 0.035;
 const pathSegment = new THREE.Shape();
@@ -427,8 +432,11 @@ export class Game {
   constructor(canvas, hooks) {
     this.canvas = canvas;
     this.hooks = hooks; // { onHearts, onWin, onFail, onPlace, onMistake, getSettings }
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-    this.renderer.setClearColor(COLORS.bg, 1);
+    // alpha canvas: on the result screens the clear colour fades out so the sky backdrop shows through
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    this.bgColor = new THREE.Color(COLORS.bg);
+    this.bgAlpha = 1;
+    this.renderer.setClearColor(this.bgColor, 1);
     this.scene = new THREE.Scene();
     // Deep depth range: tile groups are uniformly scaled by cell size, so z scales too.
     this.camera = new THREE.OrthographicCamera(0, 100, 100, 0, 1, 4000);
@@ -439,7 +447,14 @@ export class Game {
     this.contentGroup = new THREE.Group();
     this.trayGroup = new THREE.Group();
     this.dragGroup = new THREE.Group();
-    this.scene.add(this.boardGroup, this.hlGroup, this.contentGroup, this.trayGroup, this.dragGroup);
+    this.gardenGroup = new THREE.Group();
+    this.scene.add(this.boardGroup, this.hlGroup, this.contentGroup, this.gardenGroup, this.trayGroup, this.dragGroup);
+    this.gardenPlan = null; // win garden: stable (unit-space) layout of plants + house
+    this.gardenObjs = null; // meshes built from the plan for the current layout
+    this.gardenT = 0; // garden animation clock (ms)
+    this.view = null; // result-screen camera fit { rectFn, e }
+    this.resultMode = false;
+    this._winToken = 0;
     this.dragGroup.position.z = 200;
 
     this.tweens = [];
@@ -466,6 +481,9 @@ export class Game {
 
   // ---------- public ----------
   loadLevel(level, opts = {}) {
+    this.exitResultView();
+    this._clearGarden();
+    this._winToken++;
     this.level = level;
     this.hearts = MAX_HEARTS;
     this.locked = false;
@@ -536,7 +554,8 @@ export class Game {
 
   /** Cosmetic: canvas background colour. */
   setBackground(hex) {
-    this.renderer.setClearColor(new THREE.Color(hex), 1);
+    this.bgColor = new THREE.Color(hex);
+    this.renderer.setClearColor(this.bgColor, this.bgAlpha);
   }
 
   refreshHints() {
@@ -574,10 +593,21 @@ export class Game {
     this.boardCy = (minY + maxY) / 2;
     this.boardScreenX = W / 2;
     this.boardScreenY = areaTop + (bh * this.R) / 2; // anchored to the top, not centred
+    this.boardBox = {
+      x0: this.boardScreenX - (bw * this.R) / 2,
+      x1: this.boardScreenX + (bw * this.R) / 2,
+      y0: this.boardScreenY - (bh * this.R) / 2,
+      y1: this.boardScreenY + (bh * this.R) / 2,
+    };
 
     this._buildBoard();
     this._buildContent(null);
     this._buildTray();
+    if (this.gardenPlan) {
+      this._buildGardenObjs();
+      this._applyGarden();
+    }
+    this._applyView();
     this.hooks.onLayout?.({ trayTop: this.trayTop });
   }
 
@@ -613,7 +643,11 @@ export class Game {
       model.scale.setScalar(this.R);
       this.boardGroup.add(model);
     };
-    for (const [q, r] of this.level.cells) addCell(q, r, makeSocket());
+    for (const [q, r] of this.level.cells) {
+      const socket = makeSocket();
+      socket.userData.land = true;
+      addCell(q, r, socket);
+    }
     for (const [q, r] of this.level.blocked) {
       const water = new THREE.Group();
       water.add(hexLayer(waterCellGeo(q, r), waterTextureMaterial(), 1.005, 0, 0));
@@ -1191,16 +1225,240 @@ export class Game {
     const filled = Object.keys(this.level.givens).length + this.placed.size;
     if (filled < N) return;
     this.locked = true;
-    // gentle wave pulse over the chain
+    const token = ++this._winToken;
+    this.hooks.onWinStart?.();
+    // 1) gentle wave pulse over the chain (as before)
+    const step = Math.min(22, 1000 / N);
     for (let n = 1; n <= N; n++) {
       const t = this.tileGroups.get(n);
       if (!t) continue;
-      setTimeout(() => this._pulse(t), n * 22);
+      setTimeout(() => this._winToken === token && this._pulse(t), n * step);
     }
-    setTimeout(() => this.hooks.onWin(), N * 22 + 450);
+    // 2) numbers vanish, the tiles merge into one lawn, flowers sprout, the finish cell grows a cottage
+    setTimeout(() => {
+      if (this._winToken !== token) return;
+      this._growGarden(() => {
+        setTimeout(() => this._winToken === token && this.hooks.onWin(), 500);
+      });
+    }, N * step + 120);
   }
   _pulse(t) {
     this._tween(220, (k) => t.scale.setScalar(this.R * (1 + 0.12 * Math.sin(k * Math.PI))));
+  }
+
+  // ---------- garden (win animation) ----------
+  // timeline in ms: lawn fades in over the tiles 0-610, numbers fade 0-300, the cottage pops from 300,
+  // plants sprout between 450 and ~2000.
+  _clearGarden() {
+    this._clear(this.gardenGroup);
+    this.gardenPlan = null;
+    this.gardenObjs = null;
+    this.gardenT = 0;
+    this.contentGroup.visible = true;
+  }
+
+  /** Random but stable-per-level plan, in cell-relative units so it survives relayouts. */
+  _makeGardenPlan() {
+    const level = this.level;
+    const N = level.cells.length;
+    const rnd = mulberry(level.id * 9973 + N * 31 + 7);
+    const houseCell = level.solution[N];
+    const plants = [];
+    for (const [q, r] of level.cells) {
+      if (q === houseCell[0] && r === houseCell[1]) continue;
+      const count = 2 + (rnd() < 0.45 ? 1 : 0);
+      const placed = [];
+      for (let i = 0; i < count; i++) {
+        let dx = 0, dy = 0;
+        for (let tries = 0; tries < 8; tries++) {
+          const a = rnd() * Math.PI * 2;
+          const rad = 0.66 * Math.sqrt(rnd());
+          dx = Math.cos(a) * rad;
+          dy = Math.sin(a) * rad;
+          if (placed.every(([px, py]) => Math.hypot(px - dx, py - dy) > 0.42)) break;
+        }
+        placed.push([dx, dy]);
+        const tuft = rnd() < 0.42;
+        const kind = tuft ? 'tuft' : FLOWER_KINDS[Math.floor(rnd() * FLOWER_KINDS.length)];
+        plants.push({
+          q, r, dx, dy, kind,
+          size: (tuft ? 0.62 : 0.78) * (0.85 + rnd() * 0.35),
+          flip: rnd() < 0.5 ? -1 : 1,
+          delay: 450 + rnd() * 1250,
+          ph: rnd() * 6.28,
+        });
+      }
+    }
+    const lawnDelay = {};
+    for (const [q, r] of level.cells) lawnDelay[key(q, r)] = rnd() * 160;
+    return { plants, houseCell, lawnDelay };
+  }
+
+  _gardenZ(screenY) {
+    return GARDEN_Z + (screenY - this.boardScreenY) * TILE_ROW_DEPTH;
+  }
+
+  _buildGardenObjs() {
+    this._clear(this.gardenGroup);
+    const plan = this.gardenPlan;
+    const R = this.R;
+    const objs = { lawn: [], plants: [], house: null };
+    for (const [q, r] of this.level.cells) {
+      const s = this._cellScreen(q, r);
+      const cell = makeLawnCell(q, r);
+      cell.group.position.copy(this._w(s.x, s.y, this._gardenZ(s.y)));
+      cell.group.scale.setScalar(R);
+      cell.delay = plan.lawnDelay[key(q, r)] ?? 0;
+      this.gardenGroup.add(cell.group);
+      objs.lawn.push(cell);
+    }
+    for (const p of plan.plants) {
+      const s = this._cellScreen(p.q, p.r);
+      const sy = s.y - p.dy * R;
+      const mesh = new THREE.Mesh(spriteGeo(1, 1, PLANT_ANCHOR.ax, PLANT_ANCHOR.ay), plantMaterial(p.kind));
+      mesh.position.copy(this._w(s.x + p.dx * R, sy, this._gardenZ(sy) + R * 0.6));
+      mesh.position.y += R * TILE_TOP_LIFT;
+      mesh.visible = false;
+      this.gardenGroup.add(mesh);
+      objs.plants.push({ mesh, p });
+    }
+    const [hq, hr] = plan.houseCell;
+    const hs = this._cellScreen(hq, hr);
+    const house = new THREE.Mesh(spriteGeo(HOUSE_SIZE, HOUSE_SIZE, HOUSE_ANCHOR.ax, HOUSE_ANCHOR.ay), houseMaterial());
+    house.position.copy(this._w(hs.x, hs.y, this._gardenZ(hs.y) + R * 0.6));
+    house.position.y += R * TILE_TOP_LIFT;
+    house.visible = false;
+    this.gardenGroup.add(house);
+    objs.house = house;
+    this.gardenObjs = objs;
+  }
+
+  /** Pure function of this.gardenT: lawn fade, label fade, plant growth, house pop. */
+  _applyGarden() {
+    const objs = this.gardenObjs;
+    if (!objs) return;
+    const t = this.gardenT;
+    const R = this.R;
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+    const lawnDone = t >= 650;
+    for (const cell of objs.lawn) setLawnOpacity(cell, clamp01((t - cell.delay) / 450));
+    // numbers shrink away; the tiles underneath are hidden once the lawn fully covers them
+    const labelK = clamp01(t / 300);
+    for (const tile of this.tileGroups.values()) {
+      const label = tile.children[4];
+      if (!label) continue;
+      if (!label.userData.own) {
+        label.material = label.material.clone();
+        label.userData.own = true;
+      }
+      label.material.opacity = 1 - labelK;
+      label.scale.setScalar(0.72 * (1 - 0.4 * labelK));
+    }
+    this.contentGroup.visible = !lawnDone;
+    for (const c of this.boardGroup.children) if (c.userData.land) c.visible = !lawnDone;
+    // cottage
+    const hk = clamp01((t - 300) / 650);
+    objs.house.visible = hk > 0;
+    if (hk > 0) {
+      const e = easeOutBack(hk);
+      objs.house.scale.set(R * (0.5 + 0.5 * e), R * Math.max(0.001, e), 1);
+    }
+    // plants
+    for (const o of objs.plants) {
+      const k = clamp01((t - o.p.delay) / 380);
+      o.mesh.visible = k > 0;
+      if (k > 0) {
+        const e = easeOutBack(k);
+        const sz = R * o.p.size;
+        o.mesh.scale.set(sz * o.p.flip * (0.55 + 0.45 * e), sz * Math.max(0.001, e), 1);
+      }
+    }
+  }
+
+  _growGarden(done) {
+    this.gardenPlan = this._makeGardenPlan();
+    this._buildGardenObjs();
+    this.gardenT = 0;
+    const TOTAL = 2150;
+    this._applyGarden();
+    this._tween(TOTAL, (k) => {
+      this.gardenT = k * TOTAL;
+      this._applyGarden();
+    }, () => {
+      this.gardenT = TOTAL + 1000;
+      this._applyGarden();
+      done?.();
+    });
+  }
+
+  // ---------- result screens: camera fit on the finished map ----------
+  enterResultView() {
+    this.resultMode = true;
+    this.trayGroup.visible = this.hlGroup.visible = this.dragGroup.visible = false;
+    // fade the clear colour out so the sky backdrop behind the canvas shows through
+    const token = this._winToken;
+    this._tween(500, (k) => {
+      if (!this.resultMode || token !== this._winToken) return;
+      this.bgAlpha = 1 - k;
+      this.renderer.setClearColor(this.bgColor, this.bgAlpha);
+    });
+  }
+
+  /** Zoom/pan the camera so the whole map (plus cottage) fits `rectFn()` — a rect in canvas CSS px. */
+  fitView(rectFn, dur = 900) {
+    this.view = { rectFn, e: 0 };
+    const token = this._winToken;
+    this._tween(dur, (k) => {
+      if (!this.view || token !== this._winToken) return;
+      this.view.e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      this._applyView();
+    });
+  }
+
+  exitResultView() {
+    this.resultMode = false;
+    this.view = null;
+    this.bgAlpha = 1;
+    this.renderer.setClearColor(this.bgColor, 1);
+    this.trayGroup.visible = this.hlGroup.visible = this.dragGroup.visible = true;
+    this._applyView();
+  }
+
+  _viewBounds() {
+    const R = this.R;
+    const b = this.boardBox;
+    let y0 = b.y0 - 0.5 * R;
+    if (this.gardenPlan) {
+      const hs = this._cellScreen(this.gardenPlan.houseCell[0], this.gardenPlan.houseCell[1]);
+      y0 = Math.min(y0, hs.y - (TILE_TOP_LIFT + HOUSE_REACH) * R - 0.1 * R);
+    }
+    return { x0: b.x0 - 0.15 * R, x1: b.x1 + 0.15 * R, y0, y1: b.y1 + 0.3 * R };
+  }
+
+  _applyView() {
+    const cam = this.camera;
+    const { W, H } = this;
+    const v = this.view;
+    if (!v || !this.boardBox) {
+      cam.left = 0; cam.right = W; cam.top = H; cam.bottom = 0;
+      cam.updateProjectionMatrix();
+      return;
+    }
+    const rect = v.rectFn();
+    const b = this._viewBounds();
+    const cw = b.x1 - b.x0, ch = b.y1 - b.y0;
+    const s1 = Math.min(rect.width / cw, rect.height / ch, 2.4);
+    const c0 = { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 };
+    const rc = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    const e = v.e;
+    const s = 1 + (s1 - 1) * e;
+    const px = c0.x + (rc.x - c0.x) * e;
+    const py = c0.y + (rc.y - c0.y) * e;
+    cam.left = c0.x - px / s;
+    cam.right = cam.left + W / s;
+    cam.top = H - c0.y + py / s;
+    cam.bottom = cam.top - H / s;
+    cam.updateProjectionMatrix();
   }
 
   // ---------- tween + loop ----------
@@ -1223,6 +1481,9 @@ export class Game {
       const t = now / 1600 + w.ph;
       w.mesh.position.x = w.bx + Math.sin(t) * 0.12;
       w.mesh.material.opacity = 0.35 + 0.5 * (0.5 + 0.5 * Math.sin(t * 0.9 + 1));
+    }
+    if (this.gardenObjs && this.gardenT > 2200) {
+      for (const o of this.gardenObjs.plants) o.mesh.rotation.z = Math.sin(now / 900 + o.p.ph) * (o.p.kind === 'tuft' ? 0.035 : 0.07);
     }
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(this._loop);
