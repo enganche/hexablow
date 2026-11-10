@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#F7F1E6" />
-    <title>Hexablow</title>
+    <title>Gardendoku</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap" rel="stylesheet" />
@@ -17,7 +17,11 @@
     <canvas id="game"></canvas>
 
     <header id="hud">
-      <div class="hud-side"></div>
+      <div class="hud-side">
+        <button id="back-btn" class="icon-btn" aria-label="Back to home">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+        </button>
+      </div>
       <div class="hud-center">
         <div id="level-name">Level 1</div>
         <div id="hearts" aria-label="Hearts left"></div>
@@ -99,6 +103,78 @@
         <button id="settings-close" class="btn">Close</button>
       </div>
     </div>
+
+    <!-- home screen -->
+    <section id="home" aria-label="Gardendoku home">
+      <div class="h-sun"></div>
+      <div class="h-cloud c1"></div>
+      <div class="h-cloud c2"></div>
+      <div class="h-cloud c3"></div>
+
+      <div class="h-float f1"><i>3</i></div>
+      <div class="h-float f2"><i>5</i></div>
+      <div class="h-float f3"><i>2</i></div>
+      <div class="h-float f4"><i>8</i></div>
+      <div class="h-float f5"><i>4</i></div>
+
+      <button id="home-settings" class="icon-btn h-gear" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3.2" />
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+        </svg>
+      </button>
+
+      <div class="h-logo">
+        <svg class="h-flower" viewBox="0 0 300 260" aria-hidden="true">
+          <defs>
+            <polygon id="hx" points="0,-36 31.18,-18 31.18,18 0,36 -31.18,18 -31.18,-18" />
+            <linearGradient id="g-leaf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fe36b" /><stop offset="1" stop-color="#3fb54a" /></linearGradient>
+            <linearGradient id="g-pink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9ec0" /><stop offset="1" stop-color="#f0587f" /></linearGradient>
+            <linearGradient id="g-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe66b" /><stop offset="1" stop-color="#ffb52e" /></linearGradient>
+          </defs>
+          <g transform="translate(150 132)" stroke-linejoin="round" stroke-width="5" stroke="#2f6b3a">
+            <g fill="url(#g-leaf)">
+              <use href="#hx" transform="translate(-31.18 -54)" />
+              <use href="#hx" transform="translate(62.35 0)" />
+              <use href="#hx" transform="translate(-31.18 54)" />
+            </g>
+            <g fill="url(#g-pink)">
+              <use href="#hx" transform="translate(31.18 -54)" />
+              <use href="#hx" transform="translate(31.18 54)" />
+              <use href="#hx" transform="translate(-62.35 0)" />
+            </g>
+            <use href="#hx" fill="url(#g-sun)" stroke="#a2651a" transform="scale(1.04)" />
+          </g>
+          <g transform="translate(150 132)" font-family="Nunito, system-ui, sans-serif" font-weight="800" font-size="30" text-anchor="middle" fill="#fff">
+            <text x="-31.18" y="-43.5">1</text>
+            <text x="31.18" y="-43.5">2</text>
+            <text x="62.35" y="10.5">3</text>
+            <text x="31.18" y="64.5">4</text>
+            <text x="-31.18" y="64.5">5</text>
+            <text x="-62.35" y="10.5">6</text>
+            <text x="0" y="10.5" fill="#7a4a0c">7</text>
+          </g>
+          <text class="sprout" x="150" y="40" font-size="40" text-anchor="middle">🌱</text>
+        </svg>
+        <h1 class="h-title"><span class="t1">Garden</span><span class="t2">doku</span></h1>
+        <p class="h-sub">Hex number puzzle</p>
+      </div>
+
+      <div class="h-actions">
+        <button id="play-btn" class="play-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /></svg>
+          <span>Play</span>
+        </button>
+        <div id="home-level" class="h-level"></div>
+      </div>
+
+      <svg class="h-hills" viewBox="0 0 360 140" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 60 Q70 10 150 50 T300 40 T360 55 V140 H0z" fill="#8fd96b" />
+        <path d="M0 90 Q90 50 180 85 T360 80 V140 H0z" fill="#5cc25a" />
+        <path d="M0 115 Q100 85 200 112 T360 105 V140 H0z" fill="#3fa84b" />
+      </svg>
+      <div class="h-blooms" aria-hidden="true"><span>🌸</span><span>🌷</span><span>🌼</span><span>🌻</span><span>🌷</span></div>
+    </section>
 
     </div>
 

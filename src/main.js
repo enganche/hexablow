@@ -133,13 +133,57 @@ const tut = {
   },
 };
 
+// ---- Random layout: apply a random rotation / mirror of the hex grid to a level.
+// Every symmetry keeps adjacency, so the puzzle stays valid and just lands in different cells.
+function randomizeLevel(level) {
+  const rot = Math.floor(Math.random() * 6);
+  const mirror = Math.random() < 0.5;
+  const tf = ([q, r]) => {
+    if (mirror) [q, r] = [r, q];
+    for (let k = 0; k < rot; k++) [q, r] = [-r, q + r]; // 60° rotation in axial coords
+    return [q + 0, r + 0];
+  };
+  const mapObj = (o) => Object.fromEntries(Object.entries(o).map(([n, c]) => [n, tf(c)]));
+  return {
+    ...level,
+    cells: level.cells.map(tf),
+    blocked: level.blocked.map(tf),
+    givens: mapObj(level.givens),
+    solution: mapObj(level.solution),
+  };
+}
+
 function startLevel(i) {
   levelIndex = i;
   saveLevelIndex(i);
-  $('level-name').textContent = levels[i].name;
-  game.loadLevel(levels[i]);
-  tut.start(levels[i]);
+  const base = levels[i];
+  const level = base.id === 1 ? base : randomizeLevel(base); // level 1 stays fixed for the tutorial
+  $('level-name').textContent = base.name;
+  game.loadLevel(level);
+  tut.start(level);
 }
+
+// ---- Home screen ----
+const home = $('home');
+function showHome() {
+  tut.stop();
+  result.classList.add('hidden');
+  $('home-level').textContent = levels[levelIndex].name;
+  home.classList.remove('hidden');
+}
+function hideHome() {
+  home.classList.add('hidden');
+}
+$('play-btn').addEventListener('click', () => {
+  audio.unlock();
+  audio.tap();
+  startLevel(levelIndex);
+  hideHome();
+});
+$('back-btn').addEventListener('click', () => {
+  audio.tap();
+  showHome();
+});
 
 // ---- Settings ----
 const panel = $('settings');
@@ -147,12 +191,14 @@ const note = $('settings-note');
 const inputs = [...document.querySelectorAll('input[data-setting]')];
 inputs.forEach((inp) => (inp.checked = !!settings[inp.dataset.setting]));
 
-$('settings-btn').addEventListener('click', () => {
-  audio.unlock();
-  audio.tap();
-  note.textContent = '';
-  panel.classList.remove('hidden');
-});
+for (const id of ['settings-btn', 'home-settings']) {
+  $(id).addEventListener('click', () => {
+    audio.unlock();
+    audio.tap();
+    note.textContent = '';
+    panel.classList.remove('hidden');
+  });
+}
 $('settings-close').addEventListener('click', () => {
   audio.tap();
   panel.classList.add('hidden');
@@ -197,7 +243,7 @@ window.addEventListener('pointerdown', () => audio.unlock(), { once: false });
 // debug handle (handy for testing)
 window.__hexablow = { game, levels, startLevel };
 
-startLevel(levelIndex);
+showHome();
 
 // ---- Debug level picker: press ` (backtick) to toggle ----
 const dbg = document.createElement('div');
