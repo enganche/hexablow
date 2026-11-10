@@ -105,6 +105,48 @@ body {
 .hud-center {
   text-align: center;
 }
+
+/* ---- rules tooltips (under the hearts) ---- */
+#rules {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0;
+  margin: 10px 0 0;
+  padding: 5px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  pointer-events: none;
+}
+#rules .rule {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f3e6d0;
+  border-radius: 13px;
+  font-weight: 800;
+  font-size: clamp(11px, 3.4cqw, 14px);
+  line-height: 1.15;
+  color: #6d5a3e;
+  text-align: center;
+}
+#rules .rule + .rule {
+  margin-left: 6px;
+}
+#rules .rule svg {
+  flex: none;
+  width: 40px;
+  height: auto;
+}
+#rules .rule span {
+  flex: 1;
+}
+#stage {
+  container-type: inline-size;
+}
 .hud-side.right {
   display: flex;
   justify-content: flex-end;
