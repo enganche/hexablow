@@ -381,7 +381,14 @@ body {
 }
 
 /* ---- Home screen ---- */
-#home {position:absolute;inset:0;z-index:20;overflow:hidden;display:flex;flex-direction:column;align-items:center;background:radial-gradient(circle at 88% 6%,#fff5b1 0%,transparent 23%),linear-gradient(#89d9ed 0%,#c9f0e8 51%,#f3f7ce 80%);color:#315b39;transition:opacity .25s ease;}
+#home {position:absolute;inset:0;z-index:20;overflow:hidden;display:flex;flex-direction:column;align-items:center;background:transparent;color:#315b39;transition:opacity .25s ease;}
+/* square backdrop behind everything, always covering the full window */
+#bg {position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;}
+#stage {z-index:1;}
+/* on home the 9:16 frame is see-through and the game layer is hidden */
+#stage:has(#home:not(.hidden)) {background:transparent;}
+#stage:has(#home:not(.hidden)) > #game,
+#stage:has(#home:not(.hidden)) > #hud {visibility:hidden;}
 #home.hidden {opacity:0;pointer-events:none;visibility:hidden;}
 .h-gear {position:absolute;top:4cqw;right:4cqw;width:11cqw;height:11cqw;background:#fffce9;border:2px solid white;box-shadow:0 1cqw 0 #75ac92;color:#568466;z-index:3;}
 .h-gear svg {width:5.5cqw;height:5.5cqw;}
@@ -404,6 +411,5 @@ body {
 .play-btn:active {transform:translateY(1cqw);box-shadow:0 .8cqw 0 #ca6c23;}
 .play-btn:focus-visible,.h-gear:focus-visible {outline:3px solid #397c3e;outline-offset:5px;}
 .h-level {font-size:3.5cqw;font-weight:800;color:#416e3d;background:#f9ffe1cc;border:1px solid #ffffff99;border-radius:8cqw;padding:1cqw 4cqw;}
-.h-garden {position:absolute;bottom:0;width:100%;height:43cqw;pointer-events:none;}
 @keyframes garden-breathe {50% {transform:translateY(-1cqw);}}
 @media(prefers-reduced-motion:reduce) {.h-board {animation:none;}}
