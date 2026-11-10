@@ -13,6 +13,7 @@ const COLORS = {
 
 const MAX_HEARTS = 3;
 const TRAY_PAD = 18;
+const TUTORIAL_GAP = 60; // HUD bottom -> board top; the tutorial bubble (~44px) lives in here
 const TRAY_GAP = 20;
 
 // ---- Shared geometry (unit circumradius, y-up world) ----
@@ -510,7 +511,8 @@ export class Game {
     const trayBottomPad = 18;
     this.trayCenterY = H - trayBottomPad - trayH / 2;
     this.trayTop = H - trayBottomPad - trayH;
-    const areaTop = hud + 8 + (this.topReserve || 0); // topReserve: room for the tutorial bubble
+    // fixed gap under the HUD (room for the tutorial bubble) so the board never moves when it shows
+    const areaTop = hud + TUTORIAL_GAP;
     const areaBottom = this.trayTop - 14;
 
     // board extents in unit space
@@ -530,7 +532,7 @@ export class Game {
     this.boardCx = (minX + maxX) / 2;
     this.boardCy = (minY + maxY) / 2;
     this.boardScreenX = W / 2;
-    this.boardScreenY = (areaTop + areaBottom) / 2;
+    this.boardScreenY = areaTop + (bh * this.R) / 2; // anchored to the top, not centred
 
     this._buildBoard();
     this._buildContent(null);

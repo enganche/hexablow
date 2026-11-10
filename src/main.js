@@ -90,7 +90,6 @@ const tut = {
     this.steps = level.id === 1 ? Object.keys(level.solution).map(Number).filter((n) => !level.givens[n]) : [];
     this.active = this.steps.length > 0;
     this.el.classList.toggle('hidden', !this.active);
-    this.reserve();
     this.t0 = performance.now();
     if (this.active && !this.running) {
       this.running = true;
@@ -101,14 +100,6 @@ const tut = {
     this.active = false;
     this.running = false;
     this.el.classList.add('hidden');
-    this.reserve();
-  },
-  // push the board down so the bubble sits above it instead of covering it
-  reserve() {
-    const h = this.active ? $('tut-bubble').offsetHeight + 14 : 0;
-    if (game.topReserve === h) return;
-    game.topReserve = h;
-    game.resize();
   },
   tick() {
     if (!this.active) { this.running = false; return; }
@@ -138,7 +129,7 @@ const tut = {
     hand.style.transform = `translate(${x - 14}px, ${y - 4}px)`;
     hand.style.opacity = k > 0.9 ? String((1 - k) * 10) : '1';
     // keep the bubble clear of the board: just under the HUD
-    $('tut-bubble').style.top = `${info.hudBottom + 6}px`;
+    $('tut-bubble').style.top = `${info.hudBottom + 4}px`;
   },
 };
 
