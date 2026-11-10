@@ -133,33 +133,13 @@ const tut = {
   },
 };
 
-// ---- Random layout: apply a random rotation / mirror of the hex grid to a level.
-// Every symmetry keeps adjacency, so the puzzle stays valid and just lands in different cells.
-function randomizeLevel(level) {
-  const rot = Math.floor(Math.random() * 6);
-  const mirror = Math.random() < 0.5;
-  const tf = ([q, r]) => {
-    if (mirror) [q, r] = [r, q];
-    for (let k = 0; k < rot; k++) [q, r] = [-r, q + r]; // 60° rotation in axial coords
-    return [q + 0, r + 0];
-  };
-  const mapObj = (o) => Object.fromEntries(Object.entries(o).map(([n, c]) => [n, tf(c)]));
-  return {
-    ...level,
-    cells: level.cells.map(tf),
-    blocked: level.blocked.map(tf),
-    givens: mapObj(level.givens),
-    solution: mapObj(level.solution),
-  };
-}
-
 function startLevel(i) {
   levelIndex = i;
   saveLevelIndex(i);
-  const base = levels[i];
-  const level = base.id === 1 ? base : randomizeLevel(base); // level 1 stays fixed for the tutorial
-  $('level-name').textContent = base.name;
-  game.loadLevel(level);
+  const level = levels[i];
+  $('level-name').textContent = level.name;
+  // level 1 keeps its fixed tray order (tutorial); later levels shuffle the tray randomly
+  game.loadLevel(level, { randomOrder: level.id !== 1 });
   tut.start(level);
 }
 

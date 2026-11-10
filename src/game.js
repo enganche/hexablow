@@ -451,7 +451,7 @@ export class Game {
   }
 
   // ---------- public ----------
-  loadLevel(level) {
+  loadLevel(level, opts = {}) {
     this.level = level;
     this.hearts = MAX_HEARTS;
     this.locked = false;
@@ -463,7 +463,7 @@ export class Game {
     this.hooks.onHearts(this.hearts, false);
     this.pieces = buildPieces(level).map((p) => ({ ...p, group: null, slot: { x: 0, y: 0 }, scale: 1 }));
     // deterministic shuffle so the tray order is not the solution order
-    this.pieces = seededShuffle(this.pieces, level.id * 7919);
+    this.pieces = seededShuffle(this.pieces, opts.randomOrder ? Math.floor(Math.random() * 4294967296) : level.id * 7919);
     this._layout();
   }
 
