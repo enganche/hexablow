@@ -16,10 +16,10 @@
     <!-- square backdrop: always covers the whole window (cropped, never letterboxed) -->
     <svg id="bg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <defs>
-        <linearGradient id="bg-sky" x2="0" y2="1"><stop stop-color="#89d9ed"/><stop offset=".5" stop-color="#c9f0e8"/><stop offset=".72" stop-color="#f3f7ce"/></linearGradient>
-        <linearGradient id="bg-hill" x2="0" y2="1"><stop stop-color="#a9df5c"/><stop offset="1" stop-color="#54af45"/></linearGradient>
-        <radialGradient id="bg-sun" cx=".5" cy=".5" r=".5"><stop stop-color="#fff5b1"/><stop offset="1" stop-color="#fff5b1" stop-opacity="0"/></radialGradient>
-        <g id="bg-cloud" fill="#ffffffb8"><rect width="260" height="70" rx="35" y="30"/><circle cx="90" cy="35" r="50"/><circle cx="160" cy="45" r="38"/></g>
+        <linearGradient id="bg-sky" x2="0" y2="1"><stop style="stop-color:var(--sky-a)"/><stop offset=".5" style="stop-color:var(--sky-b)"/><stop offset=".72" style="stop-color:var(--sky-c)"/></linearGradient>
+        <linearGradient id="bg-hill" x2="0" y2="1"><stop style="stop-color:var(--hill-2a)"/><stop offset="1" style="stop-color:var(--hill-2b)"/></linearGradient>
+        <radialGradient id="bg-sun" cx=".5" cy=".5" r=".5"><stop style="stop-color:var(--sun)"/><stop offset="1" style="stop-color:var(--sun)" stop-opacity="0"/></radialGradient>
+        <g id="bg-cloud" style="fill:var(--cloud)"><rect width="260" height="70" rx="35" y="30"/><circle cx="90" cy="35" r="50"/><circle cx="160" cy="45" r="38"/></g>
         <g id="bg-flower"><path d="M0 0V80" stroke="#338b47" stroke-width="10" stroke-linecap="round"/><path d="M0 62Q-55 60-48 25Q-8 22 0 62M0 75Q50 68 45 35Q8 35 0 75" fill="#53b64f" stroke="#348f42" stroke-width="4"/><g fill="#ff9fc6" stroke="#dd6a9d" stroke-width="4"><ellipse cy="-25" rx="17" ry="25"/><ellipse cy="-25" rx="17" ry="25" transform="rotate(72)"/><ellipse cy="-25" rx="17" ry="25" transform="rotate(144)"/><ellipse cy="-25" rx="17" ry="25" transform="rotate(216)"/><ellipse cy="-25" rx="17" ry="25" transform="rotate(288)"/></g><circle r="17" fill="#ffe27b" stroke="#eab63d" stroke-width="4"/></g>
       </defs>
       <rect width="1000" height="1000" fill="url(#bg-sky)"/>
@@ -27,9 +27,9 @@
       <use href="#bg-cloud" x="40" y="250"/>
       <use href="#bg-cloud" x="680" y="420" transform="translate(680 420) scale(.8) translate(-680 -420)"/>
       <use href="#bg-cloud" x="300" y="90" transform="translate(300 90) scale(.6) translate(-300 -90)"/>
-      <path d="M0 640Q190 520 480 630T1000 590V1000H0Z" fill="#c5e98c"/>
+      <path d="M0 640Q190 520 480 630T1000 590V1000H0Z" style="fill:var(--hill-1)"/>
       <path d="M0 760Q250 640 560 745T1000 690V1000H0Z" fill="url(#bg-hill)"/>
-      <path d="M0 880Q380 800 1000 870V1000H0Z" fill="#50aa47"/>
+      <path d="M0 880Q380 800 1000 870V1000H0Z" style="fill:var(--hill-3)"/>
       <use href="#bg-flower" transform="translate(110 790) rotate(-12)"/>
       <use href="#bg-flower" transform="translate(890 740) rotate(13) scale(1.15)"/>
       <use href="#bg-flower" transform="translate(250 900) scale(.65)"/>
@@ -92,6 +92,14 @@
       </div>
     </header>
 
+    <!-- coin balance + hint, just above the tray -->
+    <div id="toolbar" class="hidden">
+      <div class="coin-pill"><i class="coin"></i><b id="coin-count">0</b></div>
+      <button id="hint-btn" class="hint-btn" aria-label="Hint">
+        <span>💡 Hint</span><em><i class="coin"></i><b id="hint-cost"></b></em>
+      </button>
+    </div>
+
     <!-- level 1 tutorial overlay (never blocks input) -->
     <div id="tutorial" class="hidden" aria-live="polite">
       <div id="tut-from" class="tut-ring"></div>
@@ -105,10 +113,17 @@
 
     <!-- win / fail card -->
     <div id="result" class="modal hidden" role="dialog" aria-modal="true">
-      <div class="card">
+      <div class="card result-card">
+        <div id="result-stars" class="stars" aria-hidden="true"></div>
         <h2 id="result-title"></h2>
         <p id="result-text"></p>
+        <div id="result-stats" class="stats"></div>
+        <button id="result-revive" class="btn coin-btn hidden"></button>
         <button id="result-btn" class="btn"></button>
+        <div class="result-row">
+          <button id="result-replay" class="btn ghost">Replay</button>
+          <button id="result-home" class="btn ghost">Home</button>
+        </div>
       </div>
     </div>
 
@@ -130,6 +145,7 @@
 
     <!-- home screen -->
     <section id="home" aria-label="Gardendoku home">
+      <button id="home-shop" class="icon-btn h-gear h-shop" aria-label="Garden shop"><span aria-hidden="true">🎨</span></button>
       <button id="home-settings" class="icon-btn h-gear" aria-label="Settings">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3.2" />
@@ -138,7 +154,31 @@
       </button>
       <div class="h-cloud cloud-left"></div><div class="h-cloud cloud-right"></div><header class="h-brand"><h1 class="h-title"><span>Garden</span><span>doku</span></h1><p>HEX NUMBER PUZZLE</p></header>
       <div class="h-hero"><svg class="h-board" viewBox="0 0 300 280" aria-hidden="true"><defs><polygon id="home-hex" points="0,-35 30,-17 30,17 0,35 -30,17 -30,-17" stroke-linejoin="round"/><linearGradient id="leaf" x2="0" y2="1"><stop stop-color="#bbef54"/><stop offset="1" stop-color="#78c528"/></linearGradient><linearGradient id="honey" x2="0" y2="1"><stop stop-color="#ffdb65"/><stop offset="1" stop-color="#ffa936"/></linearGradient><linearGradient id="petal" x2="0" y2="1"><stop stop-color="#ffb3d3"/><stop offset="1" stop-color="#ed77b2"/></linearGradient></defs><ellipse cx="150" cy="240" rx="87" ry="12" fill="#69824d" opacity=".09"/><g transform="translate(150 136)" font-family="Nunito, sans-serif" font-size="29" font-weight="800"><g transform="translate(-32 -55)"><use href="#home-hex" fill="#70a42a" transform="translate(0 7)"/><use href="#home-hex" fill="url(#leaf)" stroke="#d8ef9d" stroke-width="3"/><text y="10" text-anchor="middle" fill="#35581f">1</text></g><g transform="translate(32 -55)"><use href="#home-hex" fill="#70a42a" transform="translate(0 7)"/><use href="#home-hex" fill="url(#leaf)" stroke="#d8ef9d" stroke-width="3"/><text y="10" text-anchor="middle" fill="#35581f">2</text></g><g transform="translate(64 0)"><use href="#home-hex" fill="#70a42a" transform="translate(0 7)"/><use href="#home-hex" fill="url(#leaf)" stroke="#d8ef9d" stroke-width="3"/><text y="10" text-anchor="middle" fill="#35581f">3</text></g><g transform="translate(32 55)"><use href="#home-hex" fill="#d99a36" transform="translate(0 7)"/><use href="#home-hex" fill="url(#honey)" stroke="#ffe3a0" stroke-width="3"/><text y="10" text-anchor="middle" fill="#78521d">4</text></g><g transform="translate(-32 55)"><use href="#home-hex" fill="#d99a36" transform="translate(0 7)"/><use href="#home-hex" fill="url(#honey)" stroke="#ffe3a0" stroke-width="3"/><text y="10" text-anchor="middle" fill="#78521d">5</text></g><g transform="translate(-64 0)"><use href="#home-hex" fill="#d99a36" transform="translate(0 7)"/><use href="#home-hex" fill="url(#honey)" stroke="#ffe3a0" stroke-width="3"/><text y="10" text-anchor="middle" fill="#78521d">6</text></g><g transform="translate(0 0)"><use href="#home-hex" fill="#a7769f" transform="translate(0 7)"/><use href="#home-hex" fill="url(#petal)" stroke="#eac9e2" stroke-width="3"/><text y="10" text-anchor="middle" fill="#63475f">7</text></g></g><g fill="#91ad69"><path d="M38 202q-24-7-19-31 24 7 19 31Z"/><path d="M40 209q-3-24 20-28 4 21-20 28Z"/><path d="M258 78q-2-22 18-25 1 20-18 25Z"/></g><g fill="#d5b66b"><circle cx="56" cy="79" r="3"/><circle cx="253" cy="201" r="3"/></g></svg><p class="h-instruction">A little connection. A big bloom.</p></div>
-      <div class="h-actions"><button id="play-btn" class="play-btn"><span>Play</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div id="home-level" class="h-level"></div></div>
+      <div class="h-actions"><button id="play-btn" class="play-btn"><span>Play</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button id="home-level" class="h-level" aria-label="Choose level"></button></div>
+    </section>
+
+    <!-- shop -->
+    <section id="shop" class="hidden" aria-label="Garden shop">
+      <header class="lv-head">
+        <button id="shop-back" class="icon-btn" aria-label="Back">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7" /></svg>
+        </button>
+        <h2>Shop</h2>
+        <div class="lv-total"><i class="coin"></i> <span id="shop-coins"></span></div>
+      </header>
+      <div id="shop-body" class="shop-body"></div>
+    </section>
+
+    <!-- level select -->
+    <section id="levels" class="hidden" aria-label="Levels">
+      <header class="lv-head">
+        <button id="levels-back" class="icon-btn" aria-label="Back">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7" /></svg>
+        </button>
+        <h2>Levels</h2>
+        <div id="levels-stars" class="lv-total"></div>
+      </header>
+      <div id="levels-grid" class="lv-grid"></div>
     </section>
 
     </div>

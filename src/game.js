@@ -70,8 +70,18 @@ const WAX_WALL = waxSurface(0xdfb479, 0xfce4b3);
 const WAX_FLOOR = waxSurface(0xe9be7f, 0xfce1aa);
 const CONNECTED_FACE = waxSurface(0xbbef54, 0x78c528, TILE_BODY_GEO);
 const CONNECTED_RIM = waxSurface(0xd8ef9d, 0xc0e77b, TILE_BODY_GEO);
-const TILE_FACE = waxSurface(0xffdb65, 0xffa936, TILE_BODY_GEO);
-const TILE_RIM = waxSurface(0xffe3a0, 0xffd477, TILE_BODY_GEO);
+let TILE_FACE = waxSurface(0xffdb65, 0xffa936, TILE_BODY_GEO);
+let TILE_RIM = waxSurface(0xffe3a0, 0xffd477, TILE_BODY_GEO);
+let TILE_BASE = 0xd99a36;
+
+/** Swap the normal-tile palette (cosmetic skin). Connected / finish tiles keep their meaning colours. */
+function setTileSkinColors(skin) {
+  TILE_FACE.dispose();
+  TILE_RIM.dispose();
+  TILE_FACE = waxSurface(skin.face[0], skin.face[1], TILE_BODY_GEO);
+  TILE_RIM = waxSurface(skin.rim[0], skin.rim[1], TILE_BODY_GEO);
+  TILE_BASE = new THREE.Color(skin.base).getHex();
+}
 const FINISH_FACE = waxSurface(0xffb3d3, 0xed77b2, TILE_BODY_GEO);
 const FINISH_RIM = waxSurface(0xffd0e5, 0xf7afd0, TILE_BODY_GEO);
 const LABEL_GEO = new THREE.PlaneGeometry(1.5, 1.5);
@@ -362,7 +372,7 @@ function makeTile(n, directions, isFinish = false, connected = false) {
   label.position.set(0, TILE_TOP_LIFT, 0.5);
   group.add(
     hexLayer(HEX_GEO, basicMat(0xb5651a, 0.10), 0.97, -0.08, 0.08),
-    hexLayer(TILE_BODY_GEO, basicMat(connected ? 0x70a42a : isFinish ? 0xd9609c : 0xd99a36), 1, 0, 0.14),
+    hexLayer(TILE_BODY_GEO, basicMat(connected ? 0x70a42a : isFinish ? 0xd9609c : TILE_BASE), 1, 0, 0.14),
     hexLayer(connected ? CONNECTED_RIM : isFinish ? FINISH_RIM : TILE_RIM, WAX_MAT, 1, TILE_TOP_LIFT, 0.16),
     hexLayer(connected ? CONNECTED_FACE : isFinish ? FINISH_FACE : TILE_FACE, WAX_MAT, 0.92, TILE_FACE_Y, 0.20),
     label
@@ -502,6 +512,33 @@ export class Game {
     };
   }
 
+  /** Paid helper: place the piece holding the lowest missing number. Returns false if busy/nothing to place. */
+  hint() {
+    if (!this.level || this.locked || this.dragPiece || !this.pieces.length) return false;
+    const p = this.pieces.reduce((a, b) => (Math.min(...b.numbers) < Math.min(...a.numbers) ? b : a));
+    const cells = this._pieceCells(p, this.level.solution[p.numbers[0]]);
+    this._commit(p, cells);
+    return true;
+  }
+
+  /** Continue after running out of hearts: one heart back. */
+  revive() {
+    this.hearts = 1;
+    this.locked = false;
+    this.hooks.onHearts(this.hearts, false);
+  }
+
+  /** Cosmetic: tile skin ({face, rim, base}). Rebuilds the scene so existing tiles pick it up. */
+  setTileSkin(skin) {
+    setTileSkinColors(skin);
+    if (this.level) this._layout();
+  }
+
+  /** Cosmetic: canvas background colour. */
+  setBackground(hex) {
+    this.renderer.setClearColor(new THREE.Color(hex), 1);
+  }
+
   refreshHints() {
     this._updateHighlights(this._dragCells || null);
   }
@@ -517,7 +554,7 @@ export class Game {
     this.trayTop = H - trayBottomPad - trayH;
     // fixed gap under the HUD (room for the tutorial bubble) so the board never moves when it shows
     const areaTop = hud + TUTORIAL_GAP;
-    const areaBottom = this.trayTop - 14;
+    const areaBottom = this.trayTop - 54; // room for the coin / hint toolbar above the tray
 
     // board extents in unit space
     const all = [...level.cells, ...level.blocked];
@@ -541,6 +578,7 @@ export class Game {
     this._buildBoard();
     this._buildContent(null);
     this._buildTray();
+    this.hooks.onLayout?.({ trayTop: this.trayTop });
   }
 
   /** screen (y-down px) for a cell centre */

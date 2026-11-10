@@ -1,0 +1,16 @@
+{
+  "startCoins": 30,
+  "win": {
+    "base": 10,
+    "starBonus": {
+      "1": 0,
+      "2": 5,
+      "3": 10
+    },
+    "replayMultiplier": 0.3
+  },
+  "costs": {
+    "hint": 15,
+    "revive": 20
+  }
+}

@@ -3,12 +3,16 @@ import levels from './levels.json';
 import { Game } from './game.js';
 import { AudioManager, vibrate } from './audio.js';
 import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex } from './settings.js';
+import economy from './economy.json';
+import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
+import { loadProgress, recordWin, starsFor, totalStars, completedCount, resetProgress, coinsOf, canAfford, spend, earn, winReward } from './progress.js';
 
 const $ = (id) => document.getElementById(id);
 
 const settings = loadSettings();
 const audio = new AudioManager(() => settings);
 let levelIndex = loadLevelIndex(levels.length);
+const progress = loadProgress();
 
 // ---- HUD ----
 const heartsEl = $('hearts');
@@ -50,25 +54,89 @@ function renderHearts(left, animate) {
   });
 }
 
+// ---- Cosmetics: apply equipped tile skin + background theme ----
+function applyCosmetics() {
+  const tile = equippedItem(progress, 'tile');
+  const theme = equippedItem(progress, 'theme');
+  game.setTileSkin(tile);
+  const root = document.documentElement;
+  for (const [k, v] of Object.entries(theme.vars)) root.style.setProperty(`--${k}`, v);
+  root.style.setProperty('--bg', theme.game);
+  root.style.setProperty('--sub-ink', theme.vars['sub-ink']);
+  game.setBackground(theme.game);
+}
+
+// ---- Coins ----
+const COIN = '<i class="coin"></i>';
+const toolbar = $('toolbar');
+function renderCoins() {
+  $('coin-count').textContent = coinsOf(progress);
+  $('hint-cost').textContent = economy.costs.hint;
+  $('hint-btn').classList.toggle('poor', !canAfford(progress, economy.costs.hint));
+}
+function shakeCoins() {
+  const pill = document.querySelector('.coin-pill');
+  pill.classList.remove('shake');
+  void pill.offsetWidth;
+  pill.classList.add('shake');
+}
+$('hint-btn').addEventListener('click', () => {
+  const cost = economy.costs.hint;
+  if (!canAfford(progress, cost)) return shakeCoins();
+  if (!game.hint()) return;
+  spend(progress, cost);
+  audio.tap();
+  renderCoins();
+});
+
 // ---- Result card ----
 const result = $('result');
-function showResult({ title, text, button, onClick }) {
+const STAR_SVG =
+  '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
+let heartsLeft = 3;
+
+function showResult({ win, stars = 0, note = '', reward = 0, title, text, button, onClick, onRevive }) {
+  result.classList.toggle('win', win);
+  result.classList.toggle('fail', !win);
+  $('result-stars').innerHTML = win
+    ? Array.from({ length: 3 }, (_, i) =>
+        `<span class="star${i < stars ? ' on' : ''}" style="--i:${i}">${STAR_SVG}</span>`).join('')
+    : `<span class="broken">${HEART_SVG}</span>`;
   $('result-title').textContent = title;
   $('result-text').textContent = text;
-  const btn = $('result-btn');
-  btn.textContent = button;
-  btn.onclick = () => {
+  $('result-stats').innerHTML = win
+    ? `<span>Hearts left <b>${heartsLeft}/3</b></span>${note ? ` · <span>${note}</span>` : ''}${reward ? `<div class="reward">+${reward} ${COIN}</div>` : ''}`
+    : '';
+  const close = (fn) => () => {
     result.classList.add('hidden');
     audio.tap();
-    onClick();
+    fn();
   };
+  $('result-btn').textContent = button;
+  $('result-btn').onclick = close(onClick);
+  $('result-replay').classList.toggle('hidden', !win);
+  const rev = $('result-revive');
+  rev.classList.toggle('hidden', win || !onRevive);
+  if (onRevive) {
+    rev.innerHTML = `Revive · ${economy.costs.revive} ${COIN}`;
+    rev.disabled = !canAfford(progress, economy.costs.revive);
+    rev.onclick = close(onRevive);
+  }
+  $('result-replay').onclick = close(() => startLevel(levelIndex));
+  $('result-home').onclick = close(showHome);
   result.classList.remove('hidden');
 }
 
 // ---- Game ----
 const game = new Game($('game'), {
   getSettings: () => settings,
-  onHearts: (left, lostOne) => renderHearts(left, lostOne),
+  onLayout: ({ trayTop }) => {
+    toolbar.style.top = `${trayTop - 46}px`;
+  },
+  onHearts: (left, lostOne) => {
+    heartsLeft = left;
+    renderHearts(left, lostOne);
+  },
   onPlace: (count) => {
     audio.place(count);
     vibrate(settings, 12);
@@ -81,9 +149,23 @@ const game = new Game($('game'), {
     audio.win();
     vibrate(settings, [20, 40, 20]);
     const last = levelIndex === levels.length - 1;
+    const stars = Math.max(1, heartsLeft);
+    const rec = recordWin(progress, levels[levelIndex].id, stars);
+    const reward = winReward(stars, rec.firstClear);
+    earn(progress, reward);
+    renderCoins();
+    const note = rec.firstClear ? 'First clear!' : rec.isNewBest ? '<b>New best!</b>' : `Best <b>${rec.best}★</b>`;
+    // "Play" on the home screen continues from the next level
+    if (levelIndex < levels.length - 1) saveLevelIndex(levelIndex + 1);
     showResult({
+      win: true,
+      stars,
+      note,
+      reward,
       title: last ? 'All levels complete!' : 'Level complete!',
-      text: last ? `You finished all ${levels.length} levels.` : `Nice work on ${levels[levelIndex].name}.`,
+      text: last
+        ? `You finished all ${levels.length} levels.`
+        : `${levels[levelIndex].name} solved. ${['', 'Good job!', 'Great!', 'Perfect!'][stars]}`,
       button: last ? 'Play again' : 'Next level',
       onClick: () => startLevel(last ? 0 : levelIndex + 1),
     });
@@ -91,8 +173,15 @@ const game = new Game($('game'), {
   onFail: () => {
     tut.stop();
     showResult({
+      win: false,
       title: 'Out of hearts',
-      text: 'Give it another try.',
+      text: 'So close! Give it another try.',
+      onRevive: () => {
+        if (spend(progress, economy.costs.revive)) {
+          game.revive();
+          renderCoins();
+        }
+      },
       button: 'Retry',
       onClick: () => startLevel(levelIndex),
     });
@@ -157,6 +246,8 @@ const tut = {
 };
 
 function startLevel(i) {
+  toolbar.classList.remove('hidden');
+  renderCoins();
   levelIndex = i;
   saveLevelIndex(i);
   const level = levels[i];
@@ -166,21 +257,153 @@ function startLevel(i) {
   tut.start(level);
 }
 
+/** Where Continue goes: the first level not yet cleared (or the last one when everything is cleared). */
+function continueIndex() {
+  const i = levels.findIndex((l) => starsFor(progress, l.id) === 0);
+  return i === -1 ? levels.length - 1 : i;
+}
+
 // ---- Home screen ----
 const home = $('home');
 function showHome() {
   tut.stop();
+  toolbar.classList.add('hidden');
   result.classList.add('hidden');
-  $('home-level').textContent = levels[levelIndex].name;
+  const cur = continueIndex();
+  $('home-level').textContent = `${levels[cur].name} · ★ ${totalStars(progress)}/${levels.length * 3}`;
+  $('play-btn').querySelector('span').textContent = completedCount(progress) === 0 && cur === 0 ? 'Play' : 'Continue';
   home.classList.remove('hidden');
 }
 function hideHome() {
   home.classList.add('hidden');
 }
+
+// ---- Shop ----
+const shopEl = $('shop');
+function swatch(item) {
+  if (item.type === 'tile') {
+    const id = `sw-${item.id}`;
+    return `<svg class="sw" viewBox="-40 -40 80 80"><defs><linearGradient id="${id}-f" x2="0" y2="1"><stop stop-color="${item.face[0]}"/><stop offset="1" stop-color="${item.face[1]}"/></linearGradient></defs><polygon points="0,-34 29,-17 29,17 0,34 -29,17 -29,-17" fill="${item.base}" transform="translate(0 4)"/><polygon points="0,-34 29,-17 29,17 0,34 -29,17 -29,-17" fill="url(#${id}-f)" stroke="${item.rim[0]}" stroke-width="3"/><text y="9" text-anchor="middle" font-size="26" font-weight="800" fill="#7a3d12" font-family="Nunito,sans-serif">7</text></svg>`;
+  }
+  const v = item.vars;
+  return `<div class="sw sw-theme" style="background:linear-gradient(${v['sky-a']},${v['sky-b']} 55%,${v['sky-c']})"><i style="background:${v['hill-2a']}"></i><b style="background:${v['hill-3']}"></b></div>`;
+}
+function renderShop() {
+  $('shop-coins').textContent = coinsOf(progress);
+  const body = $('shop-body');
+  body.innerHTML = '';
+  for (const [type, title] of [['tile', 'Tile colours'], ['theme', 'Backgrounds']]) {
+    const h = document.createElement('h3');
+    h.textContent = title;
+    body.appendChild(h);
+    const grid = document.createElement('div');
+    grid.className = 'shop-grid';
+    for (const item of cosmeticItems.filter((i) => i.type === type)) {
+      const owned = isOwned(progress, item.id);
+      const on = progress.equipped[type] === item.id;
+      const card = document.createElement('div');
+      card.className = `shop-card${on ? ' on' : ''}`;
+      const btn = document.createElement('button');
+      btn.className = 'shop-btn';
+      if (on) {
+        btn.textContent = 'Equipped';
+        btn.disabled = true;
+      } else if (owned) {
+        btn.textContent = 'Equip';
+      } else {
+        btn.innerHTML = `${COIN} ${item.price}`;
+        btn.classList.toggle('poor', !canAfford(progress, item.price));
+      }
+      btn.onclick = () => {
+        if (!owned && !buyItem(progress, item.id)) {
+          btn.classList.remove('shake');
+          void btn.offsetWidth;
+          btn.classList.add('shake');
+          return;
+        }
+        equipItem(progress, item.id);
+        audio.tap();
+        applyCosmetics();
+        renderCoins();
+        renderShop();
+      };
+      card.innerHTML = `${swatch(item)}<span class="nm">${item.name}</span>`;
+      card.appendChild(btn);
+      grid.appendChild(card);
+    }
+    body.appendChild(grid);
+  }
+}
+$('home-shop').addEventListener('click', () => {
+  audio.unlock();
+  audio.tap();
+  renderShop();
+  shopEl.classList.remove('hidden');
+});
+$('shop-back').addEventListener('click', () => {
+  audio.tap();
+  shopEl.classList.add('hidden');
+});
+
+// ---- Level select ----
+const levelsEl = $('levels');
+const lockSvg = '<svg class="lock" viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zm2 0h6V8a3 3 0 0 0-6 0z"/></svg>';
+/** A level is playable once the previous one is cleared (or it was already cleared itself). */
+function isUnlocked(i) {
+  return i === 0 || starsFor(progress, levels[i].id) > 0 || starsFor(progress, levels[i - 1].id) > 0;
+}
+function renderLevels() {
+  const cur = continueIndex();
+  $('levels-stars').textContent = `★ ${totalStars(progress)}/${levels.length * 3}`;
+  const grid = $('levels-grid');
+  grid.innerHTML = '';
+  levels.forEach((l, i) => {
+    const locked = !isUnlocked(i);
+    const stars = starsFor(progress, l.id);
+    const b = document.createElement('button');
+    b.className = `lv-card${locked ? ' locked' : ''}${i === cur && !locked ? ' current' : ''}`;
+    b.setAttribute('aria-label', `Level ${l.id}${locked ? ', locked' : `, ${stars} of 3 stars`}`);
+    b.innerHTML =
+      `<span class="num">${l.id}</span>` +
+      (locked
+        ? lockSvg
+        : `<span class="st">${[0, 1, 2].map((k) => STAR_SVG.replace('<svg', `<svg class="${k < stars ? 'on' : ''}"`)).join('')}</span>`) +
+      `<span class="cells">${l.cells.length} cells</span>`;
+    b.onclick = () => {
+      if (locked) {
+        b.classList.remove('shake');
+        void b.offsetWidth;
+        b.classList.add('shake');
+        return;
+      }
+      audio.tap();
+      hideLevels();
+      hideHome();
+      startLevel(i);
+    };
+    grid.appendChild(b);
+  });
+}
+function showLevels() {
+  renderLevels();
+  levelsEl.classList.remove('hidden');
+}
+function hideLevels() {
+  levelsEl.classList.add('hidden');
+}
+$('home-level').addEventListener('click', () => {
+  audio.unlock();
+  audio.tap();
+  showLevels();
+});
+$('levels-back').addEventListener('click', () => {
+  audio.tap();
+  hideLevels();
+});
 $('play-btn').addEventListener('click', () => {
   audio.unlock();
   audio.tap();
-  startLevel(levelIndex);
+  startLevel(continueIndex());
   hideHome();
 });
 $('back-btn').addEventListener('click', () => {
@@ -244,8 +467,9 @@ inputs.forEach((inp) =>
 window.addEventListener('pointerdown', () => audio.unlock(), { once: false });
 
 // debug handle (handy for testing)
-window.__hexablow = { game, levels, startLevel };
+window.__hexablow = { game, levels, startLevel, progress, resetProgress: () => resetProgress(progress) };
 
+applyCosmetics();
 showHome();
 
 // ---- Debug level picker: press ` (backtick) to toggle ----

@@ -1,0 +1,150 @@
+{
+  "defaults": {
+    "owned": [
+      "tile-honey",
+      "theme-meadow"
+    ],
+    "equipped": {
+      "tile": "tile-honey",
+      "theme": "theme-meadow"
+    }
+  },
+  "items": [
+    {
+      "id": "tile-honey",
+      "type": "tile",
+      "name": "Honey",
+      "price": 0,
+      "face": [
+        "#ffdb65",
+        "#ffa936"
+      ],
+      "rim": [
+        "#ffe3a0",
+        "#ffd477"
+      ],
+      "base": "#d99a36"
+    },
+    {
+      "id": "tile-ocean",
+      "type": "tile",
+      "name": "Ocean",
+      "price": 100,
+      "face": [
+        "#a9e4ff",
+        "#4aaee8"
+      ],
+      "rim": [
+        "#d2f0ff",
+        "#9ad4f5"
+      ],
+      "base": "#2f86b8"
+    },
+    {
+      "id": "tile-lilac",
+      "type": "tile",
+      "name": "Lilac",
+      "price": 100,
+      "face": [
+        "#dcc9ff",
+        "#9d80e6"
+      ],
+      "rim": [
+        "#ece2ff",
+        "#c9b3f5"
+      ],
+      "base": "#7458b8"
+    },
+    {
+      "id": "tile-snow",
+      "type": "tile",
+      "name": "Snow",
+      "price": 150,
+      "face": [
+        "#ffffff",
+        "#d3e3ee"
+      ],
+      "rim": [
+        "#ffffff",
+        "#e8f1f7"
+      ],
+      "base": "#9db4c4"
+    },
+    {
+      "id": "theme-meadow",
+      "type": "theme",
+      "name": "Meadow",
+      "price": 0,
+      "game": "#fff4df",
+      "vars": {
+        "sky-a": "#89d9ed",
+        "sky-b": "#c9f0e8",
+        "sky-c": "#f3f7ce",
+        "hill-1": "#c5e98c",
+        "hill-2a": "#a9df5c",
+        "hill-2b": "#54af45",
+        "hill-3": "#50aa47",
+        "sun": "#fff5b1",
+        "cloud": "#ffffffb8",
+        "sub-ink": "#447b62"
+      }
+    },
+    {
+      "id": "theme-dusk",
+      "type": "theme",
+      "name": "Dusk",
+      "price": 120,
+      "game": "#ffe9d6",
+      "vars": {
+        "sky-a": "#ff9f7a",
+        "sky-b": "#ffc08f",
+        "sky-c": "#ffe3b3",
+        "hill-1": "#c9c77a",
+        "hill-2a": "#a8b84f",
+        "hill-2b": "#6f9a3f",
+        "hill-3": "#5d8a3c",
+        "sun": "#ffd27a",
+        "cloud": "#fff0e0b8",
+        "sub-ink": "#7a4a2c"
+      }
+    },
+    {
+      "id": "theme-frost",
+      "type": "theme",
+      "name": "Frost",
+      "price": 120,
+      "game": "#edf5fa",
+      "vars": {
+        "sky-a": "#b8d9f2",
+        "sky-b": "#dcecf8",
+        "sky-c": "#f4f9fd",
+        "hill-1": "#f2f7fa",
+        "hill-2a": "#e2ecf3",
+        "hill-2b": "#c8d9e6",
+        "hill-3": "#b5c8d8",
+        "sun": "#fffbe0",
+        "cloud": "#ffffffd0",
+        "sub-ink": "#4a6a85"
+      }
+    },
+    {
+      "id": "theme-night",
+      "type": "theme",
+      "name": "Night",
+      "price": 200,
+      "game": "#e9ecfa",
+      "vars": {
+        "sky-a": "#2f3b7c",
+        "sky-b": "#5a5fa8",
+        "sky-c": "#9a8fc9",
+        "hill-1": "#4a7a6a",
+        "hill-2a": "#3d6b5c",
+        "hill-2b": "#2a4f4a",
+        "hill-3": "#234540",
+        "sun": "#f4f0c8",
+        "cloud": "#c9c4ee66",
+        "sub-ink": "#e6e2ff"
+      }
+    }
+  ]
+}
