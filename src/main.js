@@ -546,6 +546,8 @@ applyCosmetics();
 showHome();
 
 // ---- Debug level picker: press ` (backtick) to toggle ----
+// "Unlock all" needs a save; progress.js keeps save() private, so earn(0) triggers one.
+const saveProgressNow = () => earn(progress, 0);
 const dbg = document.createElement('div');
 dbg.id = 'debug-levels';
 dbg.style.cssText =
@@ -569,9 +571,72 @@ function renderDebug() {
     grid.appendChild(b);
   });
   dbg.appendChild(grid);
+
+  // ---- cheats ----
+  const row = (label, buttons) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-top:8px;';
+    wrap.innerHTML = `<div style="opacity:.7;font-size:11px;margin-bottom:3px">${label}</div>`;
+    const r = document.createElement('div');
+    r.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;';
+    for (const [text, fn, color] of buttons) {
+      const b = document.createElement('button');
+      b.textContent = text;
+      b.style.cssText =
+        `padding:6px 8px;border:0;border-radius:6px;cursor:pointer;font:inherit;background:${color || '#8a5a2b'};color:#fff4df;`;
+      b.onclick = () => {
+        fn();
+        renderDebug();
+      };
+      r.appendChild(b);
+    }
+    wrap.appendChild(r);
+    dbg.appendChild(wrap);
+  };
+  const inLevel = () => home.classList.contains('hidden') && result.classList.contains('hidden');
+  const debugWin = (stars) => {
+    if (!inLevel()) startLevel(levelIndex);
+    heartsLeft = stars;
+    game.locked = true;
+    game.hooks.onWinStart();
+    game.hooks.onWin();
+  };
+  const debugLose = () => {
+    if (!inLevel()) startLevel(levelIndex);
+    game.hearts = 0;
+    heartsLeft = 0;
+    renderHearts(0, true);
+    game.locked = true;
+    game.hooks.onFail();
+  };
+  row('Coins', [
+    ['+100', () => { earn(progress, 100); renderCoins(); }],
+    ['+1000', () => { earn(progress, 1000); renderCoins(); }],
+    ['+10000', () => { earn(progress, 10000); renderCoins(); }],
+  ]);
+  row('Instant win (stars)', [
+    ['★', () => debugWin(1), '#3f7d3a'],
+    ['★★', () => debugWin(2), '#3f7d3a'],
+    ['★★★', () => debugWin(3), '#3f7d3a'],
+  ]);
+  row('Result', [['Instant lose', debugLose, '#a8402e']]);
+  row('Progress', [
+    ['Unlock all', () => { levels.forEach((l) => { if (!starsFor(progress, l.id)) progress.stars[l.id] = 1; }); saveProgressNow(); }],
+    ['Reset progress', () => {
+      resetProgress(progress);
+      saveLevelIndex(0);
+      levelIndex = 0;
+      renderCoins();
+      applyCosmetics();
+      hideLevels();
+      shopEl.classList.add('hidden');
+      showHome();
+    }, '#a8402e'],
+  ]);
+
   const info = document.createElement('div');
   info.style.cssText = 'margin-top:6px;opacity:.8';
-  info.textContent = `Now: ${levels[levelIndex].name} · ${levels[levelIndex].cells.length} cells`;
+  info.textContent = `Now: ${levels[levelIndex].name} · ${levels[levelIndex].cells.length} cells · 🪙 ${coinsOf(progress)} · ★ ${totalStars(progress)}`;
   dbg.appendChild(info);
 }
 dbg.style.display = 'none';
