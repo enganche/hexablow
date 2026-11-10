@@ -64,12 +64,12 @@ function waxSurface(top, bottom, shape = HEX_GEO) {
 const WAX_RIM = waxSurface(0xfbe3ad, 0xf5d596, TILE_BODY_GEO);
 const WAX_WALL = waxSurface(0xdfb479, 0xfce4b3);
 const WAX_FLOOR = waxSurface(0xe9be7f, 0xfce1aa);
-const CONNECTED_FACE = waxSurface(0xa3df21, 0x73bd08, TILE_BODY_GEO);
-const CONNECTED_RIM = waxSurface(0xb9ed49, 0x62a009, TILE_BODY_GEO);
-const TILE_FACE = waxSurface(0xffc247, 0xff9a2e, TILE_BODY_GEO);
-const TILE_RIM = waxSurface(0xffd882, 0xf79122, TILE_BODY_GEO);
-const FINISH_FACE = waxSurface(0xdbacd2, 0xb478af, TILE_BODY_GEO);
-const FINISH_RIM = waxSurface(0xebc4e2, 0x995c95, TILE_BODY_GEO);
+const CONNECTED_FACE = waxSurface(0xbbef54, 0x78c528, TILE_BODY_GEO);
+const CONNECTED_RIM = waxSurface(0xd8ef9d, 0xc0e77b, TILE_BODY_GEO);
+const TILE_FACE = waxSurface(0xffdb65, 0xffa936, TILE_BODY_GEO);
+const TILE_RIM = waxSurface(0xffe3a0, 0xffd477, TILE_BODY_GEO);
+const FINISH_FACE = waxSurface(0xffb3d3, 0xed77b2, TILE_BODY_GEO);
+const FINISH_RIM = waxSurface(0xffd0e5, 0xf7afd0, TILE_BODY_GEO);
 const LABEL_GEO = new THREE.PlaneGeometry(1.5, 1.5);
 
 const matCache = new Map();
@@ -358,7 +358,7 @@ function makeTile(n, directions, isFinish = false, connected = false) {
   label.position.set(0, TILE_TOP_LIFT, 0.5);
   group.add(
     hexLayer(HEX_GEO, basicMat(0xb5651a, 0.10), 0.97, -0.08, 0.08),
-    hexLayer(TILE_BODY_GEO, basicMat(connected ? 0x62a009 : isFinish ? 0x9f6399 : 0xea8a22), 1, 0, 0.14),
+    hexLayer(TILE_BODY_GEO, basicMat(connected ? 0x70a42a : isFinish ? 0xd9609c : 0xd99a36), 1, 0, 0.14),
     hexLayer(connected ? CONNECTED_RIM : isFinish ? FINISH_RIM : TILE_RIM, WAX_MAT, 1, TILE_TOP_LIFT, 0.16),
     hexLayer(connected ? CONNECTED_FACE : isFinish ? FINISH_FACE : TILE_FACE, WAX_MAT, 0.92, TILE_FACE_Y, 0.20),
     label
