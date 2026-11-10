@@ -20,7 +20,8 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #e4d9c3; /* letterbox colour outside the game frame */
+  /* fallback only: the #bg scene covers the window; match its colours so no beige edge can show */
+  background: linear-gradient(var(--sky-a, #89d9ed), var(--sky-b, #c9f0e8) 55%, var(--hill-2b, #54af45));
   color: var(--ink);
   overscroll-behavior: none;
   user-select: none;
@@ -54,7 +55,7 @@ body {
   position: absolute;
   left: 18px;
   right: 18px;
-  bottom: 4px;
+  bottom: 18px;
   height: 14px;
   display: none;
   border-radius: 7px;
@@ -482,14 +483,17 @@ body {
 }
 
 /* ---- Home screen ---- */
-#home {position:absolute;inset:0;z-index:20;overflow:hidden;display:flex;flex-direction:column;align-items:center;background:transparent;color:#315b39;transition:opacity .25s ease;}
+#home {position:absolute;inset:0;padding-bottom:calc(8cqw + env(safe-area-inset-bottom));box-sizing:border-box;z-index:20;overflow:hidden;display:flex;flex-direction:column;align-items:center;background:transparent;color:#315b39;transition:opacity .25s ease;}
 /* square backdrop behind everything, always covering the full window */
-#bg {position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;}
+#bg {position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;display:block;z-index:0;}
 #stage {z-index:1;}
 /* on home the 9:16 frame is see-through and the game layer is hidden */
 #stage:has(#home:not(.hidden)) {background:transparent;}
 #stage:has(#home:not(.hidden)) > #game,
-#stage:has(#home:not(.hidden)) > #hud {visibility:hidden;}
+#stage:has(#home:not(.hidden)) > #hud,
+#stage:has(#home:not(.hidden)) #tray-scroll,
+#stage:has(#levels:not(.hidden)) #tray-scroll,
+#stage:has(#shop:not(.hidden)) #tray-scroll {visibility:hidden;}
 #home.hidden {opacity:0;pointer-events:none;visibility:hidden;}
 .h-gear {position:absolute;top:4cqw;right:4cqw;width:11cqw;height:11cqw;background:#fffce9;border:2px solid white;box-shadow:0 1cqw 0 #75ac92;color:#568466;z-index:3;}
 .h-gear svg {width:5.5cqw;height:5.5cqw;}
@@ -555,8 +559,11 @@ body {
 .result-card .reward { margin-top:8px; font-size:22px; font-weight:800; color:#b87912; }
 
 /* ---- Level select ---- */
-.h-level { appearance:none; font-family:inherit; cursor:pointer; }
-.h-level::after { content:' ▸'; }
+.h-level { appearance:none; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:2.2cqw; font-size:4.2cqw; color:#fff; background:linear-gradient(#5fb85a,#3f9a47); border:.7cqw solid #ffffffcc; border-radius:8cqw; padding:2cqw 4.5cqw 2cqw 5cqw; box-shadow:0 1.2cqw 0 #2c7338,0 2.5cqw 3cqw #00000025; text-shadow:0 .4cqw 0 #2c733880; transition:transform .15s,box-shadow .15s; }
+.h-level::before { content:''; width:4.6cqw; height:4.6cqw; background:currentColor; order:-1; -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z'/%3E%3C/svg%3E") center/contain no-repeat; }
+.h-level::after { content:'›'; font-size:6cqw; line-height:1; margin-top:-.6cqw; }
+.h-level:active { transform:translateY(.8cqw); box-shadow:0 .4cqw 0 #2c7338; }
+.h-level:focus-visible { outline:3px solid #fff; outline-offset:3px; }
 #levels { position:absolute; inset:0; z-index:20; display:flex; flex-direction:column; background:transparent; color:#315b39; transition:opacity .25s ease; overflow:hidden; }
 #levels.hidden { opacity:0; pointer-events:none; visibility:hidden; }
 #stage:has(#levels:not(.hidden)) { background:transparent; }
@@ -567,7 +574,7 @@ body {
 .lv-head h2 { margin:0; text-align:center; font-size:8cqw; font-weight:800; color:#68bb3c; -webkit-text-stroke:1cqw #fffde6; paint-order:stroke fill; text-shadow:0 .8cqw 0 #398c34; }
 .lv-head .icon-btn { width:11cqw; height:11cqw; background:#fffce9; border:2px solid white; box-shadow:0 1cqw 0 #75ac92; color:#568466; }
 .lv-total { justify-self:end; font-weight:800; font-size:3.6cqw; color:#416e3d; background:#f9ffe1cc; border:1px solid #ffffff99; border-radius:8cqw; padding:1cqw 3cqw; white-space:nowrap; }
-.lv-grid { flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:3.5cqw; align-content:start; padding:3cqw 6cqw 8cqw; }
+.lv-grid { flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:3.5cqw; align-content:start; padding:3cqw 6cqw 14cqw; }
 .lv-card { appearance:none; font:inherit; position:relative; display:flex; flex-direction:column; align-items:center; gap:1cqw; padding:3cqw 1cqw 2.4cqw; border:1cqw solid #fff9df; border-radius:6cqw; background:linear-gradient(#ffc958,#ff9d32 70%,#ff8d2c); box-shadow:0 1.4cqw 0 #ca6c23; color:#78421a; cursor:pointer; }
 .lv-card:active { transform:translateY(.8cqw); box-shadow:0 .6cqw 0 #ca6c23; }
 .lv-card.current { background:linear-gradient(#d4f07a,#8fd13c 70%,#78c528); box-shadow:0 1.4cqw 0 #4c8f1f; color:#2f5a1a; }

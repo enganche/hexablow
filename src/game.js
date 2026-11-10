@@ -549,7 +549,7 @@ export class Game {
     if (!level) return;
     const hud = document.getElementById('hud')?.getBoundingClientRect().bottom || 96;
     const trayH = Math.max(118, Math.min(170, H * 0.2));
-    const trayBottomPad = 18;
+    const trayBottomPad = 44;
     this.trayCenterY = H - trayBottomPad - trayH / 2;
     this.trayTop = H - trayBottomPad - trayH;
     // fixed gap under the HUD (room for the tutorial bubble) so the board never moves when it shows
@@ -690,7 +690,7 @@ export class Game {
     this._clear(this.dragGroup);
     const bounds = this.pieces.map((p) => pieceBounds(p.offsets));
     const maxH = Math.max(1, ...bounds.map((b) => b.h));
-    const trayH = this.H - 18 - this.trayTop;
+    const trayH = this.H - 44 - this.trayTop;
     this.Rt = Math.max(13, Math.min(this.R * 0.8, (trayH * 0.92) / maxH, 34));
 
     let x = TRAY_PAD;
