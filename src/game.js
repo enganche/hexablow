@@ -19,9 +19,11 @@ const COLORS = {
 
 const MAX_HEARTS = 3;
 const TRAY_PAD = 18;
-const TUTORIAL_GAP = 60; // HUD bottom -> board top; the tutorial bubble (~44px) lives in here
+const TUTORIAL_GAP = 60; // HUD bottom -> board top on level 1; the tutorial bubble (~44px) lives in here
+const BOARD_GAP = 6; // HUD bottom -> board top on every other level
+const MAX_CELL_R = 46; // cap for tiny maps (e.g. level 1) so they don't dwarf the normal levels
 const TRAY_GAP = 20;
-const BAR_H = 104; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
+const BAR_H = 84; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
 const TRAY_BOTTOM = BAR_H + 14 + 12; // booster bar + scrollbar + gap
 
 // ---- Shared geometry (unit circumradius, y-up world) ----
@@ -571,7 +573,7 @@ export class Game {
       to: this._cellScreen(to[0], to[1]),
       R: this.R,
       Rt: this.Rt,
-      hudBottom: document.getElementById('hud')?.getBoundingClientRect().bottom || 96,
+      hudBottom: this._hudBottom(),
     };
   }
 
@@ -715,20 +717,25 @@ export class Game {
     this._updateHighlights(this._dragCells || null);
   }
 
+  /** HUD bottom edge in stage coordinates (the stage may be letterboxed inside the window). */
+  _hudBottom() {
+    const h = document.getElementById('hud')?.getBoundingClientRect();
+    return h ? h.bottom - this.canvas.getBoundingClientRect().top : 96;
+  }
+
   // ---------- layout ----------
   _layout() {
     const { W, H, level } = this;
     if (!level) return;
     if (this.mode) this._setMode(null); // a resize closes any open booster mode
-    const hud = document.getElementById('hud')?.getBoundingClientRect().bottom || 96;
-    const trayH = Math.max(104, Math.min(150, H * 0.18));
+    const hud = this._hudBottom();
+    const trayMaxH = Math.max(1, ...this.pieces.map((pc) => pieceBounds(pc.offsets).h));
     const trayBottomPad = TRAY_BOTTOM;
     this.trayBottomPad = trayBottomPad;
-    this.trayCenterY = H - trayBottomPad - trayH / 2;
-    this.trayTop = H - trayBottomPad - trayH;
+    const availBottom = H - trayBottomPad;
     // fixed gap under the HUD (room for the tutorial bubble) so the board never moves when it shows
-    const areaTop = hud + TUTORIAL_GAP;
-    const areaBottom = this.trayTop - 54; // room for the coin / hint toolbar above the tray
+    const areaTop = hud + (level.id === 1 ? TUTORIAL_GAP : BOARD_GAP);
+    const avail = availBottom - areaTop - 12;
 
     // board extents in unit space
     const all = [...level.cells, ...level.blocked];
@@ -742,12 +749,18 @@ export class Game {
     }
     const bw = maxX - minX;
     const bh = maxY - minY;
-    const padX = 20;
-    this.R = Math.min((W - padX * 2) / bw, (areaBottom - areaTop) / bh, 58);
+    const padX = 8;
+    // Board and tray share the height under the HUD: solve for a board scale where both fit (tray pieces
+    // at ~85% of a board cell); height left over on width-limited boards goes to the tray.
+    this.R = Math.min((W - padX * 2) / bw, (avail - 8) / (bh + 0.85 * trayMaxH), MAX_CELL_R);
+    const trayH = Math.min(avail - bh * this.R, 220);
+    this.trayCenterY = availBottom - trayH / 2;
+    this.trayTop = availBottom - trayH;
     this.boardCx = (minX + maxX) / 2;
     this.boardCy = (minY + maxY) / 2;
     this.boardScreenX = W / 2;
-    this.boardScreenY = areaTop + (bh * this.R) / 2; // anchored to the top, not centred
+    // centred in the space between the HUD and the tray
+    this.boardScreenY = (areaTop + this.trayTop - 8) / 2;
     this.boardBox = {
       x0: this.boardScreenX - (bw * this.R) / 2,
       x1: this.boardScreenX + (bw * this.R) / 2,
@@ -921,7 +934,7 @@ export class Game {
     const bounds = this.pieces.map((p) => pieceBounds(p.offsets));
     const maxH = Math.max(1, ...bounds.map((b) => b.h));
     const trayH = this.H - this.trayBottomPad - this.trayTop;
-    this.Rt = Math.max(13, Math.min(this.R * 0.8, (trayH * 0.92) / maxH, 34));
+    this.Rt = Math.max(13, Math.min(this.R, (trayH * 0.92) / maxH, 46));
 
     let x = TRAY_PAD;
     this.pieces.forEach((p, i) => {
@@ -1063,7 +1076,7 @@ export class Game {
 
   _openPickerView() {
     const HEAD = 46, PADY = 12, GAPX = 12, GAPY = 10, MX = 8;
-    const hud = document.getElementById('hud')?.getBoundingClientRect().bottom || 96;
+    const hud = this._hudBottom();
     const panelBottom = this.H - BAR_H - 4;
     const maxH = panelBottom - (hud + 20);
     const availW = this.W - 2 * (MX + 14);

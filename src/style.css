@@ -7,7 +7,7 @@
   --teal-dark: #147d72;
   --coral: #ef6f6c;
   --edge: #e6dcc8;
-  --bar-h: 104px; /* booster bar zone at the bottom (keep in sync with BAR_H in game.js) */
+  --bar-h: 84px; /* booster bar zone at the bottom (keep in sync with BAR_H in game.js) */
   font-family: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
@@ -990,3 +990,26 @@ body {
 .buy-showcase::before { display:none; }
 .buy-spark { color:#e7c35b; text-shadow:none; }
 .buy-card .buy-have { background:#fff; color:#617845; }
+
+
+/* ---- Play screen: compact chrome so the board and the tray get the room ---- */
+#hud { padding:calc(env(safe-area-inset-top) + 6px) 12px 4px; grid-template-columns:48px 1fr 48px; }
+#hud .icon-btn { width:9cqw; height:9cqw; padding:1.1cqw; border-radius:3cqw; }
+#hud .icon-btn svg { width:6.2cqw; height:6.2cqw; }
+#level-name { font-size:17px; line-height:1.1; }
+#hearts { gap:6px; margin-top:2px; min-height:28px; }
+.heart-wrap, .heart { width:28px; height:28px; }
+#rules { margin:5px 0 0; padding:3px; border-radius:14px; }
+#rules .rule { gap:5px; padding:3px 8px; border-radius:11px; font-size:clamp(10px,3cqw,12px); }
+#rules .rule + .rule { margin-left:4px; }
+#rules .rule svg { width:30px; }
+#boosters { height:66px; bottom:max(8px, env(safe-area-inset-bottom)); gap:20px; }
+.boost { flex:0 1 72px; max-width:72px; }
+.boost .b-ic { width:50px; height:50px; }
+.boost .b-badge { min-width:24px; height:24px; font-size:12px; }
+
+/* Booster bar: slightly smaller buttons, wider spacing, more room above the bottom edge */
+#boosters { height:60px; bottom:max(16px, env(safe-area-inset-bottom)); gap:36px; }
+.boost { flex:0 1 64px; max-width:64px; border-radius:16px; }
+.boost .b-ic { width:44px; height:44px; }
+.boost .b-badge { min-width:22px; height:22px; font-size:11px; }
