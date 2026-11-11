@@ -253,11 +253,12 @@ const game = new Game($('game'), {
     vibrate(settings, 60);
   },
   onWinStart: () => {
-    audio.win();
-    vibrate(settings, [20, 40, 20]);
+    audio.setLowHealth(false);
+    const stars = Math.max(1, heartsLeft);
+    audio.victory(stars);
+    vibrate(settings, [20, 40, 20, 40, 80]);
     tut.stop();
     const last = levelIndex === levels.length - 1;
-    const stars = Math.max(1, heartsLeft);
     const rec = recordWin(progress, levels[levelIndex].id, stars);
     const reward = winReward(stars, rec.firstClear);
     earn(progress, reward); // saved right away, so quitting mid-celebration never loses it
@@ -287,6 +288,9 @@ const game = new Game($('game'), {
   },
   onFail: () => {
     tut.stop();
+    audio.setLowHealth(false);
+    setTimeout(() => audio.defeat(), 350); // after the wrong-drop thud
+    vibrate(settings, [80, 60, 160]);
     showResult({
       win: false,
       title: 'Out of hearts',

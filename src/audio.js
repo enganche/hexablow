@@ -100,6 +100,83 @@ export class AudioManager {
     );
   }
 
+  /** Short filtered noise burst (snare / cymbal). */
+  _noise({ dur = 0.15, gain = 0.1, delay = 0, hp = 4000 } = {}) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + delay;
+    const len = Math.max(1, Math.floor(this.ctx.sampleRate * dur));
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const s = this.ctx.createBufferSource();
+    s.buffer = buf;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = hp;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f).connect(g).connect(this.master);
+    s.start(t);
+  }
+
+  /** Brass-ish note: detuned saw + square, so it sounds big. */
+  _brass(freq, dur, delay, gain = 0.07) {
+    this._tone(freq, { type: 'sawtooth', dur, gain, delay });
+    this._tone(freq * 1.006, { type: 'square', dur, gain: gain * 0.5, delay });
+    this._tone(freq / 2, { type: 'triangle', dur, gain: gain * 1.2, delay });
+  }
+
+  /** Level-complete fanfare: drum roll, triumphant brass phrase, big final chord, cymbal and sparkles. */
+  victory(stars = 1) {
+    if (!this.getSettings().sound || !this.ctx) return;
+    const [C, E, G, Bb, hiC, hiE, hiG] = [523.25, 659.25, 783.99, 932.33, 1046.5, 1318.5, 1567.98];
+    // snare roll that speeds up
+    let rt = 0;
+    for (let i = 0; i < 9; i++) {
+      this._noise({ dur: 0.07, gain: 0.05 + i * 0.006, delay: rt, hp: 2000 });
+      this._tone(110, { type: 'sine', dur: 0.08, gain: 0.1, delay: rt, slideTo: 60 });
+      rt += 0.1 - i * 0.007;
+    }
+    const t0 = rt + 0.02; // ~0.58
+    // "da da da DAAA": G G G C (held)
+    [0, 0.13, 0.26].forEach((d) => this._brass(G, 0.12, t0 + d));
+    this._brass(hiC, 0.45, t0 + 0.4, 0.085);
+    // second phrase: Bb, then climb up
+    const t1 = t0 + 0.9;
+    this._brass(Bb, 0.14, t1);
+    this._brass(hiC, 0.14, t1 + 0.16);
+    // final big chord C major
+    const t2 = t1 + 0.34;
+    [C, E, G, hiC, hiE].forEach((f) => this._brass(f, 1.5, t2, 0.06));
+    this._tone(65.4, { type: 'sine', dur: 1.5, gain: 0.18, delay: t2 }); // deep bass hit
+    this._noise({ dur: 1.0, gain: 0.07, delay: t2, hp: 6000 }); // cymbal crash
+    this._noise({ dur: 0.18, gain: 0.12, delay: t2, hp: 1500 });
+    // sparkle shower on top
+    for (let i = 0; i < 6 + stars * 3; i++) {
+      this._tone(2093 + (i % 5) * 330, { dur: 0.14, gain: 0.04, delay: t2 + 0.1 + i * 0.07 });
+    }
+    // perfect clear: extra rising flourish
+    if (stars >= 3) {
+      [hiG, 2093, 2637, 3136].forEach((f, i) =>
+        this._tone(f, { type: 'triangle', dur: 0.4, gain: 0.07, delay: t2 + 0.5 + i * 0.12 })
+      );
+    }
+  }
+
+  /** Sad descending phrase + low sigh for running out of hearts. */
+  defeat() {
+    if (!this.getSettings().sound || !this.ctx) return;
+    // descending minor line: G Eb C (then a low drop)
+    [392.0, 311.13, 261.63].forEach((f, i) => {
+      this._tone(f, { type: 'triangle', dur: 0.38, gain: 0.13, delay: i * 0.3 });
+      this._tone(f / 2, { type: 'sine', dur: 0.4, gain: 0.07, delay: i * 0.3 });
+    });
+    // final slumping slide
+    this._tone(196, { type: 'triangle', dur: 0.9, gain: 0.13, delay: 0.9, slideTo: 98 });
+    this._tone(98, { type: 'sine', dur: 1.0, gain: 0.08, delay: 0.9, slideTo: 65 });
+  }
+
   tap() {
     if (!this.getSettings().sound) return;
     this._tone(700, { dur: 0.05, gain: 0.05 });
