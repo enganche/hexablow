@@ -3,6 +3,8 @@ import { axialToPixel, pixelToAxial, key, areAdjacent, DIRS } from './hex.js';
 import {
   LIFT, mulberry, makeLawnCell, setLawnOpacity, spriteGeo, plantMaterial, PLANT_ANCHOR, FLOWER_KINDS,
   houseMaterial, HOUSE_SIZE, HOUSE_ANCHOR, HOUSE_REACH,
+  fishMaterial, rippleMaterial, butterflyMaterial,
+  dogMaterial, DOG_FRAMES, DOG_ASPECT, DOG_ANCHOR,
 } from './garden.js';
 
 // ---- Honeycomb palette ----
@@ -112,19 +114,27 @@ function basicMat(color, opacity = 1) {
 }
 
 const labelCache = new Map();
-function labelMaterial(n) {
-  if (!labelCache.has(n)) {
+/** Digit colour: the tile's own hue at the old brown's darkness (L .27) and saturation (S .74). */
+function labelInk(tileColor) {
+  const hsl = {};
+  new THREE.Color(tileColor).getHSL(hsl, THREE.SRGBColorSpace);
+  return `#${new THREE.Color().setHSL(hsl.h, 0.74, 0.274, THREE.SRGBColorSpace).getHexString(THREE.SRGBColorSpace)}`;
+}
+function labelMaterial(n, tileColor) {
+  const ink = labelInk(tileColor);
+  const ck = `${n}|${ink}`;
+  if (!labelCache.has(ck)) {
     const size = 128;
     const c = document.createElement('canvas');
     c.width = c.height = size;
     const g = c.getContext('2d');
-    g.fillStyle = '#7a3d12';
+    g.fillStyle = ink;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     const digits = String(n).length;
     const fs = digits >= 3 ? 70 : digits === 2 ? 88 : 104;
     g.font = `900 ${fs}px "Nunito", ui-rounded, system-ui, sans-serif`;
-    g.strokeStyle = '#7a3d12';
+    g.strokeStyle = ink;
     g.lineJoin = 'round';
     g.lineWidth = 6;
     g.strokeText(String(n), size / 2, size / 2 + 5);
@@ -132,9 +142,9 @@ function labelMaterial(n) {
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
-    labelCache.set(n, new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+    labelCache.set(ck, new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
   }
-  return labelCache.get(n);
+  return labelCache.get(ck);
 }
 
 // Water: full-size sharp hex so neighbouring water cells touch, with a painted ripple texture.
@@ -380,7 +390,7 @@ const STRAIGHT_PATH_GEO = new THREE.PlaneGeometry(1, 0.42);
 
 function makeTile(n, directions, isFinish = false, connected = false) {
   const group = new THREE.Group();
-  const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n));
+  const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n, connected ? 0x70a42a : isFinish ? 0xd9609c : TILE_BASE));
   label.scale.setScalar(0.72);
   label.position.set(0, TILE_TOP_LIFT, 0.5);
   group.add(
@@ -1332,7 +1342,7 @@ export class Game {
     const objs = { lawn: [], plants: [], house: null };
     for (const [q, r] of this.level.cells) {
       const s = this._cellScreen(q, r);
-      const cell = makeLawnCell(q, r);
+      const cell = makeLawnCell(q, r, (a, b) => this.cellKeys.has(key(a, b)));
       cell.group.position.copy(this._w(s.x, s.y, this._gardenZ(s.y)));
       cell.group.scale.setScalar(R);
       cell.delay = plan.lawnDelay[key(q, r)] ?? 0;
@@ -1357,6 +1367,116 @@ export class Game {
     house.visible = false;
     this.gardenGroup.add(house);
     objs.house = house;
+    // fish jumping out of the pond(s)
+    objs.fish = [];
+    const water = this.level.blocked || [];
+    if (water.length) {
+      const rf = mulberry(this.level.id * 131 + 5);
+      const picks = [...water].sort(() => rf() - 0.5).slice(0, Math.min(2, water.length));
+      picks.forEach(([q, r], i) => {
+        const s = this._cellScreen(q, r);
+        const z = this._tileZ(s.y) + R * 1.4;
+        const fish = new THREE.Mesh(spriteGeo(1, 1, 0.5, 0.5), fishMaterial());
+        const ring = new THREE.Mesh(spriteGeo(1, 1, 0.5, 0.5), rippleMaterial().clone());
+        fish.visible = ring.visible = false;
+        this.gardenGroup.add(ring, fish);
+        objs.fish.push({ fish, ring, s, z, per: 3600 + rf() * 1600, off: i * 1700 + rf() * 1500, dir: rf() < 0.5 ? 1 : -1 });
+      });
+    }
+    // butterflies fluttering around the map
+    objs.butterflies = [];
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const [q, r] of this.level.cells) {
+      const s = this._cellScreen(q, r);
+      x0 = Math.min(x0, s.x); x1 = Math.max(x1, s.x); y0 = Math.min(y0, s.y); y1 = Math.max(y1, s.y);
+    }
+    const rb = mulberry(this.level.id * 17 + 3);
+    for (let i = 0; i < 4; i++) {
+      const m = new THREE.Mesh(spriteGeo(1, 1, 0.5, 0.5), butterflyMaterial(i));
+      m.visible = false;
+      this.gardenGroup.add(m);
+      objs.butterflies.push({
+        m, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, ax: (x1 - x0) / 2 + R * 0.6, ay: (y1 - y0) / 2 + R * 0.2,
+        fx: 0.00018 + rb() * 0.00014, fy: 0.00024 + rb() * 0.00016, px: rb() * 6.28, py: rb() * 6.28, fl: rb() * 6.28,
+        z: this._tileZ(y1) + R * 2.2,
+      });
+    }
+    // dog: a wide, looping, curvy route that sweeps the whole lawn but keeps clear of the cottage and the pond
+    objs.dog = null;
+    {
+      const rd = mulberry(this.level.id * 71 + 11);
+      const water = (this.level.blocked || []).map(([q, r]) => this._cellScreen(q, r));
+      const hc = this._cellScreen(hq, hr);
+      const pts = this.level.cells.map(([q, r]) => this._cellScreen(q, r));
+      // keep the dog's whole body on the lawn: a ring around it must stay on land cells (not near the rim)
+      const ring = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]];
+      const onLawn = (p, m) => ring.every(([ux, uy]) => {
+        const c = this._screenToCell(p.x + ux * R * 0.62 * m, p.y + uy * R * 0.42 * m);
+        return this.cellKeys.has(key(c[0], c[1])) && !(c[0] === hq && c[1] === hr);
+      });
+      const free = (p, m) => {
+        if (!onLawn(p, m)) return false;
+        // the cottage is tall: treat it as a wide ellipse reaching well above its cell
+        const hx = (p.x - hc.x) / (R * 1.75 * m), hy = (p.y - (hc.y - R * 0.5)) / (R * 1.75 * m);
+        if (hx * hx + hy * hy < 1) return false;
+        return water.every((o) => Math.hypot(p.x - o.x, p.y - o.y) > R * 1.35 * m);
+      };
+
+      // closed Catmull-Rom through the waypoints, sampled into a fine polyline
+      const spline = (w) => {
+        const out = [];
+        const n = w.length;
+        for (let i = 0; i < n; i++) {
+          const p0 = w[(i + n - 1) % n], p1 = w[i], p2 = w[(i + 1) % n], p3 = w[(i + 2) % n];
+          for (let t = 0; t < 1; t += 1 / 16) {
+            const t2 = t * t, t3 = t2 * t;
+            const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+            out.push({ x: f(p0.x, p1.x, p2.x, p3.x), y: f(p0.y, p1.y, p2.y, p3.y) });
+          }
+        }
+        return out;
+      };
+      let gx0 = Infinity, gx1 = -Infinity, gy0 = Infinity, gy1 = -Infinity;
+      for (const p of pts) { gx0 = Math.min(gx0, p.x); gx1 = Math.max(gx1, p.x); gy0 = Math.min(gy0, p.y); gy1 = Math.max(gy1, p.y); }
+      const grid = [];
+      for (let gx = gx0 - R; gx <= gx1 + R; gx += R * 0.4) for (let gy = gy0 - R; gy <= gy1 + R; gy += R * 0.4) grid.push({ x: gx, y: gy });
+      let cx = 0, cy = 0;
+      for (const p of pts) { cx += p.x / pts.length; cy += p.y / pts.length; }
+      let best = null;
+      // try generous clearances first; on small maps relax them step by step
+      for (const m of [1.0, 0.85, 0.7, 0.55, 0.4]) {
+        if (best) break;
+        const spots = grid.filter((p) => free(p, m));
+        if (spots.length < 4) continue;
+        for (let attempt = 0; attempt < 150 && !best; attempt++) {
+          // pick 6-9 far-flung spots, ordered by angle around the lawn centre so the loop sweeps the whole map
+          const want = 6 + Math.floor(rd() * 4);
+          const chosen = [];
+          for (let n = 0; n < 120 && chosen.length < want; n++) {
+            const c = spots[Math.floor(rd() * spots.length)];
+            if (chosen.every((o) => Math.hypot(c.x - o.x, c.y - o.y) > R * 1.8 * m)) chosen.push(c);
+          }
+          if (chosen.length < 4) continue;
+          chosen.sort((p, q) => Math.atan2(p.y - cy, p.x - cx) - Math.atan2(q.y - cy, q.x - cx));
+          const path = spline(chosen);
+          if (path.every((p) => free(p, m))) best = path;
+        }
+      }
+      if (best) {
+        const segs = [];
+        let total = 0;
+        for (let i = 0; i < best.length; i++) {
+          const p = best[i], q = best[(i + 1) % best.length];
+          const len = Math.hypot(q.x - p.x, q.y - p.y);
+          segs.push({ a: p, b: q, len, at: total });
+          total += len;
+        }
+        const mesh = new THREE.Mesh(spriteGeo(DOG_ASPECT, 1, DOG_ANCHOR.ax, DOG_ANCHOR.ay), dogMaterial(0));
+        mesh.visible = false;
+        this.gardenGroup.add(mesh);
+        objs.dog = { mesh, segs, total, dir: 1 };
+      }
+    }
     this.gardenObjs = objs;
   }
 
@@ -1399,6 +1519,65 @@ export class Game {
         const sz = R * o.p.size;
         o.mesh.scale.set(sz * o.p.flip * (0.55 + 0.45 * e), sz * Math.max(0.001, e), 1);
       }
+    }
+  }
+
+  /** Ambient life on the finished garden: koi leaping from the pond, butterflies drifting about. */
+  _animateWildlife(now) {
+    const R = this.R;
+    const dog = this.gardenObjs.dog;
+    if (dog) {
+      const speed = R * 1.9 / 1000; // px per ms
+      // speed up and slow down along the route (sprint / trot)
+      const dRaw = (now - 2200) * speed + Math.sin(now / 1700) * R * 0.7;
+      const d = ((dRaw % dog.total) + dog.total) % dog.total;
+      const seg = dog.segs.find((s) => d >= s.at && d < s.at + s.len) || dog.segs[0];
+      const k = (d - seg.at) / seg.len;
+      const x = seg.a.x + (seg.b.x - seg.a.x) * k;
+      const y = seg.a.y + (seg.b.y - seg.a.y) * k;
+      const f = Math.floor(now / 70) % DOG_FRAMES;
+      const bounce = Math.abs(Math.sin(now / 70 / DOG_FRAMES * Math.PI * 2)) * R * 0.07;
+      dog.mesh.visible = true;
+      if (dog.f !== f) { dog.mesh.material = dogMaterial(f); dog.f = f; }
+      dog.mesh.position.copy(this._w(x, y - bounce, this._gardenZ(y) + R * 0.8));
+      dog.mesh.position.y += R * TILE_TOP_LIFT;
+      const h = R * 0.62;
+      // look a little ahead so the facing follows the curve without flickering at the turns
+      const ahead = dog.segs.find((q) => (d + R * 0.5) % dog.total >= q.at && (d + R * 0.5) % dog.total < q.at + q.len) || seg;
+      const vx = ahead.b.x - ahead.a.x;
+      if (Math.abs(vx) > ahead.len * 0.25) dog.dir = vx >= 0 ? 1 : -1;
+      dog.mesh.scale.set(dog.dir * h, h, 1);
+    }
+    for (const f of this.gardenObjs.fish || []) {
+      const ph = ((now + f.off) % f.per) / f.per;
+      const jump = 0.26; // fraction of the cycle spent airborne
+      if (ph > jump) { f.fish.visible = f.ring.visible = false; continue; }
+      const k = ph / jump;
+      const x = f.s.x + f.dir * (k - 0.5) * R * 0.9;
+      const sy = f.s.y - 4 * k * (1 - k) * R * 1.0;
+      f.fish.visible = k > 0.03 && k < 0.97;
+      f.fish.position.copy(this._w(x, sy, f.z));
+      // nose up while rising, down while falling
+      f.fish.rotation.z = f.dir * (0.9 - 1.8 * k) * 0.8;
+      f.fish.scale.set(R * 0.62 * f.dir, R * 0.62, 1);
+      // ripple at take-off, then at landing
+      const rk = k < 0.5 ? k / 0.5 : (k - 0.5) / 0.5;
+      const rx = f.s.x + f.dir * ((k < 0.5 ? 0 : 1) - 0.5) * R * 0.9;
+      f.ring.visible = true;
+      f.ring.position.copy(this._w(rx, f.s.y + R * 0.1, f.z - 0.1));
+      const rs = R * (0.25 + 0.55 * rk);
+      f.ring.scale.set(rs, rs, 1);
+      f.ring.material.opacity = 1 - rk;
+    }
+    for (const b of this.gardenObjs.butterflies || []) {
+      const x = b.cx + Math.sin(now * b.fx + b.px) * b.ax + Math.sin(now * b.fx * 3.1) * R * 0.15;
+      const y = b.cy + Math.sin(now * b.fy + b.py) * b.ay + Math.sin(now * 0.006 + b.fl) * R * 0.05;
+      const vx = Math.cos(now * b.fx + b.px) * b.fx * b.ax;
+      b.m.visible = true;
+      b.m.position.copy(this._w(x, y, b.z));
+      const flap = 0.25 + 0.75 * Math.abs(Math.sin(now * 0.016 + b.fl));
+      b.m.scale.set(R * 0.55 * flap, R * 0.55, 1);
+      b.m.rotation.z = -Math.max(-1, Math.min(1, vx * 6)) * 0.35;
     }
   }
 
@@ -1512,6 +1691,7 @@ export class Game {
     if (this.gardenObjs && this.gardenT > 2200) {
       for (const o of this.gardenObjs.plants) o.mesh.rotation.z = Math.sin(now / 900 + o.p.ph) * (o.p.kind === 'tuft' ? 0.035 : 0.07);
     }
+    if (this.gardenObjs && this.gardenT > 2200) this._animateWildlife(now);
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(this._loop);
   }

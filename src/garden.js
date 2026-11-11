@@ -111,8 +111,49 @@ function lawnTopGeo(q, r) {
 }
 
 /** One lawn cell: dark soil/grass edge underneath, textured grass lifted on top. Fades via its materials. */
-export function makeLawnCell(q, r) {
+const SIDE_DEPTH = 0.3; // thickness of the soil lip, in cell-radius units
+const NEIGH = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+const sideGeoCache = new Map();
+/** Soil faces under the two screen-downward edges of a hex (skipped where another lawn cell sits against them). */
+function lawnSideGeo(q, r, hasCell) {
+  const faces = [];
+  const p = unitPos(q, r);
+  // hex corners start at 30deg: the lower-left edge joins corners 210-270, the lower-right edge 270-330
+  for (const [a0, a1, shade] of [[210, 270, 0.9], [270, 330, 0.78]]) {
+    const mid = ((a0 + a1) / 2) * (Math.PI / 180);
+    const nb = NEIGH.reduce((best, [dq, dr]) => {
+      const u = unitPos(q + dq, r + dr);
+      const score = (u.x - p.x) * Math.cos(mid) + (u.y - p.y) * Math.sin(mid);
+      return !best || score > best.score ? { dq, dr, score } : best;
+    }, null);
+    if (hasCell(q + nb.dq, r + nb.dr)) continue;
+    faces.push([a0, a1, shade]);
+  }
+  const k = faces.map(([a, b, s]) => `${a}${b}${s}`).join('|');
+  if (sideGeoCache.has(k)) return sideGeoCache.get(k);
+  const pos = [], col = [];
+  const c = new THREE.Color();
+  const pt = (a) => [Math.cos((a * Math.PI) / 180), Math.sin((a * Math.PI) / 180)];
+  for (const [a0, a1, shade] of faces) {
+    const A = pt(a0), B = pt(a1);
+    const top = (v) => pos.push(v[0], v[1] + LIFT, 0);
+    const bot = (v) => pos.push(v[0], v[1] + LIFT - SIDE_DEPTH, 0);
+    top(A); bot(A); top(B);
+    top(B); bot(A); bot(B);
+    const upper = c.set('#b57b43').multiplyScalar(shade).toArray();
+    const lower = c.set('#7d4e28').multiplyScalar(shade).toArray();
+    col.push(...upper, ...lower, ...upper, ...upper, ...lower, ...lower);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  sideGeoCache.set(k, geo);
+  return geo;
+}
+
+export function makeLawnCell(q, r, hasCell = () => false) {
   const baseMat = new THREE.MeshBasicMaterial({ color: 0x5cba30, transparent: true, opacity: 0 });
+  const sideMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, side: THREE.DoubleSide });
   const topMat = new THREE.MeshBasicMaterial({
     map: lawnTexture(),
     transparent: true,
@@ -120,12 +161,14 @@ export function makeLawnCell(q, r) {
   });
   const group = new THREE.Group();
   const base = new THREE.Mesh(HEX_BASE_GEO, baseMat);
-  base.position.set(0, 0, 0.15);
+  base.position.set(0, LIFT, 0.15);
+  const side = new THREE.Mesh(lawnSideGeo(q, r, hasCell), sideMat);
+  side.position.set(0, 0, 0.2);
   const top = new THREE.Mesh(lawnTopGeo(q, r), topMat);
   top.scale.setScalar(1.006);
   top.position.set(0, LIFT, 0.25);
-  group.add(base, top);
-  return { group, mats: [baseMat, topMat] };
+  group.add(base, side, top);
+  return { group, mats: [baseMat, sideMat, topMat] };
 }
 
 export function setLawnOpacity(cell, a) {
@@ -288,7 +331,7 @@ export function plantMaterial(kind) {
 // ---------- isometric cottage ----------
 const HS = 512; // house canvas size
 const H_AX = 256, H_AY = 360; // ground-contact point on the canvas (cell centre)
-export const HOUSE_SIZE = 2.9; // plane size in cell radii
+export const HOUSE_SIZE = 2.3; // plane size in cell radii
 export const HOUSE_ANCHOR = { ax: H_AX / HS, ay: 1 - H_AY / HS };
 /** How far the sprite reaches above its ground point, in cell radii. */
 export const HOUSE_REACH = (H_AY - 56) / HS * HOUSE_SIZE;
@@ -451,3 +494,251 @@ export function houseMaterial() {
   houseMatCache = canvasMat(c);
   return houseMatCache;
 }
+
+// ---------- fish & butterflies (ambient win-screen animation) ----------
+let fishMatCache = null;
+/** Orange koi facing right; origin at the sprite centre. */
+export function fishMaterial() {
+  if (fishMatCache) return fishMatCache;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.lineCap = g.lineJoin = 'round';
+  g.lineWidth = 4;
+  g.strokeStyle = '#d4561f';
+  // tail
+  g.beginPath();
+  g.moveTo(34, 64);
+  g.lineTo(8, 40);
+  g.quadraticCurveTo(18, 64, 8, 88);
+  g.closePath();
+  g.fillStyle = '#ff9a4a';
+  g.fill();
+  g.stroke();
+  // body
+  g.beginPath();
+  g.ellipse(68, 64, 44, 26, 0, 0, Math.PI * 2);
+  g.fillStyle = '#ff8a3c';
+  g.fill();
+  g.stroke();
+  // belly + spot
+  g.beginPath();
+  g.ellipse(70, 74, 30, 11, 0, 0, Math.PI * 2);
+  g.fillStyle = '#ffd9b0';
+  g.fill();
+  g.beginPath();
+  g.ellipse(58, 52, 12, 7, -0.2, 0, Math.PI * 2);
+  g.fillStyle = '#fff4e4';
+  g.fill();
+  // dorsal fin
+  g.beginPath();
+  g.moveTo(50, 40);
+  g.quadraticCurveTo(66, 18, 84, 40);
+  g.fillStyle = '#ff9a4a';
+  g.fill();
+  g.stroke();
+  // eye
+  g.beginPath();
+  g.arc(94, 58, 5, 0, Math.PI * 2);
+  g.fillStyle = '#fff';
+  g.fill();
+  g.beginPath();
+  g.arc(95, 58, 2.6, 0, Math.PI * 2);
+  g.fillStyle = '#2b2b2b';
+  g.fill();
+  fishMatCache = canvasMat(c);
+  return fishMatCache;
+}
+
+let ringMatCache = null;
+/** Soft white ripple ring for the splash. */
+export function rippleMaterial() {
+  if (ringMatCache) return ringMatCache;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.strokeStyle = 'rgba(255,255,255,0.95)';
+  g.lineWidth = 7;
+  g.beginPath();
+  g.ellipse(64, 64, 52, 22, 0, 0, Math.PI * 2);
+  g.stroke();
+  ringMatCache = canvasMat(c);
+  return ringMatCache;
+}
+
+const butterflyCache = new Map();
+/** Front-view butterfly with spread wings; scale X to flap. Origin at centre. */
+export function butterflyMaterial(kind = 0) {
+  if (butterflyCache.has(kind)) return butterflyCache.get(kind);
+  const pal = [
+    ['#ffb347', '#e0731c', '#fff1c9'],
+    ['#8fb5ff', '#4c6fe0', '#e6efff'],
+    ['#ff9fc6', '#d8639a', '#ffe3f0'],
+    ['#ffe56b', '#d9a81c', '#fff8d2'],
+  ][kind % 4];
+  const c = document.createElement('canvas');
+  c.width = c.height = 96;
+  const g = c.getContext('2d');
+  g.lineJoin = 'round';
+  g.lineWidth = 3;
+  g.strokeStyle = pal[1];
+  const wing = (sx) => {
+    g.save();
+    g.translate(48, 48);
+    g.scale(sx, 1);
+    g.beginPath();
+    g.ellipse(18, -13, 20, 16, -0.45, 0, Math.PI * 2);
+    g.fillStyle = pal[0];
+    g.fill();
+    g.stroke();
+    g.beginPath();
+    g.ellipse(14, 16, 13, 11, 0.5, 0, Math.PI * 2);
+    g.fillStyle = pal[0];
+    g.fill();
+    g.stroke();
+    g.beginPath();
+    g.arc(20, -14, 5, 0, Math.PI * 2);
+    g.fillStyle = pal[2];
+    g.fill();
+    g.restore();
+  };
+  wing(1);
+  wing(-1);
+  g.beginPath();
+  g.ellipse(48, 50, 4.5, 17, 0, 0, Math.PI * 2);
+  g.fillStyle = '#5a3a24';
+  g.fill();
+  g.strokeStyle = '#5a3a24';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(47, 33); g.quadraticCurveTo(42, 22, 37, 20);
+  g.moveTo(49, 33); g.quadraticCurveTo(54, 22, 59, 20);
+  g.stroke();
+  const m = canvasMat(c);
+  butterflyCache.set(kind, m);
+  return m;
+}
+
+// ---------- dog (runs around the lawn) ----------
+const dogCache = [];
+export const DOG_FRAMES = 6;
+/** Side-view corgi-ish pup facing right, 6-frame gallop cycle. Origin: feet-level centre. */
+export function dogMaterial(frame) {
+  const f = ((frame % DOG_FRAMES) + DOG_FRAMES) % DOG_FRAMES;
+  if (dogCache[f]) return dogCache[f];
+  const W = 192, H = 144;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const g = c.getContext('2d');
+  g.lineCap = g.lineJoin = 'round';
+  const ph = (f / DOG_FRAMES) * Math.PI * 2;
+  const OUT = '#8a4f1f', FUR = '#f0a24a', LIGHT = '#fff1d6', DARK = '#c97a2c';
+  const gy = 124; // ground line
+  // shadow
+  g.fillStyle = 'rgba(36,96,24,0.28)';
+  g.beginPath();
+  g.ellipse(94, gy + 2, 54, 8, 0, 0, Math.PI * 2);
+  g.fill();
+  // legs: [hipx, hipy, phase offset, far?]
+  const leg = (hx, hy, off, far) => {
+    const a = Math.sin(ph + off);
+    const lift = Math.max(0, Math.cos(ph + off));
+    const fx = hx + a * 20;
+    const fy = gy - lift * 12;
+    g.strokeStyle = OUT;
+    g.lineWidth = 15;
+    g.beginPath();
+    g.moveTo(hx, hy);
+    g.lineTo(fx, fy);
+    g.stroke();
+    g.strokeStyle = far ? DARK : FUR;
+    g.lineWidth = 9;
+    g.stroke();
+    g.fillStyle = LIGHT;
+    g.beginPath();
+    g.ellipse(fx + 3, fy, 8, 5, 0, 0, Math.PI * 2);
+    g.fill();
+  };
+  leg(60, 94, Math.PI, true);
+  leg(120, 94, 0, true);
+  // tail (wags with the cycle)
+  g.strokeStyle = OUT;
+  g.lineWidth = 13;
+  g.beginPath();
+  g.moveTo(44, 72);
+  g.quadraticCurveTo(24, 54 + Math.sin(ph * 2) * 8, 28, 40 + Math.sin(ph * 2) * 8);
+  g.stroke();
+  g.strokeStyle = FUR;
+  g.lineWidth = 7;
+  g.stroke();
+  // body
+  g.beginPath();
+  g.ellipse(92, 82, 52, 29, 0, 0, Math.PI * 2);
+  g.fillStyle = FUR;
+  g.fill();
+  g.strokeStyle = OUT;
+  g.lineWidth = 5;
+  g.stroke();
+  g.beginPath();
+  g.ellipse(96, 98, 36, 13, 0, 0, Math.PI * 2);
+  g.fillStyle = LIGHT;
+  g.fill();
+  leg(70, 96, 0.5, false);
+  leg(128, 96, Math.PI + 0.5, false);
+  // head
+  g.beginPath();
+  g.ellipse(144, 60, 25, 22, 0, 0, Math.PI * 2);
+  g.fillStyle = FUR;
+  g.fill();
+  g.strokeStyle = OUT;
+  g.lineWidth = 5;
+  g.stroke();
+  // snout
+  g.beginPath();
+  g.ellipse(166, 68, 15, 11, 0.1, 0, Math.PI * 2);
+  g.fillStyle = LIGHT;
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#3a2418';
+  g.beginPath();
+  g.ellipse(178, 63, 5.5, 4.5, 0, 0, Math.PI * 2);
+  g.fill();
+  // tongue
+  g.fillStyle = '#ff7f9a';
+  g.beginPath();
+  g.ellipse(166, 82 + Math.abs(Math.sin(ph)) * 3, 5, 7, 0, 0, Math.PI * 2);
+  g.fill();
+  // ear (flops with the stride)
+  g.save();
+  g.translate(132, 46);
+  g.rotate(-0.5 + Math.sin(ph + 1) * 0.25);
+  g.beginPath();
+  g.ellipse(0, 12, 10, 20, 0, 0, Math.PI * 2);
+  g.fillStyle = DARK;
+  g.fill();
+  g.strokeStyle = OUT;
+  g.lineWidth = 4;
+  g.stroke();
+  g.restore();
+  // eye
+  g.fillStyle = '#2b1a10';
+  g.beginPath();
+  g.arc(153, 54, 4.2, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.arc(154.5, 52.5, 1.4, 0, Math.PI * 2);
+  g.fill();
+  // collar
+  g.strokeStyle = '#e8503a';
+  g.lineWidth = 6;
+  g.beginPath();
+  g.moveTo(128, 76);
+  g.quadraticCurveTo(136, 86, 142, 80);
+  g.stroke();
+  dogCache[f] = canvasMat(c);
+  return dogCache[f];
+}
+export const DOG_ASPECT = 192 / 144;
+export const DOG_ANCHOR = { ax: 0.5, ay: 20 / 144 };
