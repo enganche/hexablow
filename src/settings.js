@@ -37,6 +37,15 @@ export function loadLevelIndex(max) {
   return 0;
 }
 
+/** True once any level has ever been opened (false on the very first launch). */
+export function hasOpenedLevel() {
+  try {
+    return localStorage.getItem(LEVEL_KEY) !== null;
+  } catch {
+    return true; // storage unavailable: don't force-open every launch
+  }
+}
+
 export function saveLevelIndex(i) {
   try {
     localStorage.setItem(LEVEL_KEY, String(i));

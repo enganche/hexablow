@@ -2,7 +2,7 @@ import './style.css';
 import levels from './levels.json';
 import { Game } from './game.js';
 import { AudioManager, vibrate } from './audio.js';
-import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex } from './settings.js';
+import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex, hasOpenedLevel } from './settings.js';
 import economy from './economy.json';
 import { winArt, loseArt, confetti } from './resultArt.js';
 import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
@@ -306,7 +306,8 @@ const tut = {
     last: '{n} goes between {p} and {s}',
   },
   start(level) {
-    this.steps = level.id === 1 ? Object.keys(level.solution).map(Number).filter((n) => !level.givens[n]) : [];
+    // only teach until level 1 has been cleared once; replays skip the tutorial
+    this.steps = level.id === 1 && starsFor(progress, level.id) === 0 ? Object.keys(level.solution).map(Number).filter((n) => !level.givens[n]) : [];
     this.active = this.steps.length > 0;
     this.el.classList.toggle('hidden', !this.active);
     this.t0 = performance.now();
@@ -636,6 +637,11 @@ window.__hexablow = { game, levels, startLevel, progress, resetProgress: () => r
 
 applyCosmetics();
 showHome();
+// very first launch: jump straight into level 1
+if (!hasOpenedLevel() && completedCount(progress) === 0) {
+  startLevel(0);
+  hideHome();
+}
 
 // ---- Debug level picker: press ` (backtick) to toggle ----
 // "Unlock all" needs a save; progress.js keeps save() private, so earn(0) triggers one.
