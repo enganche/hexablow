@@ -1280,11 +1280,13 @@ export class Game {
           if (placed.every(([px, py]) => Math.hypot(px - dx, py - dy) > 0.6)) break;
         }
         placed.push([dx, dy]);
+        // grass tufts removed (looked off); keep the rnd() draw so flower layout stays stable
         const tuft = rnd() < 0.42;
-        const kind = tuft ? 'tuft' : FLOWER_KINDS[Math.floor(rnd() * FLOWER_KINDS.length)];
+        if (tuft) { rnd(); rnd(); rnd(); rnd(); continue; }
+        const kind = FLOWER_KINDS[Math.floor(rnd() * FLOWER_KINDS.length)];
         plants.push({
           q, r, dx, dy, kind,
-          size: (tuft ? 0.62 : 0.78) * (0.85 + rnd() * 0.35),
+          size: 0.78 * (0.85 + rnd() * 0.35),
           flip: rnd() < 0.5 ? -1 : 1,
           delay: 450 + rnd() * 1250,
           ph: rnd() * 6.28,

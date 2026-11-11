@@ -35,13 +35,55 @@ const HEX_SHAPE = (() => {
   return s;
 })();
 const HEX_BASE_GEO = new THREE.ShapeGeometry(HEX_SHAPE);
-// Low-poly lawn: every cell is cut into 12 flat-shaded triangles. Tone comes from smooth noise in
-// board space (so patches flow across cells) plus a little per-facet jitter, quantised to a few greens.
-const GRASS_TONES = ['#74c43c', '#85d04a', '#94da58', '#a8e66c'].map((c) => new THREE.Color(c));
-const hash2 = (x, y) => {
-  const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-  return v - Math.floor(v);
-};
+// Pixel-art lawn: one seamless tile (soft tonal patches + faint speckles, drawn texel by texel)
+// sampled in board space, so the pattern flows across neighbouring cells. Linear filtering keeps it soft.
+const TEX_N = 128; // texels per tile side
+const TEX_UNITS = 3.6; // tile side in cell-radius units
+let lawnTex = null;
+function lawnTexture() {
+  if (lawnTex) return lawnTex;
+  const N = TEX_N;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d');
+  const rnd = mulberry(20261110);
+  const wrap = (v) => ((Math.round(v) % N) + N) % N;
+  const px = (x, y, col) => {
+    g.fillStyle = col;
+    g.fillRect(wrap(x), wrap(y), 1, 1);
+  };
+  // 1) tonal patches: wrapping value noise, quantised to a few greens
+  const G = 16;
+  const lat = Array.from({ length: G * G }, () => rnd());
+  const L = (i, j) => lat[(((j % G) + G) % G) * G + (((i % G) + G) % G)];
+  const sm = (t) => t * t * (3 - 2 * t);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const tones = ['#6ac13a', '#6ec53d', '#72c840', '#76cc43'];
+  const cs = N / G;
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const u = x / cs, v = y / cs, i = Math.floor(u), j = Math.floor(v);
+      const fu = sm(u - i), fv = sm(v - j);
+      let n = lerp(lerp(L(i, j), L(i + 1, j), fu), lerp(L(i, j + 1), L(i + 1, j + 1), fu), fv);
+      n += (rnd() - 0.5) * 0.05;
+      px(x, y, tones[Math.max(0, Math.min(3, Math.floor(n * 4)))]);
+    }
+  }
+  // 2) speckles
+  for (let k = 0; k < 14; k++) px(rnd() * N, rnd() * N, rnd() < 0.6 ? '#7acd46' : '#76ca43');
+  for (let k = 0; k < 8; k++) {
+    const x = rnd() * N, y = rnd() * N;
+    px(x, y, '#66bc38');
+    if (rnd() < 0.5) px(x, y + 1, '#66bc38');
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  lawnTex = tex;
+  return tex;
+}
 const lawnGeoCache = new Map();
 function lawnTopGeo(q, r) {
   const k = `${q},${r}`;
@@ -51,35 +93,28 @@ function lawnTopGeo(q, r) {
     const a = ((30 + 60 * i) * Math.PI) / 180;
     return [Math.cos(a), Math.sin(a)];
   });
-  const pos = [], col = [];
-  const tri = (A, B, C) => {
-    const cx = (A[0] + B[0] + C[0]) / 3 + p.x, cy = (A[1] + B[1] + C[1]) / 3 + p.y;
-    const n = Math.sin(cx * 1.3 + cy * 0.7) * 0.5 + Math.sin(cx * 0.6 - cy * 1.4 + 2) * 0.5; // -1..1
-    const t = Math.max(0, Math.min(3, Math.floor((n * 0.5 + 0.5) * 3.2 + (hash2(cx, cy) - 0.5) * 1.3)));
-    const c = GRASS_TONES[t];
-    for (const P of [A, B, C]) {
-      pos.push(P[0], P[1], 0);
-      col.push(c.r, c.g, c.b);
-    }
+  const pos = [], uv = [];
+  const vert = (P) => {
+    pos.push(P[0], P[1], 0);
+    uv.push((P[0] + p.x) / TEX_UNITS, (P[1] + p.y) / TEX_UNITS);
   };
   for (let i = 0; i < 6; i++) {
-    const A = V[i], B = V[(i + 1) % 6];
-    const M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
-    tri([0, 0], A, M);
-    tri([0, 0], M, B);
+    vert([0, 0]);
+    vert(V[i]);
+    vert(V[(i + 1) % 6]);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   lawnGeoCache.set(k, g);
   return g;
 }
 
 /** One lawn cell: dark soil/grass edge underneath, textured grass lifted on top. Fades via its materials. */
 export function makeLawnCell(q, r) {
-  const baseMat = new THREE.MeshBasicMaterial({ color: 0x5fae33, transparent: true, opacity: 0 });
+  const baseMat = new THREE.MeshBasicMaterial({ color: 0x5cba30, transparent: true, opacity: 0 });
   const topMat = new THREE.MeshBasicMaterial({
-    vertexColors: true,
+    map: lawnTexture(),
     transparent: true,
     opacity: 0,
   });
