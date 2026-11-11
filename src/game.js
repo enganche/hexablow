@@ -355,7 +355,6 @@ function makeSocket() {
 
 /** Layered profile for the orthographic camera. The numbers stay dynamic. */
 const TILE_TOP_LIFT = LIFT;
-const GARDEN_Z = 12; // lift the lawn above the board / water layer
 const TILE_FACE_Y = TILE_TOP_LIFT + 0.027;
 const TILE_ROW_DEPTH = 0.035;
 const pathSegment = new THREE.Shape();
@@ -611,6 +610,14 @@ export class Game {
     this.hooks.onLayout?.({ trayTop: this.trayTop });
   }
 
+  /**
+   * Depth of a tile in a given row. Lower rows sit in front of upper ones, but the whole range is shifted
+   * so the top row is still above the socket / water layer (a centred range hid top-row tiles on tall boards).
+   */
+  _tileZ(screenY) {
+    return (screenY - this.boardBox.y0) * TILE_ROW_DEPTH;
+  }
+
   /** screen (y-down px) for a cell centre */
   _cellScreen(q, r) {
     const u = unitPos(q, r);
@@ -707,7 +714,7 @@ export class Game {
       const last = this.level.cells.length;
       const connected = n !== last && linked.has(n);
       const t = makeTile(n, [], n === last, connected);
-      t.position.copy(this._w(s.x, s.y, (s.y - this.boardScreenY) * TILE_ROW_DEPTH));
+      t.position.copy(this._w(s.x, s.y, this._tileZ(s.y)));
       t.scale.setScalar(this.R);
       this.contentGroup.add(t);
       this.tileGroups.set(n, t);
@@ -1300,7 +1307,7 @@ export class Game {
   }
 
   _gardenZ(screenY) {
-    return GARDEN_Z + (screenY - this.boardScreenY) * TILE_ROW_DEPTH;
+    return this._tileZ(screenY) + this.R * 0.7;
   }
 
   _buildGardenObjs() {
