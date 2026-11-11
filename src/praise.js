@@ -10,6 +10,15 @@ const TIERS = [
   { min: 6, text: 'Fantastic!', color: ['#fff0c2', '#ff9a2e'], parts: 30, size: 1.5 },
   { min: 8, text: 'Unstoppable!', color: ['#ffffff', '#ff4d4d'], parts: 40, size: 1.65 },
 ];
+// Time allowed to reach the next streak step before the combo restarts: 10s for 0→1,
+// shrinking linearly to 3s for the step into the top tier (and every step after it).
+const IDLE_MAX_MS = 10000;
+const IDLE_MIN_MS = 3000;
+function idleWindow(nextStreak) {
+  const top = TIERS[TIERS.length - 1].min;
+  const k = Math.min(Math.max(nextStreak - 1, 0) / (top - 1), 1);
+  return IDLE_MAX_MS - (IDLE_MAX_MS - IDLE_MIN_MS) * k;
+}
 const CHAIN_TEXT = { 2: 'Double link!', 3: 'Triple link!' };
 const SPARKS = ['★', '✦', '✧', '●'];
 const CONFETTI = ['#ff6b8b', '#ffd24a', '#6ee06e', '#4ea8ff', '#c07bff', '#ff9a2e'];
@@ -26,24 +35,38 @@ export class Praise {
     this.audio = audio;
     this.getSettings = getSettings;
     this.streak = 0;
+    this.idleTimer = null;
     this.layer = document.createElement('div');
     this.layer.id = 'praise-layer';
     stage.appendChild(this.layer);
   }
 
+  /** (Re)start the idle countdown for the next streak step; running out breaks the streak. */
+  _armIdle() {
+    clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(() => {
+      this.streak = 0;
+      this.idleTimer = null;
+    }, idleWindow(this.streak + 1));
+  }
+
   reset() {
+    clearTimeout(this.idleTimer);
     this.streak = 0;
     this.layer.replaceChildren();
   }
 
   /** a wrong drop breaks the streak */
   miss() {
+    clearTimeout(this.idleTimer);
     this.streak = 0;
   }
 
   /** A correct placement. `pos` = stage-local px of the placed piece centre, `size` = chain length. */
   hit(pos, size, isLast) {
     this.streak++;
+    if (isLast) clearTimeout(this.idleTimer);
+    else this._armIdle();
     const ti = tierFor(this.streak);
     const tier = TIERS[ti];
     this.audio.praise?.(ti, size);
