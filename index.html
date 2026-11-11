@@ -112,12 +112,14 @@
     </div>
 
     <!-- win / fail screen: art -> map -> action -->
-    <div id="result" class="hidden" role="dialog" aria-modal="true">
+    <div id="result" class="hidden" role="dialog" aria-modal="true" aria-label="Level result">
       <div id="res-confetti" aria-hidden="true"></div>
+      <p id="res-kicker" class="res-kicker"></p>
       <div id="res-art" class="res-art"></div>
       <p id="res-sub" class="res-sub"></p>
       <div id="res-map" class="res-map" aria-hidden="true"></div>
       <div id="res-actions" class="res-actions">
+        <div id="res-reward" class="res-reward"></div>
         <button id="result-revive" class="claim-btn alt hidden"></button>
         <button id="result-btn" class="claim-btn"></button>
         <p id="res-next" class="res-next"></p>

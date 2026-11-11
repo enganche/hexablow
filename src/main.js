@@ -146,13 +146,19 @@ function showResult(o) {
   const rev = $('result-revive');
   const home = $('result-home');
   $('res-art').innerHTML = o.win ? winArt(o) : loseArt(o);
+  result.dataset.outcome = o.win ? 'win' : 'lose';
+  result.setAttribute('aria-label', o.title);
+  $('res-kicker').textContent = o.win ? 'A LITTLE CONNECTION. A BIG BLOOM.' : levels[levelIndex].name + ' · KEEP GROWING';
+  $('res-reward').innerHTML = o.win
+    ? `<span>GARDEN REWARD</span><strong>${COIN} +${o.reward}</strong><small>Added to your balance</small>`
+    : '<span>ONE MORE CHANCE</span><strong>Your garden is worth it.</strong><small>Revive to keep your placed tiles.</small>';
   if (o.win) confetti($('res-confetti'));
   else $('res-confetti').innerHTML = '';
   $('res-sub').innerHTML = o.sub;
   $('res-next').textContent = o.next ?? '';
   btn.disabled = false;
   if (o.win) {
-    btn.innerHTML = `<span>Claim</span><em>+${o.reward} ${COIN}</em>`;
+    btn.innerHTML = '<span>Continue</span><span aria-hidden="true">›</span>';
     btn.classList.remove('alt');
     btn.onclick = () => {
       btn.disabled = true;
@@ -166,12 +172,13 @@ function showResult(o) {
     rev.classList.add('hidden');
     home.classList.add('hidden');
   } else {
-    btn.textContent = 'Retry';
+    btn.textContent = '↻  Try again';
     btn.classList.add('alt');
     btn.onclick = () => { audio.tap(); o.onRetry(); };
     rev.classList.remove('hidden');
-    rev.innerHTML = `<span>Revive</span><em>${economy.costs.revive} ${COIN}</em>`;
+    rev.innerHTML = `<span>Keep growing</span><em>${economy.costs.revive} ${COIN}</em>`;
     rev.disabled = !canAfford(progress, economy.costs.revive);
+    if (rev.disabled) $('res-reward').querySelector('small').textContent = `Revive needs ${economy.costs.revive} coins · try again for free`;
     rev.onclick = () => { audio.tap(); o.onRevive(); };
     home.classList.remove('hidden');
     home.onclick = () => { audio.tap(); o.onHome(); };
