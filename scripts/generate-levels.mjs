@@ -381,8 +381,8 @@ const blob = (region, center, n) =>
 // sizes = [w1, w2, w3]: relative weight of 1-, 2-, 3-tile chains in the tray (max chain = 3).
 const specs = [
   { id: 1, region: hexRegion(1), seed: 21, maxGap: 2, ratio: 0.5, sizes: [1, 0, 0] },
-  { id: 2, region: hexRegion(2), seed: 22, maxGap: 5, ratio: 0.45, sizes: [1, 0, 0] },
-  { id: 3, region: hexRegion(2), pond: [[0, 0]], seed: 23, maxGap: 5, ratio: 0.45, sizes: [3, 2, 0] },
+  { id: 2, region: hexRegion(2), seed: 22, maxGap: 2, gapP: 0.25, ratio: 0.6, sizes: [1, 0, 0] },
+  { id: 3, region: hexRegion(2), pond: [[0, 0]], seed: 23, maxGap: 3, gapP: 0.4, ratio: 0.5, sizes: [3, 2, 0] },
   { id: 4, region: flower3, pond: blob(flower3, [0, 0], 5), seed: 24, maxGap: 5, ratio: 0.42, sizes: [2, 3, 0] },
   { id: 5, region: flower3, pond: blob(flower3, [1, 0], 3), seed: 25, maxGap: 5, ratio: 0.4, sizes: [1, 4, 0] },
   { id: 6, region: flower3, pond: [[1, 0], [1, 1]], seed: 26, maxGap: 5, ratio: 0.38, sizes: [1, 5, 1] },
