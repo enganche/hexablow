@@ -2,13 +2,16 @@
 // (coins, inventory, streak...) without breaking saves.
 import economy from './economy.json';
 import cosmetics from './cosmetics.json';
+import collection from './collection.json';
 
 const KEY = 'hexablow.progress.v1';
 
 // stars: { [levelId]: 1..3 }, coins: soft currency balance
 const empty = () => ({
-  v: 1,
+  v: 2,
   stars: {},
+  found: [],
+  setsClaimed: [],
   coins: economy.startCoins,
   owned: [...cosmetics.defaults.owned],
   equipped: { ...cosmetics.defaults.equipped },
@@ -17,7 +20,7 @@ const empty = () => ({
 export function loadProgress() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-    if (raw && raw.v === 1 && raw.stars && typeof raw.stars === 'object') {
+    if (raw && (raw.v === 1 || raw.v === 2) && raw.stars && typeof raw.stars === 'object') {
       const stars = {};
       for (const [id, n] of Object.entries(raw.stars)) {
         const s = Math.round(Number(n));
@@ -30,7 +33,11 @@ export function loadProgress() {
       for (const [type, id] of Object.entries(raw.equipped ?? {})) {
         if (type in equipped && owned.includes(id)) equipped[type] = id;
       }
-      return { v: 1, stars, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, owned, equipped };
+      const speciesIds = new Set(collection.species.map((x) => x.id));
+      const setIds = new Set(collection.sets.map((x) => x.id));
+      const found = [...new Set(Array.isArray(raw.found) ? raw.found : [])].filter((id) => speciesIds.has(id));
+      const setsClaimed = [...new Set(Array.isArray(raw.setsClaimed) ? raw.setsClaimed : [])].filter((id) => setIds.has(id));
+      return { v: 2, stars, found, setsClaimed, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, owned, equipped };
     }
   } catch {
     /* corrupt or unavailable storage: start fresh */
@@ -71,6 +78,8 @@ export function recordWin(p, levelId, stars) {
 
 export function resetProgress(p) {
   p.stars = {};
+  p.found = [];
+  p.setsClaimed = [];
   p.coins = economy.startCoins;
   p.owned = [...cosmetics.defaults.owned];
   p.equipped = { ...cosmetics.defaults.equipped };
@@ -131,4 +140,47 @@ export function equipItem(p, id) {
   p.equipped[item.type] = id;
   save(p);
   return true;
+}
+
+// ---- collection (Garden Album) ----
+export const collectionSets = collection.sets;
+export const collectionSpecies = collection.species;
+
+export function hasSpecies(p, id) {
+  return p.found.includes(id);
+}
+
+export function foundCount(p) {
+  return p.found.length;
+}
+
+/** Species of a set, in album order. */
+export function speciesOfSet(setId) {
+  return collection.species.filter((s) => s.set === setId);
+}
+
+export function setProgress(p, setId) {
+  const list = speciesOfSet(setId);
+  return { have: list.filter((s) => hasSpecies(p, s.id)).length, total: list.length };
+}
+
+/**
+ * Unlock the species tied to a level (first clear only; safe to call again).
+ * Returns { species, set, bonus }: species is null when nothing new was found;
+ * bonus is the coin reward (already paid) when this find completed its set.
+ */
+export function discoverForLevel(p, levelId) {
+  const species = collection.species.find((s) => s.level === levelId);
+  if (!species || hasSpecies(p, species.id)) return { species: null, set: null, bonus: 0 };
+  p.found.push(species.id);
+  const set = collection.sets.find((x) => x.id === species.set);
+  let bonus = 0;
+  const { have, total } = setProgress(p, set.id);
+  if (have === total && !p.setsClaimed.includes(set.id)) {
+    p.setsClaimed.push(set.id);
+    p.coins += set.bonus;
+    bonus = set.bonus;
+  }
+  save(p);
+  return { species, set, bonus };
 }

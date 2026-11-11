@@ -1,0 +1,24 @@
+{
+  "sets": [
+    { "id": "meadow", "name": "Meadow", "bonus": 30 },
+    { "id": "pond", "name": "Pond", "bonus": 40 },
+    { "id": "orchard", "name": "Orchard", "bonus": 50 }
+  ],
+  "species": [
+    { "id": "daisy", "set": "meadow", "name": "Daisy", "icon": "🌼", "level": 1 },
+    { "id": "tulip", "set": "meadow", "name": "Tulip", "icon": "🌷", "level": 2 },
+    { "id": "bee", "set": "meadow", "name": "Bee", "icon": "🐝", "level": 3 },
+    { "id": "butterfly", "set": "meadow", "name": "Butterfly", "icon": "🦋", "level": 4 },
+    { "id": "ladybug", "set": "meadow", "name": "Ladybug", "icon": "🐞", "level": 5 },
+    { "id": "turtle", "set": "pond", "name": "Turtle", "icon": "🐢", "level": 6 },
+    { "id": "frog", "set": "pond", "name": "Frog", "icon": "🐸", "level": 7 },
+    { "id": "duck", "set": "pond", "name": "Duck", "icon": "🦆", "level": 8 },
+    { "id": "koi", "set": "pond", "name": "Koi", "icon": "🐟", "level": 9 },
+    { "id": "snail", "set": "pond", "name": "Snail", "icon": "🐌", "level": 10 },
+    { "id": "apple", "set": "orchard", "name": "Apple", "icon": "🍎", "level": 11 },
+    { "id": "owl", "set": "orchard", "name": "Owl", "icon": "🦉", "level": 12 },
+    { "id": "hedgehog", "set": "orchard", "name": "Hedgehog", "icon": "🦔", "level": 13 },
+    { "id": "mushroom", "set": "orchard", "name": "Mushroom", "icon": "🍄", "level": 14 },
+    { "id": "fox", "set": "orchard", "name": "Fox", "icon": "🦊", "level": 15 }
+  ]
+}

@@ -6,6 +6,7 @@ import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex } from './se
 import economy from './economy.json';
 import { winArt, loseArt, confetti } from './resultArt.js';
 import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
+import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecies, foundCount, discoverForLevel } from './progress.js';
 import { loadProgress, recordWin, starsFor, totalStars, completedCount, resetProgress, coinsOf, canAfford, spend, earn, winReward } from './progress.js';
 
 const $ = (id) => document.getElementById(id);
@@ -107,6 +108,7 @@ function leaveResult() {
   resultTimers.forEach(clearTimeout);
   resultTimers = [];
   result.classList.add('hidden');
+  $('res-find').classList.add('hidden');
   result.classList.remove('show-art', 'show-map', 'show-actions');
   stage.classList.remove('result-mode', 'lose');
   result.querySelectorAll('.fly-coin').forEach((n) => n.remove());
@@ -191,6 +193,33 @@ function showResult(o) {
   result.classList.add('show-art', 'show-map');
   game.fitView(mapRect, 800);
   later(() => result.classList.add('show-actions'), o.win ? 1200 : 800);
+  if (o.win && o.find?.species) later(() => showFind(o.find), 1500);
+}
+
+/** Reward-style reveal for a newly discovered species: dim backdrop, glowing rays, big bounce-in icon. */
+function showFind({ species, set, bonus }) {
+  const { have, total } = setProgress(progress, set.id);
+  const pips = Array.from({ length: total }, (_, i) => `<i class="${i < have ? 'on' : ''}"></i>`).join('');
+  const el = $('res-find');
+  el.innerHTML =
+    '<div class="fp-card">' +
+    '<div class="fp-rays"></div>' +
+    '<span class="fp-new">NEW!</span>' +
+    `<div class="fp-ic">${species.icon}</div>` +
+    `<h4>${species.name}</h4>` +
+    `<p class="fp-set">${set.name} collection</p>` +
+    `<div class="fp-pips" aria-label="${have} of ${total}">${pips}</div>` +
+    (bonus ? `<div class="fp-bonus">Set complete! ${COIN} +${bonus}</div>` : '') +
+    '<button class="claim-btn fp-btn">Collect</button>' +
+    '</div>';
+  el.classList.remove('hidden', 'out');
+  confetti($('res-confetti'));
+  audio.win();
+  el.querySelector('.fp-btn').onclick = () => {
+    audio.tap();
+    el.classList.add('out');
+    later(() => el.classList.add('hidden'), 260);
+  };
 }
 
 let pendingWin = null;
@@ -222,14 +251,15 @@ const game = new Game($('game'), {
     const rec = recordWin(progress, levels[levelIndex].id, stars);
     const reward = winReward(stars, rec.firstClear);
     earn(progress, reward); // saved right away, so quitting mid-celebration never loses it
+    const find = rec.firstClear ? discoverForLevel(progress, levels[levelIndex].id) : null;
     renderCoins();
     // "Play" on the home screen continues from the next level
     if (levelIndex < levels.length - 1) saveLevelIndex(levelIndex + 1);
-    pendingWin = { last, stars, rec, reward, levelIdx: levelIndex };
+    pendingWin = { last, stars, rec, reward, find, levelIdx: levelIndex };
   },
   onWin: () => {
     if (!pendingWin) return;
-    const { last, stars, rec, reward, levelIdx } = pendingWin;
+    const { last, stars, rec, reward, find, levelIdx } = pendingWin;
     pendingWin = null;
     const praise = ['', 'Good job!', 'Great!', 'Perfect!'][stars];
     const note = rec.firstClear ? 'First clear!' : rec.isNewBest ? 'New best!' : `Best ${rec.best}★`;
@@ -238,6 +268,7 @@ const game = new Game($('game'), {
       title: last ? 'Garden Complete!' : 'Level Complete!',
       stars,
       reward,
+      find,
       sub: `<b>${levels[levelIdx].name}</b> · ${praise} · ${note}`,
       next: last ? 'You grew every garden!' : `Next: ${levels[levelIdx + 1].name}`,
       onClaim: () => startLevel(last ? 0 : levelIdx + 1),
@@ -420,6 +451,42 @@ $('home-shop').addEventListener('click', () => {
 $('shop-back').addEventListener('click', () => {
   audio.tap();
   shopEl.classList.add('hidden');
+});
+
+// ---- Garden album (collection) ----
+const albumEl = $('album');
+function renderAlbum() {
+  $('album-total').textContent = `${foundCount(progress)}/${collectionSpecies.length}`;
+  const body = $('album-body');
+  body.innerHTML = '';
+  for (const set of collectionSets) {
+    const { have, total } = setProgress(progress, set.id);
+    const h = document.createElement('h3');
+    h.innerHTML = `${set.name} <small>${have}/${total}${have === total ? ' ✓' : ` · bonus ${set.bonus}`}</small>`;
+    if (have < total) h.querySelector('small').insertAdjacentHTML('beforeend', ` ${COIN}`);
+    body.appendChild(h);
+    const grid = document.createElement('div');
+    grid.className = 'album-grid';
+    for (const sp of speciesOfSet(set.id)) {
+      const got = hasSpecies(progress, sp.id);
+      const card = document.createElement('div');
+      card.className = `album-card${got ? '' : ' unknown'}`;
+      card.setAttribute('aria-label', got ? sp.name : `Undiscovered, clear level ${sp.level}`);
+      card.innerHTML = `<span class="ic" aria-hidden="true">${sp.icon}</span><span class="nm">${got ? sp.name : `Level ${sp.level}`}</span>`;
+      grid.appendChild(card);
+    }
+    body.appendChild(grid);
+  }
+}
+$('home-album').addEventListener('click', () => {
+  audio.unlock();
+  audio.tap();
+  renderAlbum();
+  albumEl.classList.remove('hidden');
+});
+$('album-back').addEventListener('click', () => {
+  audio.tap();
+  albumEl.classList.add('hidden');
 });
 
 // ---- Level select ----

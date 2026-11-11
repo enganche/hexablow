@@ -587,6 +587,48 @@ body {
 
 /* ---- Shop ---- */
 .h-shop { left: 4cqw; right: auto; font-size: 5.4cqw; }
+.h-album { left: 17cqw; right: auto; font-size: 5.4cqw; }
+
+/* ---- Album ---- */
+#album { position:absolute; inset:0; z-index:20; display:flex; flex-direction:column; background:transparent; color:#315b39; transition:opacity .25s ease; overflow:hidden; }
+#album.hidden { opacity:0; pointer-events:none; visibility:hidden; }
+#stage:has(#album:not(.hidden)) { background:transparent; }
+#stage:has(#album:not(.hidden)) > #game,
+#stage:has(#album:not(.hidden)) > #hud,
+#stage:has(#album:not(.hidden)) > #toolbar,
+#stage:has(#album:not(.hidden)) > #tray-scroll,
+#stage:has(#album:not(.hidden)) > #home { visibility:hidden; }
+#album h3 small { font-size:3.2cqw; opacity:.9; display:inline-flex; align-items:center; gap:1cqw; margin-left:1.5cqw; }
+.album-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3cqw; }
+.album-card { display:flex; flex-direction:column; align-items:center; gap:1cqw; padding:3cqw 1cqw 2.4cqw; border-radius:5cqw; background:#fffdf3; border:1cqw solid #fff; box-shadow:0 1.4cqw 0 #b7c99a; }
+.album-card .ic { font-size:11cqw; line-height:1.1; }
+.album-card .nm { font-weight:800; font-size:3.4cqw; color:#416e3d; text-align:center; }
+.album-card.unknown { background:#e6e0cf; box-shadow:0 1.4cqw 0 #b9b19a; }
+.album-card.unknown .ic { filter:brightness(0) opacity(.28); }
+.album-card.unknown .nm { color:#8a7d6a; }
+
+/* result: new-find reveal */
+.find-pop { position:absolute; inset:0; z-index:5; display:grid; place-items:center; background:#1b3a2acc; pointer-events:auto; animation:fp-fade .3s both; }
+.find-pop.hidden { display:none; }
+.find-pop.out { animation:fp-fade .25s reverse both; }
+@keyframes fp-fade { from { opacity:0; } to { opacity:1; } }
+.fp-card { position:relative; width:78%; display:flex; flex-direction:column; align-items:center; gap:1.6cqw; padding:12cqw 6cqw 6cqw; border-radius:8cqw; background:linear-gradient(#fffef0,#fff3c6); border:1.2cqw solid #fff; box-shadow:0 2cqw 0 #d9a63a, 0 0 8cqw #ffe27a; animation:fp-card .6s cubic-bezier(.2,1.5,.4,1) both; color:#7a4a10; }
+@keyframes fp-card { from { transform:scale(.4) translateY(8cqw); opacity:0; } to { transform:none; opacity:1; } }
+.fp-rays { position:absolute; left:50%; top:30%; width:130cqw; height:130cqw; margin:-65cqw 0 0 -65cqw; z-index:-1; border-radius:50%; background:repeating-conic-gradient(from 0deg,#ffe88a55 0 10deg,#fff0 10deg 20deg); -webkit-mask:radial-gradient(circle,#000 20%,#0000 68%); mask:radial-gradient(circle,#000 20%,#0000 68%); animation:fp-spin 14s linear infinite; }
+@keyframes fp-spin { to { transform:rotate(360deg); } }
+.fp-new { position:absolute; top:-4cqw; left:50%; transform:translateX(-50%) rotate(-4deg); background:#ff6b3c; color:#fff; font-weight:900; font-size:5cqw; letter-spacing:.4cqw; padding:1cqw 6cqw; border-radius:8cqw; border:.8cqw solid #fff; box-shadow:0 1cqw 0 #b8431c; animation:fp-new 1.2s ease-in-out .6s infinite alternate; }
+@keyframes fp-new { to { transform:translateX(-50%) rotate(3deg) scale(1.08); } }
+.fp-ic { font-size:30cqw; line-height:1.1; filter:drop-shadow(0 2cqw 1.4cqw #7a4a1033); animation:fp-ic .9s cubic-bezier(.2,1.8,.4,1) .25s both, fp-bob 2s ease-in-out 1.2s infinite alternate; }
+@keyframes fp-ic { from { transform:scale(0) rotate(-40deg); } to { transform:none; } }
+@keyframes fp-bob { to { transform:translateY(-1.6cqw) scale(1.04); } }
+.fp-card h4 { margin:0; font-size:9cqw; font-weight:900; color:#97601d; }
+.fp-set { margin:0; font-size:3.8cqw; font-weight:800; opacity:.75; }
+.fp-pips { display:flex; gap:2cqw; margin:1cqw 0; }
+.fp-pips i { width:4.4cqw; height:4.4cqw; border-radius:50%; background:#e3d6b0; border:.5cqw solid #c9b682; }
+.fp-pips i.on { background:#ffb02e; border-color:#c97a0a; box-shadow:0 0 2cqw #ffd45a; }
+.fp-bonus { display:flex; align-items:center; gap:1.6cqw; font-weight:900; font-size:4.4cqw; color:#3d7d3a; background:#eaffc7; border-radius:6cqw; padding:1cqw 4cqw; }
+.fp-btn { margin-top:2cqw; width:80%; }
+
 #shop { position:absolute; inset:0; z-index:20; display:flex; flex-direction:column; background:transparent; color:#315b39; transition:opacity .25s ease; overflow:hidden; }
 #shop.hidden { opacity:0; pointer-events:none; visibility:hidden; }
 #stage:has(#shop:not(.hidden)) { background:transparent; }

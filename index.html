@@ -123,6 +123,7 @@
         <button id="result-btn" class="claim-btn"></button>
         <button id="result-home" class="res-home hidden" aria-label="Home"></button>
       </div>
+      <div id="res-find" class="find-pop hidden" role="dialog" aria-label="New collectible"></div>
     </div>
 
     <!-- settings -->
@@ -144,6 +145,7 @@
     <!-- home screen -->
     <section id="home" aria-label="Gardendoku home">
       <button id="home-shop" class="icon-btn h-gear h-shop" aria-label="Garden shop"><span aria-hidden="true">🎨</span></button>
+      <button id="home-album" class="icon-btn h-gear h-album" aria-label="Garden album"><span aria-hidden="true">📖</span></button>
       <button id="home-settings" class="icon-btn h-gear" aria-label="Settings">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3.2" />
@@ -165,6 +167,18 @@
         <div class="lv-total"><i class="coin"></i> <span id="shop-coins"></span></div>
       </header>
       <div id="shop-body" class="shop-body"></div>
+    </section>
+
+    <!-- garden album -->
+    <section id="album" class="hidden" aria-label="Garden album">
+      <header class="lv-head">
+        <button id="album-back" class="icon-btn" aria-label="Back">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7" /></svg>
+        </button>
+        <h2>Album</h2>
+        <div id="album-total" class="lv-total"></div>
+      </header>
+      <div id="album-body" class="shop-body"></div>
     </section>
 
     <!-- level select -->
