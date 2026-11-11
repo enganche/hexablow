@@ -73,6 +73,26 @@ export class AudioManager {
     this._tone(220, { type: 'triangle', dur: 0.22, gain: 0.16, slideTo: 150 });
   }
 
+  /**
+   * Zelda-style low-health alarm: a quick "bip-bip" every second while one heart is left.
+   * `canBeep()` lets the caller mute it on non-game screens (home, result, shop...).
+   */
+  setLowHealth(on, canBeep = () => true) {
+    if (!on) {
+      clearInterval(this.lowTimer);
+      this.lowTimer = null;
+      return;
+    }
+    if (this.lowTimer) return;
+    const beep = () => {
+      if (document.hidden || !this.ctx || !this.getSettings().sound || !canBeep()) return;
+      this._tone(1568, { type: 'square', dur: 0.07, gain: 0.05 });
+      this._tone(1568, { type: 'square', dur: 0.07, gain: 0.05, delay: 0.13 });
+    };
+    this.lowTimer = setInterval(beep, 1000);
+    setTimeout(beep, 350); // first alarm right after the wrong-drop thud
+  }
+
   win() {
     if (!this.getSettings().sound) return;
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>

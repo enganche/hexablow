@@ -33,6 +33,7 @@ function heartBurst() {
 }
 
 function renderHearts(left, animate) {
+  $('stage').classList.toggle('low-hearts', left === 1); // calm warning: heartbeat + soft edge glow
   heartsEl.innerHTML = Array.from({ length: 3 }, () => `<span class="heart-wrap">${HEART_SVG}</span>`).join('');
   [...heartsEl.children].forEach((w, i) => {
     const lost = i >= left;
@@ -236,6 +237,10 @@ const game = new Game($('game'), {
   onHearts: (left, lostOne) => {
     heartsLeft = left;
     renderHearts(left, lostOne);
+    audio.setLowHealth(left === 1, () => {
+      const st = $('stage');
+      return !st.matches('.result-mode, :has(#home:not(.hidden)), :has(#levels:not(.hidden)), :has(#shop:not(.hidden)), :has(#album:not(.hidden))');
+    });
   },
   onPlace: (count, pos, isLast) => {
     audio.place(count);

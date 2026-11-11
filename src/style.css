@@ -855,3 +855,37 @@ body {
 .praise-spark { position:absolute; line-height:1; text-shadow:0 0 6px #fff; }
 .praise-confetti { position:absolute; border-radius:2px; }
 .praise-flash { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 45%,#fffbe0 0%,#fff3b000 70%); }
+
+/* ---- Last-heart warning: slow heartbeat on the remaining heart + faint breathing edge glow.
+   Edge-only, low opacity, never over the board centre, and no flashing (about 1 pulse per 1.6s). ---- */
+.heart-wrap:not(.lost) .heart { transition: filter .3s; }
+#stage.low-hearts .heart-wrap:not(.lost):not(.breaking) .heart {
+  animation: heart-beat 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(239, 70, 66, 0.75));
+}
+#stage.low-hearts .heart-wrap:not(.lost):not(.breaking) path { stroke: #ffd9d6; }
+@keyframes heart-beat {
+  0%, 38%, 100% { transform: scale(1); }
+  10% { transform: scale(1.22); }
+  20% { transform: scale(1.02); }
+  28% { transform: scale(1.14); }
+}
+#stage.low-hearts::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  box-shadow: inset 0 0 56px 8px rgba(239, 70, 66, 0.4);
+  animation: low-glow 3.2s ease-in-out infinite;
+}
+@keyframes low-glow { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+#stage.result-mode::before,
+#stage:has(#home:not(.hidden))::before,
+#stage:has(#levels:not(.hidden))::before,
+#stage:has(#shop:not(.hidden))::before,
+#stage:has(#album:not(.hidden))::before { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  #stage.low-hearts .heart-wrap:not(.lost) .heart, #stage.low-hearts::before { animation: none; }
+  #stage.low-hearts::before { opacity: .6; }
+}
