@@ -23,7 +23,7 @@ const TUTORIAL_GAP = 60; // HUD bottom -> board top on level 1; the tutorial bub
 const BOARD_GAP = 6; // HUD bottom -> board top on every other level
 const MAX_CELL_R = 46; // cap for tiny maps (e.g. level 1) so they don't dwarf the normal levels
 const TRAY_GAP = 20;
-const BAR_H = 84; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
+const BAR_H = 92; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
 const TRAY_BOTTOM = BAR_H + 14 + 12; // booster bar + scrollbar + gap
 
 // ---- Shared geometry (unit circumradius, y-up world) ----
@@ -473,7 +473,7 @@ export class Game {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.bgColor = new THREE.Color(COLORS.bg);
     this.bgAlpha = 1;
-    this.renderer.setClearColor(this.bgColor, 1);
+    this._applyClear();
     this.scene = new THREE.Scene();
     // Deep depth range: tile groups are uniformly scaled by cell size, so z scales too.
     this.camera = new THREE.OrthographicCamera(0, 100, 100, 0, 1, 4000);
@@ -708,9 +708,19 @@ export class Game {
     if (this.level) this._layout();
   }
 
+  /** The canvas clears transparent; the map colour lives in #play-bg so the bottom panel can sit between them. */
+  _applyClear() {
+    this.renderer.setClearColor(this.bgColor, 0);
+    const bg = this.canvas.parentElement?.querySelector('#play-bg');
+    if (bg) {
+      bg.style.background = `#${this.bgColor.getHexString()}`;
+      bg.style.opacity = String(this.bgAlpha);
+    }
+  }
+
   setBackground(hex) {
     this.bgColor = new THREE.Color(hex);
-    this.renderer.setClearColor(this.bgColor, this.bgAlpha);
+    this._applyClear();
   }
 
   refreshHints() {
@@ -776,6 +786,8 @@ export class Game {
       this._applyGarden();
     }
     this._applyView();
+    // bottom panel card starts just above the tray area
+    this.canvas.parentElement?.style.setProperty('--panel-top', `${Math.round(this.trayTop - 12)}px`);
     this.hooks.onLayout?.({ trayTop: this.trayTop });
   }
 
@@ -1913,7 +1925,7 @@ export class Game {
     this._tween(500, (k) => {
       if (!this.resultMode || token !== this._winToken) return;
       this.bgAlpha = 1 - k;
-      this.renderer.setClearColor(this.bgColor, this.bgAlpha);
+      this._applyClear();
     });
   }
 
@@ -1932,7 +1944,7 @@ export class Game {
     this.resultMode = false;
     this.view = null;
     this.bgAlpha = 1;
-    this.renderer.setClearColor(this.bgColor, 1);
+    this._applyClear();
     this.trayGroup.visible = this.hlGroup.visible = this.dragGroup.visible = true;
     this._applyView();
   }

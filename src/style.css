@@ -7,7 +7,7 @@
   --teal-dark: #147d72;
   --coral: #ef6f6c;
   --edge: #e6dcc8;
-  --bar-h: 84px; /* booster bar zone at the bottom (keep in sync with BAR_H in game.js) */
+  --bar-h: 92px; /* booster bar zone at the bottom (keep in sync with BAR_H in game.js) */
   font-family: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
@@ -494,7 +494,11 @@ body {
 #stage:has(#home:not(.hidden)) > #hud,
 #stage:has(#home:not(.hidden)) #tray-scroll,
 #stage:has(#levels:not(.hidden)) #tray-scroll,
-#stage:has(#shop:not(.hidden)) #tray-scroll {visibility:hidden;}
+#stage:has(#shop:not(.hidden)) #tray-scroll,
+#stage:has(#home:not(.hidden)) > #tray-panel,
+#stage:has(#levels:not(.hidden)) > #tray-panel,
+#stage:has(#shop:not(.hidden)) > #tray-panel,
+#stage.result-mode > #tray-panel {visibility:hidden;}
 #home.hidden {opacity:0;pointer-events:none;visibility:hidden;}
 .h-gear {position:absolute;top:4cqw;right:4cqw;width:11cqw;height:11cqw;background:#fffce9;border:2px solid white;box-shadow:0 1cqw 0 #75ac92;color:#568466;z-index:3;}
 .h-gear svg {width:5.5cqw;height:5.5cqw;}
@@ -638,6 +642,7 @@ body {
 #stage:has(#album:not(.hidden)) > #game,
 #stage:has(#album:not(.hidden)) > #hud,
 #stage:has(#album:not(.hidden)) > #tray-scroll,
+#stage:has(#album:not(.hidden)) > #tray-panel,
 #stage:has(#album:not(.hidden)) > #home { visibility:hidden; }
 #album h3 small { font-size:3.2cqw; opacity:.9; display:inline-flex; align-items:center; gap:1cqw; margin-left:1.5cqw; }
 .album-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3cqw; }
@@ -1013,3 +1018,28 @@ body {
 .boost { flex:0 1 64px; max-width:64px; border-radius:16px; }
 .boost .b-ic { width:44px; height:44px; }
 .boost .b-badge { min-width:22px; height:22px; font-size:11px; }
+
+#play-bg { position:absolute; inset:0; pointer-events:none; }
+#stage:has(#home:not(.hidden)) > #play-bg, #stage:has(#levels:not(.hidden)) > #play-bg, #stage:has(#shop:not(.hidden)) > #play-bg, #stage:has(#album:not(.hidden)) > #play-bg { visibility:hidden; }
+/* ---- Bottom panel: one card holding the tray list, its scrollbar and the booster bar ---- */
+#tray-panel {
+  position:absolute; left:0; right:0; bottom:0; top:var(--panel-top, 72%);
+  border-radius:30px 30px 0 0;
+  background:linear-gradient(#fffdee 0, #f4f6d6 45%, #e6efc2 100%);
+  border-top:4px solid #fffef5;
+  box-shadow:0 -8px 22px rgba(66,110,44,.24), 0 -2px 0 rgba(120,170,80,.35), inset 0 3px 0 #fff;
+  pointer-events:none;
+}
+/* grab-handle accent */
+#tray-panel::after {
+  content:''; position:absolute; top:7px; left:50%; width:44px; height:5px; margin-left:-22px;
+  border-radius:3px; background:rgba(120,150,70,.35);
+}
+/* recessed band behind the tray pieces (full width so scrolled pieces clip at the screen edge) */
+#tray-panel::before {
+  content:''; position:absolute; left:0; right:0; top:16px; bottom:calc(var(--bar-h) - 4px);
+  background:linear-gradient(rgba(110,150,60,.20), rgba(140,180,80,.09));
+  border-top:2px solid rgba(96,130,50,.18);
+  border-bottom:3px solid rgba(255,255,240,.9);
+  box-shadow:inset 0 5px 8px rgba(80,115,40,.16);
+}
