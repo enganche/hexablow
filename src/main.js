@@ -74,16 +74,24 @@ function applyCosmetics() {
 
 // ---- Coins ----
 const COIN = '<i class="coin"></i>';
-const toolbar = $('toolbar');
+const coinHud = $('coin-hud');
 function renderCoins() {
   $('coin-count').textContent = coinsOf(progress);
   renderBoosters();
 }
 function shakeCoins() {
-  const pill = document.querySelector('.coin-pill');
-  pill.classList.remove('shake');
-  void pill.offsetWidth;
-  pill.classList.add('shake');
+  coinHud.classList.remove('shake');
+  void coinHud.offsetWidth;
+  coinHud.classList.add('shake');
+}
+/** Show the coin balance just left of the settings button (only while the buy popup is open). */
+function showCoinHud() {
+  renderCoins();
+  const s = $('settings-btn').getBoundingClientRect();
+  const st = stage.getBoundingClientRect();
+  coinHud.style.top = `${s.top - st.top + (s.height - 36) / 2}px`;
+  coinHud.style.right = `${st.right - s.left + 10}px`;
+  coinHud.classList.remove('hidden');
 }
 
 // ---- Boosters: Reveal (instant) / Find + Picker (interactive modes) ----
@@ -174,9 +182,11 @@ function openBuyPop(id) {
   });
   buyCard.querySelector('.buy-x').onclick = () => { audio.tap(); closeBuyPop(); };
   buyPop.classList.remove('hidden');
+  showCoinHud();
 }
 function closeBuyPop() {
   buyingId = null;
+  coinHud.classList.add('hidden');
   buyPop.classList.add('hidden');
 }
 buyPop.addEventListener('click', (e) => { if (e.target === buyPop) closeBuyPop(); });
@@ -347,9 +357,6 @@ const praise = new Praise($('stage'), audio, () => settings);
 // ---- Game ----
 const game = new Game($('game'), {
   getSettings: () => settings,
-  onLayout: ({ trayTop }) => {
-    toolbar.style.top = `${trayTop - 46}px`;
-  },
   onModeChange: () => syncModeUI(),
   onBoosterUsed: (id) => {
     useBooster(progress, id);
@@ -490,7 +497,6 @@ const tut = {
 function startLevel(i) {
   pendingWin = null;
   leaveResult();
-  toolbar.classList.remove('hidden');
   boostBar.classList.remove('hidden');
   levelIndex = i;
   saveLevelIndex(i);
@@ -516,7 +522,6 @@ function showHome() {
   tut.stop();
   game.cancelMode();
   closeBuyPop();
-  toolbar.classList.add('hidden');
   boostBar.classList.add('hidden');
   leaveResult();
   const cur = continueIndex();

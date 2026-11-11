@@ -522,11 +522,10 @@ body {
 
 /* ---- Coins, toolbar, hint ---- */
 .coin { display:inline-block; width:1em; height:1em; vertical-align:-.15em; background:radial-gradient(circle at 35% 30%, #fff1a8, #f5c84b 55%, #d99a1c); border-radius:50%; border:2px solid #b87912; box-sizing:border-box; }
-#toolbar { position:absolute; left:12px; right:12px; height:36px; z-index:5; display:flex; justify-content:space-between; align-items:center; pointer-events:none; }
-#toolbar.hidden { display:none; }
-#toolbar > * { pointer-events:auto; }
-.coin-pill { display:flex; align-items:center; gap:7px; padding:6px 14px 6px 10px; border-radius:999px; background:var(--panel); border:1px solid var(--edge); font-weight:800; font-size:16px; box-shadow:0 2px 0 var(--edge); }
-.coin-pill .coin { font-size:18px; }
+#coin-hud { position:absolute; z-index:31; box-sizing:border-box; height:36px; pointer-events:none; }
+#coin-hud.hidden { display:none; }
+.coin-pill { display:flex; align-items:center; gap:5px; padding:4px 10px 4px 7px; border-radius:999px; background:var(--panel); border:1px solid var(--edge); font-weight:800; font-size:14px; box-shadow:0 2px 0 var(--edge); }
+.coin-pill .coin { font-size:16px; }
 .coin-pill.shake { animation:pill-shake .35s; }
 @keyframes pill-shake { 25% { transform:translateX(-5px); } 75% { transform:translateX(5px); } }
 
@@ -550,7 +549,6 @@ body {
 #boost-tip { position:absolute; left:50%; transform:translateX(-50%); z-index:6; padding:8px 18px; border-radius:999px; background:var(--panel); border:2px solid #f5c84b; box-shadow:0 5px 14px rgba(60,50,38,.22); font-weight:800; font-size:16px; white-space:nowrap; pointer-events:none; animation:tip-bob 1.4s ease-in-out infinite; }
 #boost-tip.hidden { display:none; }
 @keyframes tip-bob { 50% { transform:translateX(-50%) translateY(-3px); } }
-#stage.picker-mode > #toolbar { visibility:hidden; }
 #stage:has(#home:not(.hidden)) > #boosters, #stage:has(#levels:not(.hidden)) > #boosters, #stage:has(#album:not(.hidden)) > #boosters,
 #stage:has(#shop:not(.hidden)) > #boosters, #stage.result-mode > #boosters, #stage.result-mode > #boost-tip, #stage.result-mode > #picker-head { visibility:hidden; pointer-events:none; }
 
@@ -589,7 +587,6 @@ body {
 #stage:has(#levels:not(.hidden)) { background:transparent; }
 #stage:has(#levels:not(.hidden)) > #game,
 #stage:has(#levels:not(.hidden)) > #hud,
-#stage:has(#levels:not(.hidden)) > #toolbar { visibility:hidden; }
 .lv-head { display:grid; grid-template-columns:11cqw 1fr 24cqw; align-items:center; gap:2cqw; padding:4cqw 4cqw 2cqw; }
 .lv-head h2 { margin:0; text-align:center; font-size:8cqw; font-weight:800; color:#68bb3c; -webkit-text-stroke:1cqw #fffde6; paint-order:stroke fill; text-shadow:0 .8cqw 0 #398c34; }
 .lv-head .icon-btn { width:11cqw; height:11cqw; background:#fffce9; border:2px solid white; box-shadow:0 1cqw 0 #75ac92; color:#568466; }
@@ -640,7 +637,6 @@ body {
 #stage:has(#album:not(.hidden)) { background:transparent; }
 #stage:has(#album:not(.hidden)) > #game,
 #stage:has(#album:not(.hidden)) > #hud,
-#stage:has(#album:not(.hidden)) > #toolbar,
 #stage:has(#album:not(.hidden)) > #tray-scroll,
 #stage:has(#album:not(.hidden)) > #home { visibility:hidden; }
 #album h3 small { font-size:3.2cqw; opacity:.9; display:inline-flex; align-items:center; gap:1cqw; margin-left:1.5cqw; }
@@ -679,7 +675,6 @@ body {
 #stage:has(#shop:not(.hidden)) { background:transparent; }
 #stage:has(#shop:not(.hidden)) > #game,
 #stage:has(#shop:not(.hidden)) > #hud,
-#stage:has(#shop:not(.hidden)) > #toolbar,
 #stage:has(#shop:not(.hidden)) > #home { visibility:hidden; }
 .shop-body { flex:1; overflow-y:auto; padding:1cqw 6cqw 8cqw; scrollbar-width:none; }
 .shop-body::-webkit-scrollbar { display:none; }
@@ -705,7 +700,7 @@ body {
 #result.hidden { display:none; }
 /* gameplay chrome fades away, the sky backdrop takes over */
 #stage.result-mode { background:transparent; }
-#stage.result-mode > #hud, #stage.result-mode > #toolbar, #stage.result-mode > #tutorial, #stage.result-mode #tray-scroll { opacity:0; visibility:hidden; pointer-events:none; transition:opacity .35s ease, visibility 0s .35s; }
+#stage.result-mode > #hud,#stage.result-mode > #tutorial, #stage.result-mode #tray-scroll { opacity:0; visibility:hidden; pointer-events:none; transition:opacity .35s ease, visibility 0s .35s; }
 #stage.result-mode.lose > #game { filter:saturate(.62) brightness(.97); }
 #game { transition:filter .6s ease; }
 
