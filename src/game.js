@@ -69,9 +69,18 @@ function waxSurface(top, bottom, shape = HEX_GEO) {
   return geometry;
 }
 
-const WAX_RIM = waxSurface(0xfbe3ad, 0xf5d596, TILE_BODY_GEO);
-const WAX_WALL = waxSurface(0xdfb479, 0xfce4b3);
-const WAX_FLOOR = waxSurface(0xe9be7f, 0xfce1aa);
+let WAX_RIM = waxSurface(0xfbe3ad, 0xf5d596, TILE_BODY_GEO);
+let WAX_WALL = waxSurface(0xdfb479, 0xfce4b3);
+let WAX_FLOOR = waxSurface(0xe9be7f, 0xfce1aa);
+
+/** Theme palette for the empty board sockets: { rim, wall, floor } each [top, bottom]. */
+function setSocketColors(s) {
+  if (!s) return;
+  WAX_RIM.dispose(); WAX_WALL.dispose(); WAX_FLOOR.dispose();
+  WAX_RIM = waxSurface(s.rim[0], s.rim[1], TILE_BODY_GEO);
+  WAX_WALL = waxSurface(s.wall[0], s.wall[1]);
+  WAX_FLOOR = waxSurface(s.floor[0], s.floor[1]);
+}
 const CONNECTED_FACE = waxSurface(0xbbef54, 0x78c528, TILE_BODY_GEO);
 const CONNECTED_RIM = waxSurface(0xd8ef9d, 0xc0e77b, TILE_BODY_GEO);
 let TILE_FACE = waxSurface(0xffdb65, 0xffa936, TILE_BODY_GEO);
@@ -552,6 +561,11 @@ export class Game {
   }
 
   /** Cosmetic: canvas background colour. */
+  setSocketSkin(socket) {
+    setSocketColors(socket);
+    if (this.level) this._layout();
+  }
+
   setBackground(hex) {
     this.bgColor = new THREE.Color(hex);
     this.renderer.setClearColor(this.bgColor, this.bgAlpha);

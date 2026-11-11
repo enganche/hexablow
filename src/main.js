@@ -66,6 +66,7 @@ function applyCosmetics() {
   root.style.setProperty('--bg', theme.game);
   root.style.setProperty('--sub-ink', theme.vars['sub-ink']);
   game.setBackground(theme.game);
+  game.setSocketSkin(theme.socket);
 }
 
 // ---- Coins ----

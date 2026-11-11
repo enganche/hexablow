@@ -76,6 +76,20 @@
       "name": "Meadow",
       "price": 0,
       "game": "#e8f2d8",
+      "socket": {
+        "rim": [
+          "#e6f0c4",
+          "#dbe9b0"
+        ],
+        "wall": [
+          "#b9d08a",
+          "#cfe3a2"
+        ],
+        "floor": [
+          "#cfe3a2",
+          "#e2efbc"
+        ]
+      },
       "vars": {
         "sky-a": "#89d9ed",
         "sky-b": "#c9f0e8",
@@ -86,7 +100,16 @@
         "hill-3": "#50aa47",
         "sun": "#fff5b1",
         "cloud": "#ffffffb8",
-        "sub-ink": "#447b62"
+        "sub-ink": "#447b62",
+        "ui-bg": "#e8f2d8",
+        "ui-bottom": "#d6eab9",
+        "ui-ink": "#47723a",
+        "ui-muted": "#71854d",
+        "ui-card": "#f1f4d8",
+        "ui-edge": "#a6bf79",
+        "ui-selected": "#c8e795",
+        "ui-accent": "#9bc85c",
+        "ui-locked": "#ccddb2"
       }
     },
     {
@@ -95,6 +118,20 @@
       "name": "Dusk",
       "price": 120,
       "game": "#ffe9d6",
+      "socket": {
+        "rim": [
+          "#fbe3ad",
+          "#f5d596"
+        ],
+        "wall": [
+          "#dfb479",
+          "#fce4b3"
+        ],
+        "floor": [
+          "#e9be7f",
+          "#fce1aa"
+        ]
+      },
       "vars": {
         "sky-a": "#ff9f7a",
         "sky-b": "#ffc08f",
@@ -105,7 +142,16 @@
         "hill-3": "#5d8a3c",
         "sun": "#ffd27a",
         "cloud": "#fff0e0b8",
-        "sub-ink": "#7a4a2c"
+        "sub-ink": "#7a4a2c",
+        "ui-bg": "#ffe9d6",
+        "ui-bottom": "#f4cba7",
+        "ui-ink": "#875337",
+        "ui-muted": "#9a7054",
+        "ui-card": "#fff0dc",
+        "ui-edge": "#c99b73",
+        "ui-selected": "#f8d49a",
+        "ui-accent": "#d7a15e",
+        "ui-locked": "#ead0af"
       }
     },
     {
@@ -114,6 +160,20 @@
       "name": "Frost",
       "price": 120,
       "game": "#edf5fa",
+      "socket": {
+        "rim": [
+          "#e8f3fa",
+          "#d9e9f4"
+        ],
+        "wall": [
+          "#b3cbdc",
+          "#d4e6f2"
+        ],
+        "floor": [
+          "#c4dcea",
+          "#e4f0f8"
+        ]
+      },
       "vars": {
         "sky-a": "#b8d9f2",
         "sky-b": "#dcecf8",
@@ -124,7 +184,16 @@
         "hill-3": "#b5c8d8",
         "sun": "#fffbe0",
         "cloud": "#ffffffd0",
-        "sub-ink": "#4a6a85"
+        "sub-ink": "#4a6a85",
+        "ui-bg": "#edf5fa",
+        "ui-bottom": "#cddfea",
+        "ui-ink": "#43677e",
+        "ui-muted": "#708a99",
+        "ui-card": "#eef7fc",
+        "ui-edge": "#96b6ca",
+        "ui-selected": "#c6e6f3",
+        "ui-accent": "#87b8d0",
+        "ui-locked": "#d2e2ec"
       }
     },
     {
@@ -133,6 +202,20 @@
       "name": "Night",
       "price": 200,
       "game": "#e9ecfa",
+      "socket": {
+        "rim": [
+          "#e4def6",
+          "#d3cbee"
+        ],
+        "wall": [
+          "#aaa0d0",
+          "#cdc4e8"
+        ],
+        "floor": [
+          "#bdb2de",
+          "#ddd6f1"
+        ]
+      },
       "vars": {
         "sky-a": "#2f3b7c",
         "sky-b": "#5a5fa8",
@@ -143,7 +226,16 @@
         "hill-3": "#234540",
         "sun": "#f4f0c8",
         "cloud": "#c9c4ee66",
-        "sub-ink": "#e6e2ff"
+        "sub-ink": "#e6e2ff",
+        "ui-bg": "#e9ecfa",
+        "ui-bottom": "#cbcce8",
+        "ui-ink": "#565781",
+        "ui-muted": "#7a7b9a",
+        "ui-card": "#f2effb",
+        "ui-edge": "#aaa4cd",
+        "ui-selected": "#d8c9f0",
+        "ui-accent": "#ac95d0",
+        "ui-locked": "#d6d2e8"
       }
     }
   ]
