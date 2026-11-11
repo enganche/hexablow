@@ -21,7 +21,7 @@ const MAX_HEARTS = 3;
 const TRAY_PAD = 18;
 const TUTORIAL_GAP = 60; // HUD bottom -> board top; the tutorial bubble (~44px) lives in here
 const TRAY_GAP = 20;
-const BAR_H = 76; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
+const BAR_H = 104; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
 const TRAY_BOTTOM = BAR_H + 14 + 12; // booster bar + scrollbar + gap
 
 // ---- Shared geometry (unit circumradius, y-up world) ----

@@ -99,9 +99,9 @@ const BOOSTERS = economy.boosters;
 const boostBar = $('boosters');
 const boostTip = $('boost-tip');
 const BOOST_ICON = {
-  reveal: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3.2"/></svg>',
-  find: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2"/><path d="m15.2 15.2 6 6M10.5 7.8v5.4M7.8 10.5h5.4"/></svg>',
-  picker: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M8 7l4-4 4 4"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 17.5h.01M12 17.5h.01M17 17.5h.01"/></svg>',
+  reveal: '<svg viewBox="0 0 64 64" aria-hidden="true" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path fill="#ffc842" stroke="#ad651c" d="M5 30Q32 5 59 30Q32 55 5 30Z"/><path fill="#fffbea" stroke="none" d="M10 30Q32 13 54 30Q32 47 10 30Z"/><circle cx="32" cy="30" r="13" fill="#9ac36b" stroke="#698344"/><circle cx="32" cy="30" r="7" fill="#526d39" stroke="none"/><circle cx="28" cy="25" r="4" fill="white" stroke="none"/><path d="m48 7 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fff5a6" stroke="#d9a634"/></svg>',
+  find: '<svg viewBox="0 0 64 64" aria-hidden="true" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="m39 39 15 15" stroke="#734320" stroke-width="13"/><path d="m39 38 15 15" stroke="#ffba43" stroke-width="9"/><circle cx="27" cy="26" r="20" fill="#ffd66a" stroke="#ac7427"/><circle cx="27" cy="26" r="15" fill="#dceeb1" stroke="#fff5bf" stroke-width="3"/><path d="M17 23q1-9 10-10" fill="none" stroke="white" stroke-width="5"/><path d="m29 21 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fffdeb" stroke="none"/></svg>',
+  picker: '<svg viewBox="0 0 64 64" aria-hidden="true" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="M7 35h50v20Q32 64 7 55Z" fill="#84ad57" stroke="#526f38"/><path d="m7 35 12-9h26l12 9-13 9H20Z" fill="#d9ecac" stroke="#6b8945"/><path d="m23 31 9-5 9 5v11l-9 5-9-5Z" fill="#ffcf4f" stroke="#c38a26"/><path d="M32 30V6m-9 9 9-9 9 9" fill="none" stroke="#fff7cb" stroke-width="9"/><path d="M32 28V7m-8 8 8-8 8 8" fill="none" stroke="#8ab55b" stroke-width="5"/></svg>',
 };
 const BOOST_TIP = { find: 'Tap an empty cell' };
 const DEBUG_AUTOBUY_KEY = 'hexablow.debug.autobuy';
@@ -162,13 +162,15 @@ function openBuyPop(id) {
   const packCost = packPrice(id);
   const saving = Math.round((1 - BOOSTERS.packDiscount) * 100);
   buyCard.innerHTML =
-    `<button class="buy-x" type="button" aria-label="Close">×</button>
-     <div class="buy-ic b-${id}">${BOOST_ICON[id]}</div>
-     <h3 id="buy-title">${cfg.name}</h3>
-     <p>${cfg.desc}</p>
+    `<h3 id="buy-title">Add ${cfg.name}</h3>
+     <button class="buy-x" type="button" aria-label="Close">×</button>
+     <div class="buy-showcase"><div class="buy-ic b-${id}">${BOOST_ICON[id]}</div><span class="buy-spark" aria-hidden="true">✦</span></div>
+     <p class="buy-desc">${cfg.desc}</p>
      <p class="buy-have">You have <b>${boosterCount(progress, id)}</b> · ${COIN} <b>${coinsOf(progress)}</b></p>
-     <button class="buy-opt" type="button" data-qty="1"><span>Buy 1</span><em>${COIN} ${cfg.price}</em></button>
-     <button class="buy-opt best" type="button" data-qty="${pack}"><span>Buy ${pack}</span><em>${COIN} ${packCost}</em><small>-${saving}%</small></button>`;
+     <div class="buy-actions">
+       <button class="buy-opt" type="button" data-qty="1"><span>Buy ×1</span><em>${COIN} ${cfg.price}</em></button>
+       <button class="buy-opt best" type="button" data-qty="${pack}"><span>Buy ×${pack}</span><em>${COIN} ${packCost}</em><small>Save ${saving}%</small></button>
+     </div>`;
   buyCard.querySelectorAll('.buy-opt').forEach((btn) => {
     const qty = Number(btn.dataset.qty);
     const cost = qty === pack ? packCost : cfg.price * qty;

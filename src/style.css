@@ -7,7 +7,7 @@
   --teal-dark: #147d72;
   --coral: #ef6f6c;
   --edge: #e6dcc8;
-  --bar-h: 76px; /* booster bar zone at the bottom (keep in sync with BAR_H in game.js) */
+  --bar-h: 104px; /* booster bar zone at the bottom (keep in sync with BAR_H in game.js) */
   font-family: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
@@ -929,3 +929,64 @@ body {
   #stage.low-hearts .heart-wrap:not(.lost) .heart, #stage.low-hearts::before { animation: none; }
   #stage.low-hearts::before { opacity: .6; }
 }
+
+
+
+/* Boosters share the enamel, cream rim and honey base of the Home/HUD buttons. */
+#boosters { justify-content:center; gap:24px; height:82px; bottom:12px; }
+.boost { flex:0 1 86px; max-width:86px; border:3px solid #fff9dc; border-radius:18px; background:linear-gradient(#ffdc79,#ffb64b 65%,#f49a31); box-shadow:inset 0 3px 0 #fff0b5,inset 0 -3px 0 #ed9e36,0 5px 0 #bf772b,0 8px 0 #407b5030; }
+.boost .b-ic { width:64px; height:64px; }
+.boost .b-ic svg { width:100%; height:100%; fill:initial; stroke:initial; filter:drop-shadow(0 1px 0 #6d753b35); }
+.boost .b-nm { display:none; }
+.boost .b-badge { top:auto; bottom:-7px; right:-8px; min-width:28px; height:28px; border:2px solid #fff9dc; background:linear-gradient(#b4db7d,#81b34e); color:#fffdf0; font-size:14px; text-shadow:0 1px 0 #537d35; box-shadow:0 2px 0 #537d35; }
+.boost .b-badge.plus { background:linear-gradient(#b4db7d,#81b34e); font-size:20px; }
+.boost.on { transform:translateY(-2px); border-color:#fffde8; background:linear-gradient(#d8eea1,#a7d56b 65%,#89bb50); box-shadow:inset 0 3px 0 #effbc9,inset 0 -3px 0 #81ad47,0 6px 0 #5f893e,0 8px 0 #407b5030; }
+.boost:active { transform:translateY(3px); box-shadow:inset 0 2px 0 #fff0b5,0 2px 0 #bf772b; }
+.boost.locked { filter:none; background:linear-gradient(#e4e6d3,#bfc8a8); border-color:#f9f8e6; box-shadow:inset 0 3px #f0f2e4,0 4px #8d9d78; }
+.boost.locked .b-ic,.boost.locked .b-badge { visibility:hidden; }
+.boost .b-lock { fill:#7c9163; filter:drop-shadow(0 1px 0 #fffce4); }
+.boost:focus-visible,.buy-opt:focus-visible,.buy-x:focus-visible { outline:3px solid #397c3e; outline-offset:4px; }
+.buy-card { width:min(320px,100%); padding:24px 20px 22px; gap:12px; border:4px solid #fffcef; border-radius:26px; background:linear-gradient(#fffef0,#e8f0cd); box-shadow:inset 0 0 0 2px #d5e2b5,0 6px #9cb67b,0 10px 0 #75954b20,0 16px 30px #243c3033; }
+.buy-ic,.buy-ic.b-find,.buy-ic.b-picker { width:76px; height:76px; border:3px solid #fff9dc; border-radius:22px; background:linear-gradient(#ffdc79,#ffb64b 65%,#f49a31); box-shadow:inset 0 3px #fff0b5,inset 0 -3px #ed9e36,0 4px #bf772b; margin-bottom:4px; }
+.buy-ic svg { width:60px; height:60px; fill:initial; stroke:initial; filter:drop-shadow(0 1px 0 #6d753b35); }
+.buy-card h3 { color:#52783b; font-size:26px; text-shadow:0 2px #fffcec; }
+.buy-card p { color:#7a855f; font-size:14px; line-height:1.5; }
+.buy-card .buy-have { color:#617845; background:#dce8c1; padding:5px 14px; border-radius:18px; margin:0 0 3px; }
+.buy-x { top:10px; right:10px; width:32px; height:32px; border:2px solid #fff9dc; border-radius:11px; background:linear-gradient(#ffdc79,#ffb64b 65%,#f49a31); box-shadow:inset 0 2px #fff0b5,0 3px #bf772b; color:#89602c; font-family:inherit; font-size:25px; font-weight:800; line-height:1; }
+.buy-opt { min-height:50px; border:2px solid #fff3b9; border-radius:14px; background:linear-gradient(#ffdd65,#ffba35); color:#805022; box-shadow:inset 0 2px #ffed97,0 4px #bc8330; text-shadow:0 1px #ffed97; font-size:16px; }
+.buy-opt em { background:#fff3c7; color:#805022; padding:4px 10px; font-size:15px; }
+.buy-opt.best { margin-top:7px; background:linear-gradient(#c6e99a,#94c65f); color:#476b32; border-color:#f4ffdb; box-shadow:inset 0 2px #e0f5bc,0 4px #6b9845; text-shadow:0 1px #dcf0bc; }
+.buy-opt.best small { background:#fff0b1; color:#805022; border-color:#fff9dc; }
+.buy-opt.poor { background:linear-gradient(#e8dfbd,#cfc59e); border-color:#fbf3d5; box-shadow:0 4px #a49b79; color:#817453; text-shadow:none; }
+@media(prefers-reduced-motion:reduce) { .buy-card,#boost-tip { animation:none; } .boost { transition:none; } }
+
+/* Booster purchase: raised title, showcase and two side-by-side packs. */
+#buy-pop { background:#102c35bf; padding:40px 20px 24px; }
+.buy-card { width:min(380px,100%); padding:42px 22px 26px; gap:12px; border:4px solid #fffbe6; border-radius:24px; background:linear-gradient(#eef5d6,#dcebbd); box-shadow:inset 0 0 0 2px #b5cf8d,0 6px 0 #779b51,0 15px 30px #102b3b55; }
+.buy-card h3 { position:absolute; top:-28px; left:50%; transform:translateX(-50%); width:76%; margin:0; padding:10px 8px; border:3px solid #fffbe6; border-radius:16px; background:linear-gradient(#ffe77c,#ffc446); box-shadow:inset 0 3px #fff0a7,0 4px #ca953b; color:#fffdf1; font-size:28px; line-height:1.15; font-weight:900; -webkit-text-stroke:3px #ac6829; paint-order:stroke fill; text-shadow:0 2px #ac6829; }
+.buy-card .buy-x { z-index:2; top:-15px; right:-12px; width:40px; height:40px; border-radius:13px; border:3px solid #fff9dc; background:linear-gradient(#ff9c7e,#f06d59); box-shadow:inset 0 2px #ffc5a4,0 4px #b74e39; color:#fff9e9; font-size:30px; text-shadow:0 2px #b74e39; }
+.buy-showcase { position:relative; width:100%; height:195px; display:grid; place-items:center; overflow:hidden; border:2px solid #a3bf7e; border-radius:20px; background:radial-gradient(ellipse at center,#fffce4 0%,#f5f7d6 28%,#d3e8aa 64%,#bfdc96 100%); box-shadow:inset 0 2px 3px #718e4120,0 2px #faffeb; }
+.buy-showcase::before { content:''; position:absolute; inset:0; background:repeating-conic-gradient(from 10deg at 50% 55%,#fffde630 0deg 12deg,transparent 12deg 30deg); mask-image:radial-gradient(ellipse,#000,transparent 72%); }
+.buy-showcase .buy-ic { position:relative; width:132px; height:132px; margin:0; border:0; border-radius:0; background:none; box-shadow:none; transform:rotate(-8deg); }
+.buy-showcase .buy-ic svg { width:128px; height:128px; filter:drop-shadow(0 5px 0 #64864230); }
+.buy-spark { position:absolute; top:20px; right:24%; color:#fffef0; font-size:32px; text-shadow:0 0 12px #fff; }
+.buy-card .buy-desc { min-height:42px; display:flex; align-items:center; justify-content:center; margin:0; color:#55713d; font-size:18px; line-height:1.4; font-weight:800; }
+.buy-card .buy-have { font-size:15px; padding:4px 12px; margin:0; }
+.buy-actions { display:grid; grid-template-columns:1fr 1fr; gap:14px; width:100%; padding-top:9px; }
+.buy-actions .buy-opt { min-width:0; min-height:67px; margin:0; padding:8px 6px; display:flex; flex-direction:column; justify-content:center; gap:4px; border-radius:14px; font-size:19px; }
+.buy-actions .buy-opt em { background:none; padding:0; font-size:23px; line-height:1.2; font-weight:900; }
+.buy-actions .buy-opt.best small { top:-12px; left:50%; transform:translateX(-50%); white-space:nowrap; padding:2px 7px; font-size:12px; text-shadow:none; }
+.buy-actions .buy-opt:active { transform:translateY(3px); box-shadow:0 1px #8c773c; }
+@media(max-height:600px) { .buy-showcase { height:130px; } .buy-showcase .buy-ic,.buy-showcase .buy-ic svg { width:106px; height:106px; } .buy-card { gap:8px; padding-bottom:16px; } }
+
+/* Shared white popup surfaces; retain the garden accents on controls and rims. */
+.modal .card,.buy-card,.fp-card { background:#fff; }
+.st-card .rows { background:#fff; border-color:#e2e9d8; box-shadow:none; }
+.st-card .rows li { border-bottom-color:#e2e9d8; }
+.st-copy strong { color:#47633b; -webkit-text-stroke:0; text-shadow:none; }
+.st-ic { filter:none; }
+.st-ic svg { stroke:#597841; }
+.buy-showcase { background:#fff; border-color:#e2e9d8; box-shadow:inset 0 0 0 1px #f4f6f0; }
+.buy-showcase::before { display:none; }
+.buy-spark { color:#e7c35b; text-shadow:none; }
+.buy-card .buy-have { background:#fff; color:#617845; }
