@@ -2,6 +2,7 @@ import './style.css';
 import levels from './levels.json';
 import { Game } from './game.js';
 import { AudioManager, vibrate } from './audio.js';
+import { Praise } from './praise.js';
 import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex, hasOpenedLevel } from './settings.js';
 import economy from './economy.json';
 import { winArt, loseArt, confetti } from './resultArt.js';
@@ -224,6 +225,7 @@ function showFind({ species, set, bonus }) {
 }
 
 let pendingWin = null;
+const praise = new Praise($('stage'), audio, () => settings);
 
 // ---- Game ----
 const game = new Game($('game'), {
@@ -235,11 +237,13 @@ const game = new Game($('game'), {
     heartsLeft = left;
     renderHearts(left, lostOne);
   },
-  onPlace: (count) => {
+  onPlace: (count, pos, isLast) => {
     audio.place(count);
     vibrate(settings, 12);
+    praise.hit(pos, count, isLast);
   },
   onMistake: () => {
+    praise.miss();
     audio.wrong();
     vibrate(settings, 60);
   },
@@ -363,6 +367,7 @@ function startLevel(i) {
   const level = levels[i];
   $('level-name').textContent = level.name;
   // levels 1-2 keep an ascending tray order (gentle start); from level 3 the tray is shuffled each play
+  praise.reset();
   game.loadLevel(level, { randomOrder: level.id > 2 });
   tut.start(level);
 }

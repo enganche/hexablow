@@ -1068,7 +1068,9 @@ export class Game {
     this._updateHighlights(null);
     this._buildContent(p.numbers);
     this._reflowTray();
-    this.hooks.onPlace?.(p.numbers.length);
+    const pts = cells.map(([q, r]) => this._cellScreen(q, r));
+    const mid = { x: pts.reduce((a, s) => a + s.x, 0) / pts.length, y: pts.reduce((a, s) => a + s.y, 0) / pts.length };
+    this.hooks.onPlace?.(p.numbers.length, mid, this.pieces.length === 0);
     this._checkWin();
   }
 

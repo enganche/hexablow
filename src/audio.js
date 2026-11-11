@@ -45,6 +45,29 @@ export class AudioManager {
     this._tone(base * 1.5, { dur: 0.16, gain: 0.07, delay: 0.05 });
   }
 
+  /** Exciting reward: rising sparkle arpeggio + shimmer; grows richer with the combo tier. */
+  praise(tier = 0, size = 1) {
+    if (!this.getSettings().sound || !this.ctx) return;
+    const scale = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1567.98];
+    const notes = Math.min(3 + tier, 7);
+    const start = Math.min(tier, 3);
+    for (let i = 0; i < notes; i++) {
+      const f = scale[Math.min(start + i, scale.length - 1)];
+      this._tone(f, { type: 'triangle', dur: 0.2, gain: 0.1, delay: 0.04 + i * 0.055 });
+      this._tone(f * 2, { dur: 0.16, gain: 0.04, delay: 0.04 + i * 0.055 });
+    }
+    const end = 0.04 + notes * 0.055;
+    // final bright chord
+    [1, 1.25, 1.5].forEach((m) =>
+      this._tone(scale[Math.min(start + notes, scale.length - 1)] * m, { type: 'triangle', dur: 0.4 + tier * 0.05, gain: 0.07, delay: end })
+    );
+    if (size > 1) this._tone(1760, { dur: 0.3, gain: 0.05, delay: end + 0.05 });
+    // coin-like sparkle on top for bigger combos
+    if (tier >= 2) for (let i = 0; i < 3; i++) this._tone(2093 + i * 330, { dur: 0.1, gain: 0.04, delay: end + 0.08 + i * 0.05 });
+    // rising whoosh
+    if (tier >= 3) this._tone(300, { type: 'sawtooth', dur: 0.35, gain: 0.035, slideTo: 1400 });
+  }
+
   wrong() {
     if (!this.getSettings().sound) return;
     this._tone(220, { type: 'triangle', dur: 0.22, gain: 0.16, slideTo: 150 });

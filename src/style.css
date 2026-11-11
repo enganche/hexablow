@@ -845,3 +845,13 @@ body {
 .shop-btn.poor { background:linear-gradient(#e8dfbd,#cfc59e); border-color:#fbf3d5; box-shadow:0 .8cqw #a49b79; color:#817453; text-shadow:none; }
 :is(#shop,#album) button:focus-visible { outline:3px solid #397c3e; outline-offset:4px; }
 @media(prefers-reduced-motion:reduce) { .shop-btn { transition:none; } }
+
+/* ---- Praise / combo rewards ---- */
+#praise-layer { position:absolute; inset:0; pointer-events:none; z-index:8; overflow:hidden; }
+.praise-text { position:absolute; font-weight:900; white-space:nowrap; text-align:center; line-height:1; letter-spacing:.02em;
+  color:var(--c1); -webkit-text-stroke:.11em #3a2412; paint-order:stroke fill; text-shadow:0 .08em 0 var(--c2), 0 .12em 0 #3a2412; }
+.praise-text small { display:block; margin-top:.35em; font-size:.4em; letter-spacing:.04em; -webkit-text-stroke:.22em #3a2412; color:#fff; text-shadow:none; }
+.praise-ring { position:absolute; border:.9cqw solid #fff; border-radius:50%; box-sizing:border-box; }
+.praise-spark { position:absolute; line-height:1; text-shadow:0 0 6px #fff; }
+.praise-confetti { position:absolute; border-radius:2px; }
+.praise-flash { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 45%,#fffbe0 0%,#fff3b000 70%); }
