@@ -8,6 +8,7 @@ import economy from './economy.json';
 import { winArt, loseArt, confetti } from './resultArt.js';
 import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
 import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecies, foundCount, discoverForLevel } from './progress.js';
+import { boosterIds, boosterCount, buyBooster, useBooster, packPrice, grantBooster } from './progress.js';
 import { loadProgress, recordWin, starsFor, totalStars, completedCount, resetProgress, coinsOf, canAfford, spend, earn, winReward } from './progress.js';
 
 const $ = (id) => document.getElementById(id);
@@ -76,8 +77,7 @@ const COIN = '<i class="coin"></i>';
 const toolbar = $('toolbar');
 function renderCoins() {
   $('coin-count').textContent = coinsOf(progress);
-  $('hint-cost').textContent = economy.costs.hint;
-  $('hint-btn').classList.toggle('poor', !canAfford(progress, economy.costs.hint));
+  renderBoosters();
 }
 function shakeCoins() {
   const pill = document.querySelector('.coin-pill');
@@ -85,13 +85,129 @@ function shakeCoins() {
   void pill.offsetWidth;
   pill.classList.add('shake');
 }
-$('hint-btn').addEventListener('click', () => {
-  const cost = economy.costs.hint;
-  if (!canAfford(progress, cost)) return shakeCoins();
-  if (!game.hint()) return;
-  spend(progress, cost);
+
+// ---- Boosters: Reveal (instant) / Find + Picker (interactive modes) ----
+const BOOSTERS = economy.boosters;
+const boostBar = $('boosters');
+const boostTip = $('boost-tip');
+const BOOST_ICON = {
+  reveal: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3.2"/></svg>',
+  find: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2"/><path d="m15.2 15.2 6 6M10.5 7.8v5.4M7.8 10.5h5.4"/></svg>',
+  picker: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M8 7l4-4 4 4"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 17.5h.01M12 17.5h.01M17 17.5h.01"/></svg>',
+};
+const BOOST_TIP = { find: 'Tap an empty cell' };
+const DEBUG_AUTOBUY_KEY = 'hexablow.debug.autobuy';
+let debugAutoBuy = false;
+try { debugAutoBuy = localStorage.getItem(DEBUG_AUTOBUY_KEY) === '1'; } catch { /* ignore */ }
+
+boostBar.innerHTML = BOOSTERS.order
+  .map((id) => `<button type="button" class="boost" data-boost="${id}" data-id="${id}" aria-label="${BOOSTERS[id].name}">
+      <span class="b-ic">${BOOST_ICON[id]}</span><span class="b-nm">${BOOSTERS[id].name}</span><i class="b-badge"></i>
+      <svg class="b-lock" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zm2 0h6V8a3 3 0 0 0-6 0z"/></svg>
+    </button>`)
+  .join('');
+
+/** Booster unlock gate: each booster has a level to unlock at (all level 1 for now; tutorials come later). */
+function boosterUnlocked(id) {
+  return levels[levelIndex].id >= BOOSTERS[id].unlockLevel;
+}
+
+function renderBoosters() {
+  for (const b of boostBar.querySelectorAll('.boost')) {
+    const id = b.dataset.id;
+    const n = boosterCount(progress, id);
+    const locked = !boosterUnlocked(id);
+    b.classList.toggle('locked', locked);
+    b.classList.toggle('empty', !locked && n === 0);
+    b.classList.toggle('on', game.mode === id);
+    const badge = b.querySelector('.b-badge');
+    badge.textContent = n > 0 ? n : '+';
+    badge.classList.toggle('plus', n === 0);
+  }
+}
+
+function shakeEl(el) {
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+}
+
+/** Keep the chrome in step with the game's booster mode (picker panel open, find hint tip...). */
+function syncModeUI() {
+  const mode = game.mode;
+  stage.classList.toggle('picker-mode', mode === 'picker');
+  const tip = BOOST_TIP[mode];
+  boostTip.textContent = tip ?? '';
+  boostTip.classList.toggle('hidden', !tip);
+  if (tip) boostTip.style.top = `${($('hud').getBoundingClientRect().bottom - stage.getBoundingClientRect().top) + 6}px`;
+  renderBoosters();
+}
+
+// out-of-stock popup
+const buyPop = $('buy-pop');
+const buyCard = buyPop.querySelector('.buy-card');
+let buyingId = null;
+function openBuyPop(id) {
+  buyingId = id;
+  const cfg = BOOSTERS[id];
+  const pack = BOOSTERS.packSize;
+  const packCost = packPrice(id);
+  const saving = Math.round((1 - BOOSTERS.packDiscount) * 100);
+  buyCard.innerHTML =
+    `<button class="buy-x" type="button" aria-label="Close">×</button>
+     <div class="buy-ic b-${id}">${BOOST_ICON[id]}</div>
+     <h3 id="buy-title">${cfg.name}</h3>
+     <p>${cfg.desc}</p>
+     <p class="buy-have">You have <b>${boosterCount(progress, id)}</b> · ${COIN} <b>${coinsOf(progress)}</b></p>
+     <button class="buy-opt" type="button" data-qty="1"><span>Buy 1</span><em>${COIN} ${cfg.price}</em></button>
+     <button class="buy-opt best" type="button" data-qty="${pack}"><span>Buy ${pack}</span><em>${COIN} ${packCost}</em><small>-${saving}%</small></button>`;
+  buyCard.querySelectorAll('.buy-opt').forEach((btn) => {
+    const qty = Number(btn.dataset.qty);
+    const cost = qty === pack ? packCost : cfg.price * qty;
+    btn.classList.toggle('poor', !canAfford(progress, cost));
+    btn.onclick = () => {
+      if (!buyBooster(progress, id, qty)) return shakeEl(btn);
+      audio.tap();
+      closeBuyPop();
+      renderCoins();
+    };
+  });
+  buyCard.querySelector('.buy-x').onclick = () => { audio.tap(); closeBuyPop(); };
+  buyPop.classList.remove('hidden');
+}
+function closeBuyPop() {
+  buyingId = null;
+  buyPop.classList.add('hidden');
+}
+buyPop.addEventListener('click', (e) => { if (e.target === buyPop) closeBuyPop(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && buyingId) closeBuyPop(); });
+
+function onBoosterTap(id, btn) {
+  audio.unlock();
+  if (!boosterUnlocked(id)) return shakeEl(btn);
+  if (game.mode === id) { audio.tap(); return game.cancelMode(); } // tap again = cancel
+  if (game.mode) game.cancelMode();
+  if (!game.canBoost()) return shakeEl(btn);
+  if (boosterCount(progress, id) <= 0) {
+    if (!debugAutoBuy) return openBuyPop(id);
+    // debug: buy on the fly, topping the wallet up when short
+    const price = BOOSTERS[id].price;
+    if (!canAfford(progress, price)) earn(progress, price - coinsOf(progress));
+    buyBooster(progress, id, 1);
+    renderCoins();
+  }
   audio.tap();
-  renderCoins();
+  if (id === 'reveal') {
+    if (game.reveal()) { useBooster(progress, id); renderBoosters(); } else shakeEl(btn);
+  } else if (id === 'find') {
+    game.beginFind();
+  } else if (id === 'picker') {
+    game.beginPicker();
+  }
+}
+boostBar.addEventListener('click', (e) => {
+  const btn = e.target.closest('.boost');
+  if (btn) onBoosterTap(btn.dataset.id, btn);
 });
 
 // ---- Result screens: art -> map -> action ----
@@ -234,6 +350,11 @@ const game = new Game($('game'), {
   onLayout: ({ trayTop }) => {
     toolbar.style.top = `${trayTop - 46}px`;
   },
+  onModeChange: () => syncModeUI(),
+  onBoosterUsed: (id) => {
+    useBooster(progress, id);
+    renderBoosters();
+  },
   onHearts: (left, lostOne) => {
     heartsLeft = left;
     renderHearts(left, lostOne);
@@ -370,7 +491,7 @@ function startLevel(i) {
   pendingWin = null;
   leaveResult();
   toolbar.classList.remove('hidden');
-  renderCoins();
+  boostBar.classList.remove('hidden');
   levelIndex = i;
   saveLevelIndex(i);
   const level = levels[i];
@@ -378,6 +499,8 @@ function startLevel(i) {
   // levels 1-2 keep an ascending tray order (gentle start); from level 3 the tray is shuffled each play
   praise.reset();
   game.loadLevel(level, { randomOrder: level.id > 2 });
+  syncModeUI();
+  renderCoins();
   tut.start(level);
 }
 
@@ -391,7 +514,10 @@ function continueIndex() {
 const home = $('home');
 function showHome() {
   tut.stop();
+  game.cancelMode();
+  closeBuyPop();
   toolbar.classList.add('hidden');
+  boostBar.classList.add('hidden');
   leaveResult();
   const cur = continueIndex();
   $('home-level').textContent = `${levels[cur].name} · ★ ${totalStars(progress)}/${levels.length * 3}`;
@@ -726,6 +852,14 @@ function renderDebug() {
     ['+1000', () => { earn(progress, 1000); renderCoins(); }],
     ['+10000', () => { earn(progress, 10000); renderCoins(); }],
   ]);
+  row('Boosters', [
+    ['+3 each', () => { boosterIds.forEach((id) => grantBooster(progress, id, 3)); renderBoosters(); }],
+    ['Clear', () => { boosterIds.forEach((id) => { progress.boosters[id] = 0; }); saveProgressNow(); renderBoosters(); }],
+    [`Auto-buy: ${debugAutoBuy ? 'ON' : 'OFF'}`, () => {
+      debugAutoBuy = !debugAutoBuy;
+      try { localStorage.setItem(DEBUG_AUTOBUY_KEY, debugAutoBuy ? '1' : '0'); } catch { /* ignore */ }
+    }, debugAutoBuy ? '#3f7d3a' : '#8a5a2b'],
+  ]);
   row('Instant win (stars)', [
     ['★', () => debugWin(1), '#3f7d3a'],
     ['★★', () => debugWin(2), '#3f7d3a'],
@@ -748,7 +882,7 @@ function renderDebug() {
 
   const info = document.createElement('div');
   info.style.cssText = 'margin-top:6px;opacity:.8';
-  info.textContent = `Now: ${levels[levelIndex].name} · ${levels[levelIndex].cells.length} cells · 🪙 ${coinsOf(progress)} · ★ ${totalStars(progress)}`;
+  info.textContent = `Now: ${levels[levelIndex].name} · ${levels[levelIndex].cells.length} cells · 🪙 ${coinsOf(progress)} · ★ ${totalStars(progress)} · ${boosterIds.map((id) => `${id} ${boosterCount(progress, id)}`).join(' / ')}`;
   dbg.appendChild(info);
 }
 dbg.style.display = 'none';

@@ -6,6 +6,8 @@ import collection from './collection.json';
 
 const KEY = 'hexablow.progress.v1';
 
+const emptyBoosters = () => Object.fromEntries(economy.boosters.order.map((id) => [id, 0]));
+
 // stars: { [levelId]: 1..3 }, coins: soft currency balance
 const empty = () => ({
   v: 2,
@@ -13,6 +15,7 @@ const empty = () => ({
   found: [],
   setsClaimed: [],
   coins: economy.startCoins,
+  boosters: emptyBoosters(),
   owned: [...cosmetics.defaults.owned],
   equipped: { ...cosmetics.defaults.equipped },
 });
@@ -37,7 +40,12 @@ export function loadProgress() {
       const setIds = new Set(collection.sets.map((x) => x.id));
       const found = [...new Set(Array.isArray(raw.found) ? raw.found : [])].filter((id) => speciesIds.has(id));
       const setsClaimed = [...new Set(Array.isArray(raw.setsClaimed) ? raw.setsClaimed : [])].filter((id) => setIds.has(id));
-      return { v: 2, stars, found, setsClaimed, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, owned, equipped };
+      const boosters = emptyBoosters();
+      for (const id of Object.keys(boosters)) {
+        const n = Math.floor(Number(raw.boosters?.[id]));
+        if (Number.isFinite(n) && n > 0) boosters[id] = n;
+      }
+      return { v: 2, stars, found, setsClaimed, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, boosters, owned, equipped };
     }
   } catch {
     /* corrupt or unavailable storage: start fresh */
@@ -81,6 +89,7 @@ export function resetProgress(p) {
   p.found = [];
   p.setsClaimed = [];
   p.coins = economy.startCoins;
+  p.boosters = emptyBoosters();
   p.owned = [...cosmetics.defaults.owned];
   p.equipped = { ...cosmetics.defaults.equipped };
   save(p);
@@ -183,4 +192,40 @@ export function discoverForLevel(p, levelId) {
   }
   save(p);
   return { species, set, bonus };
+}
+
+// ---- boosters (consumable inventory) ----
+export const boosterIds = economy.boosters.order;
+
+export function boosterCount(p, id) {
+  return p.boosters[id] ?? 0;
+}
+
+/** Price of a pack of `packSize` boosters, with the bulk discount. */
+export function packPrice(id) {
+  return Math.round(economy.boosters[id].price * economy.boosters.packSize * economy.boosters.packDiscount);
+}
+
+/** Buy `qty` boosters (1 = single at list price, packSize = discounted pack). False if too expensive. */
+export function buyBooster(p, id, qty = 1) {
+  const cfg = economy.boosters[id];
+  if (!cfg) return false;
+  const cost = qty === economy.boosters.packSize ? packPrice(id) : cfg.price * qty;
+  if (!spend(p, cost)) return false;
+  p.boosters[id] = boosterCount(p, id) + qty;
+  save(p);
+  return true;
+}
+
+/** Use one booster from stock. False (no change) when none left. */
+export function useBooster(p, id) {
+  if (boosterCount(p, id) <= 0) return false;
+  p.boosters[id] -= 1;
+  save(p);
+  return true;
+}
+
+export function grantBooster(p, id, qty) {
+  p.boosters[id] = boosterCount(p, id) + qty;
+  save(p);
 }

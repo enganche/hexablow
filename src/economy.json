@@ -10,7 +10,14 @@
     "replayMultiplier": 0.3
   },
   "costs": {
-    "hint": 15,
     "revive": 20
+  },
+  "boosters": {
+    "order": ["reveal", "find", "picker"],
+    "packSize": 3,
+    "packDiscount": 0.85,
+    "reveal": { "name": "Reveal", "price": 10, "unlockLevel": 1, "desc": "Shows the exact number of a random empty cell." },
+    "find": { "name": "Find", "price": 20, "unlockLevel": 1, "desc": "Tap an empty cell and its tile flies in." },
+    "picker": { "name": "Picker", "price": 25, "unlockLevel": 1, "desc": "Open the whole list and send any tile to its cell." }
   }
 }

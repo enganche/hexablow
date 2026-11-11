@@ -85,12 +85,18 @@
       </div>
     </header>
 
-    <!-- coin balance + hint, just above the tray -->
+    <!-- coin balance, just above the tray -->
     <div id="toolbar" class="hidden">
       <div class="coin-pill"><i class="coin"></i><b id="coin-count">0</b></div>
-      <button id="hint-btn" class="hint-btn" aria-label="Hint">
-        <span>💡 Hint</span><em><i class="coin"></i><b id="hint-cost"></b></em>
-      </button>
+    </div>
+
+    <!-- boosters: bottom bar, under the tray scrollbar -->
+    <nav id="boosters" class="hidden" aria-label="Boosters"></nav>
+    <div id="boost-tip" class="hidden" role="status"></div>
+
+    <!-- out-of-stock popup -->
+    <div id="buy-pop" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="buy-title">
+      <div class="buy-card"></div>
     </div>
 
     <!-- level 1 tutorial overlay (never blocks input) -->

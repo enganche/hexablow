@@ -21,6 +21,8 @@ const MAX_HEARTS = 3;
 const TRAY_PAD = 18;
 const TUTORIAL_GAP = 60; // HUD bottom -> board top; the tutorial bubble (~44px) lives in here
 const TRAY_GAP = 20;
+const BAR_H = 76; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
+const TRAY_BOTTOM = BAR_H + 14 + 12; // booster bar + scrollbar + gap
 
 // ---- Shared geometry (unit circumradius, y-up world) ----
 function roundedHexShape(radius = 1, corner = 0.18) {
@@ -56,6 +58,21 @@ const TILE_RING_GEO = new THREE.ShapeGeometry(TILE_RING, 6);
 const WAX_MAT = new THREE.MeshBasicMaterial({ vertexColors: true });
 
 const TILE_BODY_GEO = new THREE.ShapeGeometry(roundedHexShape(1, 0));
+
+function roundRectGeo(w, h, r) {
+  const x = -w / 2, y = -h / 2;
+  const s = new THREE.Shape();
+  s.moveTo(x + r, y);
+  s.lineTo(x + w - r, y);
+  s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r);
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h);
+  s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r);
+  s.quadraticCurveTo(x, y, x + r, y);
+  return new THREE.ShapeGeometry(s, 8);
+}
 
 function waxSurface(top, bottom, shape = HEX_GEO) {
   const geometry = shape.clone();
@@ -466,7 +483,12 @@ export class Game {
     this.trayGroup = new THREE.Group();
     this.dragGroup = new THREE.Group();
     this.gardenGroup = new THREE.Group();
-    this.scene.add(this.boardGroup, this.hlGroup, this.contentGroup, this.gardenGroup, this.trayGroup, this.dragGroup);
+    this.pickerGroup = new THREE.Group(); // dim + panel behind the tray pieces while the Picker booster is open
+    this.scene.add(this.boardGroup, this.hlGroup, this.contentGroup, this.gardenGroup, this.pickerGroup, this.trayGroup, this.dragGroup);
+    this.pickerMode = false;
+    this.findMode = false;
+    this.revealed = new Map(); // cell key -> number shown by the Reveal booster (cleared per level load)
+    this.revealMarks = new Map();
     this.gardenPlan = null; // win garden: stable (unit-space) layout of plants + house
     this.gardenObjs = null; // meshes built from the plan for the current layout
     this.gardenT = 0; // garden animation clock (ms)
@@ -491,6 +513,8 @@ export class Game {
 
     this._bind();
     this._initScrollbar();
+    this._initPickerUI();
+    this._pickTok = 0;
     this.resize();
     this._last = performance.now();
     this._loop = this._loop.bind(this);
@@ -510,6 +534,8 @@ export class Game {
     this._dragCells = null;
     this.ptr = null;
     this.placed = new Map();
+    this.revealed = new Map();
+    this._setMode(null, true);
     this.hooks.onHearts(this.hearts, false);
     this.pieces = buildPieces(level).map((p) => ({ ...p, group: null, slot: { x: 0, y: 0 }, scale: 1 }));
     // random per play from level 3; level 1 keeps its fixed shuffle; level 2 keeps ascending order
@@ -549,13 +575,116 @@ export class Game {
     };
   }
 
-  /** Paid helper: place the piece holding the lowest missing number. Returns false if busy/nothing to place. */
-  hint() {
-    if (!this.level || this.locked || this.dragPiece || !this.pieces.length) return false;
-    const p = this.pieces.reduce((a, b) => (Math.min(...b.numbers) < Math.min(...a.numbers) ? b : a));
-    const cells = this._pieceCells(p, this.level.solution[p.numbers[0]]);
-    this._commit(p, cells);
+  // ---------- boosters ----------
+  /** True when a booster can start right now (no drag in flight, not locked, still something to place). */
+  canBoost() {
+    return !!this.level && !this.locked && !this.dragPiece && this.pieces.length > 0 && !this.resultMode;
+  }
+
+  get mode() {
+    return this.pickerMode ? 'picker' : this.findMode ? 'find' : null;
+  }
+
+  _setMode(mode, silent = false) {
+    if (this.pickerMode && mode !== 'picker') this._closePickerView();
+    this.findMode = mode === 'find';
+    this.pickerMode = mode === 'picker';
+    this._updateHighlights(null);
+    if (!silent) this.hooks.onModeChange?.(mode);
+  }
+
+  cancelMode() {
+    if (this.mode) this._setMode(null);
+  }
+
+  _emptyCells() {
+    return this.level.cells.filter(([q, r]) => !this._occupied(key(q, r)));
+  }
+
+  /** Reveal: show the exact number of one random empty cell. Returns false if nothing to reveal. */
+  reveal() {
+    if (!this.canBoost()) return false;
+    const byCell = new Map();
+    for (const [n, c] of Object.entries(this.level.solution)) byCell.set(key(c[0], c[1]), Number(n));
+    const open = this._emptyCells().filter(([q, r]) => !this.revealed.has(key(q, r)));
+    if (!open.length) return false;
+    const [q, r] = open[Math.floor(Math.random() * open.length)];
+    const k = key(q, r);
+    this.revealed.set(k, byCell.get(k));
+    this._buildContent(null);
+    const mark = this.revealMarks.get(k);
+    if (mark) {
+      mark.scale.setScalar(this.R * 0.3);
+      this._tween(380, (t) => mark.scale.setScalar(this.R * (0.3 + 0.7 * easeOutBack(t))));
+    }
     return true;
+  }
+
+  /** Find: next tap on an empty cell pulls the tile that belongs there. */
+  beginFind() {
+    if (!this.canBoost()) return false;
+    this._select(null);
+    this._setMode('find');
+    return true;
+  }
+
+  /** Picker: the tray opens up into a full list; tapping a tile sends it to its cell. */
+  beginPicker() {
+    if (!this.canBoost()) return false;
+    this._select(null);
+    this._setMode('picker');
+    this._openPickerView();
+    return true;
+  }
+
+  _solutionCells(p) {
+    return this._pieceCells(p, this.level.solution[p.numbers[0]]);
+  }
+
+  /** Fly a tray piece from where it is to its solved cells, then place it. Never costs a heart. */
+  _flyPiece(p) {
+    const cells = this._solutionCells(p);
+    this.locked = true;
+    if (this.dragPiece !== p) {
+      this.trayGroup.remove(p.group);
+      this.dragGroup.add(p.group);
+      this.dragPiece = p;
+    }
+    // a piece scrolled out of the list starts from the nearest visible edge of the tray
+    const s = this._cellScreen(cells[0][0], cells[0][1]);
+    const from = p.group.position.clone();
+    from.x = clamp(from.x, this.W * 0.12, this.W * 0.88);
+    const to = this._w(s.x, s.y);
+    const fromScale = p.group.scale.x;
+    const lift = this.R * 1.2;
+    this._tween(460, (k) => {
+      const e = easeOut(k);
+      p.group.position.lerpVectors(from, to, e);
+      p.group.position.y += Math.sin(k * Math.PI) * lift;
+      p.group.scale.setScalar(fromScale + (this.R - fromScale) * e);
+    }, () => {
+      this.locked = false;
+      this._commit(p, cells);
+    });
+  }
+
+  _findCell(cell) {
+    const k = key(cell[0], cell[1]);
+    const p = this.pieces.find((x) => this._solutionCells(x).some(([q, r]) => key(q, r) === k));
+    if (!p) return;
+    this._setMode(null);
+    this.hooks.onBoosterUsed?.('find');
+    this._flyPiece(p);
+  }
+
+  _pickPiece(p) {
+    // the chosen tile leaves the list; the panel closes and the others settle back into the tray
+    this.trayGroup.remove(p.group);
+    this.dragGroup.add(p.group);
+    this.dragPiece = p;
+    this._setMode(null);
+    this.hooks.onBoosterUsed?.('picker');
+    this._flyPiece(p);
   }
 
   /** Continue after running out of hearts: one heart back. */
@@ -590,9 +719,11 @@ export class Game {
   _layout() {
     const { W, H, level } = this;
     if (!level) return;
+    if (this.mode) this._setMode(null); // a resize closes any open booster mode
     const hud = document.getElementById('hud')?.getBoundingClientRect().bottom || 96;
-    const trayH = Math.max(118, Math.min(170, H * 0.2));
-    const trayBottomPad = 44;
+    const trayH = Math.max(104, Math.min(150, H * 0.18));
+    const trayBottomPad = TRAY_BOTTOM;
+    this.trayBottomPad = trayBottomPad;
     this.trayCenterY = H - trayBottomPad - trayH / 2;
     this.trayTop = H - trayBottomPad - trayH;
     // fixed gap under the HUD (room for the tutorial bubble) so the board never moves when it shows
@@ -748,6 +879,39 @@ export class Game {
         this._tween(150, (k) => t.scale.setScalar(this.R * (0.6 + 0.4 * easeOutBack(k))));
       }
     }
+
+    // Reveal booster: the exact number of a still-empty cell, shown as a golden ghost tile
+    this.revealMarks.clear();
+    for (const [k, n] of this.revealed) {
+      if (this._occupied(k)) continue;
+      const [q, r] = k.split(',').map(Number);
+      const s = this._cellScreen(q, r);
+      const mark = new THREE.Group();
+      // ghost look (clearly not a placed tile): flat pale fill that breathes, dashed outline, faded number
+      const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n, 0x70a42a).clone());
+      label.material.opacity = 0.42;
+      label.scale.setScalar(0.6);
+      label.position.set(0, 0, 0.5);
+      const fill = hexLayer(HEX_GEO, new THREE.MeshBasicMaterial({ color: 0xb6dc7a, transparent: true, opacity: 0.15 }), 0.88, 0, 0.1);
+      mark.add(fill, label);
+      const dashMat = basicMat(0x7da84a, 0.4);
+      for (let e = 0; e < 6; e++) {
+        const a0 = ((30 + 60 * e) * Math.PI) / 180, a1 = a0 + Math.PI / 3;
+        const ax = Math.cos(a0) * 0.9, ay = Math.sin(a0) * 0.9, bx = Math.cos(a1) * 0.9, by = Math.sin(a1) * 0.9;
+        const ang = Math.atan2(by - ay, bx - ax), len = Math.hypot(bx - ax, by - ay);
+        for (const t of [0.2, 0.5, 0.8]) {
+          const d = new THREE.Mesh(new THREE.PlaneGeometry(len * 0.2, 0.075), dashMat);
+          d.position.set(ax + (bx - ax) * t, ay + (by - ay) * t, 0.12);
+          d.rotation.z = ang;
+          mark.add(d);
+        }
+      }
+      mark.userData.fill = fill;
+      mark.position.copy(this._w(s.x, s.y, this._tileZ(s.y)));
+      mark.scale.setScalar(this.R);
+      this.contentGroup.add(mark);
+      this.revealMarks.set(k, mark);
+    }
   }
 
   // ---------- tray ----------
@@ -756,7 +920,7 @@ export class Game {
     this._clear(this.dragGroup);
     const bounds = this.pieces.map((p) => pieceBounds(p.offsets));
     const maxH = Math.max(1, ...bounds.map((b) => b.h));
-    const trayH = this.H - 44 - this.trayTop;
+    const trayH = this.H - this.trayBottomPad - this.trayTop;
     this.Rt = Math.max(13, Math.min(this.R * 0.8, (trayH * 0.92) / maxH, 34));
 
     let x = TRAY_PAD;
@@ -797,6 +961,7 @@ export class Game {
 
   /** screen position of a piece's pivot (first cell) when resting in tray */
   _trayPivot(p) {
+    if (this.pickerMode && p.pickPivot) return p.pickPivot;
     const cxu = p.bounds.cx;
     const cyu = p.bounds.cy;
     return {
@@ -853,7 +1018,7 @@ export class Game {
 
   _updateScrollbar() {
     if (!this.sbTrack) return;
-    const show = this.maxScroll > 1 && this.pieces.length > 0;
+    const show = this.maxScroll > 1 && this.pieces.length > 0 && !this.pickerMode;
     this.sbTrack.style.display = show ? 'block' : 'none';
     if (!show) return;
     const tw = this.sbTrack.clientWidth;
@@ -866,6 +1031,7 @@ export class Game {
 
   _positionTray(animate = false) {
     this._updateScrollbar();
+    const sc = this.pickerMode ? this.Rp : this.Rt;
     for (const p of this.pieces) {
       if (p === this.dragPiece) continue;
       const s = this._trayPivot(p);
@@ -875,14 +1041,117 @@ export class Game {
         this._tween(180, (k) => {
           const e = easeOut(k);
           p.group.position.copy(this._w(from.x + (s.x - from.x) * e, from.y + (s.y - from.y) * e));
-          p.group.scale.setScalar(from.k + (this.Rt - from.k) * e);
+          p.group.scale.setScalar(from.k + (sc - from.k) * e);
         });
       } else {
         p.group.position.copy(this._w(s.x, s.y));
-        p.group.scale.setScalar(this.Rt);
+        p.group.scale.setScalar(sc);
       }
       if (p === this.selected) p.group.position.y += 8;
     }
+  }
+
+  // ---------- picker panel ----------
+  _initPickerUI() {
+    const head = document.createElement('div');
+    head.id = 'picker-head';
+    head.innerHTML = '<span>Pick a tile</span><button type="button" aria-label="Close">×</button>';
+    head.querySelector('button').addEventListener('click', () => this.cancelMode());
+    (this.canvas.parentElement || document.body).appendChild(head);
+    this.pickerHead = head;
+  }
+
+  _openPickerView() {
+    const HEAD = 46, PADY = 12, GAPX = 12, GAPY = 10, MX = 8;
+    const hud = document.getElementById('hud')?.getBoundingClientRect().bottom || 96;
+    const panelBottom = this.H - BAR_H - 4;
+    const maxH = panelBottom - (hud + 20);
+    const availW = this.W - 2 * (MX + 14);
+    const list = [...this.pieces].sort((a, b) => a.numbers[0] - b.numbers[0]);
+    const flow = (Rp) => {
+      const rows = [];
+      let cur = { items: [], w: 0, h: 0 };
+      for (const p of list) {
+        const pw = p.bounds.w * Rp, ph = p.bounds.h * Rp;
+        if (cur.items.length && cur.w + GAPX + pw > availW) { rows.push(cur); cur = { items: [], w: 0, h: 0 }; }
+        cur.w += (cur.items.length ? GAPX : 0) + pw;
+        cur.h = Math.max(cur.h, ph);
+        cur.items.push({ p, pw });
+      }
+      rows.push(cur);
+      return { rows, h: rows.reduce((a, r) => a + r.h, 0) + GAPY * (rows.length - 1) };
+    };
+    let Rp = Math.min(this.Rt, 28), f = flow(Rp);
+    while (f.h + HEAD + PADY * 2 > maxH && Rp > 10) f = flow((Rp -= 1));
+    this.Rp = Rp;
+    const panelH = f.h + HEAD + PADY * 2;
+    const panelTop = panelBottom - panelH;
+    this.panelTop = panelTop;
+    let y = panelTop + HEAD + PADY;
+    for (const row of f.rows) {
+      let x = (this.W - row.w) / 2;
+      const cy = y + row.h / 2;
+      for (const { p, pw } of row.items) {
+        p.pickPivot = { x: x + pw / 2 - p.bounds.cx * Rp, y: cy + p.bounds.cy * Rp };
+        x += pw + GAPX;
+      }
+      y += row.h + GAPY;
+    }
+
+    const tok = ++this._pickTok;
+    this._clear(this.pickerGroup);
+    const dim = new THREE.Mesh(new THREE.PlaneGeometry(this.W, this.H), new THREE.MeshBasicMaterial({ color: 0x2b1d0c, transparent: true, opacity: 0 }));
+    dim.position.set(this.W / 2, this.H / 2, 120);
+    const pw = this.W - MX * 2;
+    const border = new THREE.Mesh(roundRectGeo(pw + 8, panelH + 8, 24), new THREE.MeshBasicMaterial({ color: 0xd9a24a }));
+    const panel = new THREE.Mesh(roundRectGeo(pw, panelH, 20), new THREE.MeshBasicMaterial({ color: 0xfff5dd }));
+    const cyw = this.H - (panelTop + panelBottom) / 2;
+    border.position.set(this.W / 2, cyw, 124);
+    panel.position.set(this.W / 2, cyw, 125);
+    this.pickerGroup.add(dim, border, panel);
+    this.pickerDim = dim;
+    this.pickerSlide = panelH + BAR_H;
+    this.trayGroup.position.z = 150;
+    this.pickerHead.style.display = 'flex';
+    this.pickerHead.style.top = `${panelTop + 6}px`;
+    this.pickerHead.style.left = `${MX}px`;
+    this.pickerHead.style.width = `${pw}px`;
+    this._tween(220, (k) => {
+      if (this._pickTok !== tok) return;
+      const e = easeOut(k);
+      this.pickerGroup.position.y = -this.pickerSlide * (1 - e);
+      dim.material.opacity = 0.45 * e;
+    });
+    this._positionTray(true);
+  }
+
+  _closePickerView() {
+    this.pickerMode = false;
+    this.pickerHead.style.display = 'none';
+    const tok = ++this._pickTok;
+    const dim = this.pickerDim;
+    this._tween(200, (k) => {
+      if (this._pickTok !== tok) return;
+      this.pickerGroup.position.y = -(this.pickerSlide || 0) * easeOut(k);
+      if (dim) dim.material.opacity = 0.45 * (1 - k);
+    }, () => {
+      if (this._pickTok !== tok) return;
+      this._clear(this.pickerGroup);
+      this.pickerGroup.position.y = 0;
+      this.trayGroup.position.z = 0;
+    });
+    this._positionTray(true);
+  }
+
+  _pickerPieceAt(pt) {
+    for (const p of this.pieces) {
+      const piv = this._trayPivot(p);
+      for (const [dq, dr] of p.offsets) {
+        const u = unitPos(dq, dr);
+        if (Math.hypot(pt.x - (piv.x + u.x * this.Rp), pt.y - (piv.y - u.y * this.Rp)) < this.Rp) return p;
+      }
+    }
+    return null;
   }
 
   // ---------- input ----------
@@ -922,10 +1191,14 @@ export class Game {
     } catch {
       /* synthetic or already-released pointer */
     }
+    if (this.pickerMode) {
+      this.ptr = { id: e.pointerId, start: pt, piece: this._pickerPieceAt(pt), mode: null, picker: true };
+      return;
+    }
     this.ptr = {
       id: e.pointerId,
       start: pt,
-      piece: this._pieceAt(pt),
+      piece: this.findMode ? null : this._pieceAt(pt),
       mode: null,
       scrollStart: this.scroll,
     };
@@ -933,7 +1206,7 @@ export class Game {
 
   _move(e) {
     const s = this.ptr;
-    if (!s || s.id !== e.pointerId) return;
+    if (!s || s.id !== e.pointerId || s.picker) return;
     const pt = this._pt(e);
     const dx = pt.x - s.start.x;
     const dy = pt.y - s.start.y;
@@ -956,12 +1229,25 @@ export class Game {
     if (!s || s.id !== e.pointerId) return;
     this.ptr = null;
     const pt = this._pt(e);
+    if (s.picker) {
+      if (cancelled || !this.pickerMode) return;
+      if (s.piece && this._pickerPieceAt(pt) === s.piece) this._pickPiece(s.piece);
+      else if (pt.y < this.panelTop) this.cancelMode();
+      return;
+    }
     if (s.mode === 'drag') {
       if (cancelled) this._returnPiece(this.dragPiece);
       else this._drop(pt);
       return;
     }
     if (s.mode) return; // scroll / none
+    if (this.findMode) {
+      const cell = this._screenToCell(pt.x, pt.y);
+      const k = key(cell[0], cell[1]);
+      if (this.cellKeys.has(k) && !this._occupied(k)) this._findCell(cell);
+      else this.cancelMode();
+      return;
+    }
     // ---- tap ----
     if (s.piece) {
       this._select(this.selected === s.piece ? null : s.piece);
@@ -1219,6 +1505,12 @@ export class Game {
       m.position.copy(this._w(s.x, s.y, z));
       this.hlGroup.add(m);
     };
+    if (this.findMode) {
+      for (const [q, r] of this._emptyCells()) {
+        add(q, r, COLORS.hint, 0.32, this.R * 0.15);
+        add(q, r, 0xe0932a, 0.95, this.R * 0.2, true);
+      }
+    }
     const active = drag?.piece || this.selected;
     if (settings.hints && active && !this.locked) {
       for (const anchor of this._candidateAnchors(active)) add(anchor[0], anchor[1], COLORS.hint, 0.55, this.R * 0.15);
@@ -1685,6 +1977,7 @@ export class Game {
         tw.done?.();
       }
     }
+    for (const m of this.revealMarks.values()) m.userData.fill.material.opacity = 0.15 + 0.08 * Math.sin(now / 420);
     for (const w of this.waves || []) {
       const t = now / 1600 + w.ph;
       w.mesh.position.x = w.bx + Math.sin(t) * 0.12;
