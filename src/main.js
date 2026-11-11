@@ -96,6 +96,8 @@ const result = $('result');
 const resMap = $('res-map');
 const STAR_SVG =
   '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
+const HOME_SVG =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11.5L12 4l8.5 7.5M6 10v9.5h4.5V14h3v5.5H18V10"/></svg>';
 let heartsLeft = 3;
 let resultTimers = [];
 const later = (fn, ms) => resultTimers.push(setTimeout(fn, ms));
@@ -148,14 +150,10 @@ function showResult(o) {
   $('res-art').innerHTML = o.win ? winArt(o) : loseArt(o);
   result.dataset.outcome = o.win ? 'win' : 'lose';
   result.setAttribute('aria-label', o.title);
-  $('res-kicker').textContent = o.win ? 'A LITTLE CONNECTION. A BIG BLOOM.' : levels[levelIndex].name + ' · KEEP GROWING';
-  $('res-reward').innerHTML = o.win
-    ? `<span>GARDEN REWARD</span><strong>${COIN} +${o.reward}</strong><small>Added to your balance</small>`
-    : '<span>ONE MORE CHANCE</span><strong>Your garden is worth it.</strong><small>Revive to keep your placed tiles.</small>';
+  $('res-reward').innerHTML = o.win ? `<strong>${COIN} +${o.reward}</strong>` : '';
+  home.innerHTML = `${HOME_SVG}${o.win ? '' : '<span>Home</span>'}`;
   if (o.win) confetti($('res-confetti'));
   else $('res-confetti').innerHTML = '';
-  $('res-sub').innerHTML = o.sub;
-  $('res-next').textContent = o.next ?? '';
   btn.disabled = false;
   if (o.win) {
     btn.innerHTML = '<span>Continue</span><span aria-hidden="true">›</span>';
@@ -170,7 +168,8 @@ function showResult(o) {
       }, 520);
     };
     rev.classList.add('hidden');
-    home.classList.add('hidden');
+    home.classList.remove('hidden');
+    home.onclick = () => { audio.tap(); o.onHome(); };
   } else {
     btn.textContent = '↻  Try again';
     btn.classList.add('alt');
@@ -178,7 +177,7 @@ function showResult(o) {
     rev.classList.remove('hidden');
     rev.innerHTML = `<span>Keep growing</span><em>${economy.costs.revive} ${COIN}</em>`;
     rev.disabled = !canAfford(progress, economy.costs.revive);
-    if (rev.disabled) $('res-reward').querySelector('small').textContent = `Revive needs ${economy.costs.revive} coins · try again for free`;
+    rev.title = rev.disabled ? `Revive needs ${economy.costs.revive} coins` : '';
     rev.onclick = () => { audio.tap(); o.onRevive(); };
     home.classList.remove('hidden');
     home.onclick = () => { audio.tap(); o.onHome(); };
@@ -188,13 +187,10 @@ function showResult(o) {
   result.classList.remove('hidden');
   game.enterResultView();
   void result.offsetWidth;
-  // 1) art  2) the map, scaled to fit the slot  3) the action button
-  result.classList.add('show-art');
-  later(() => {
-    result.classList.add('show-map');
-    game.fitView(mapRect, 950);
-  }, o.win ? 1000 : 750);
-  later(() => result.classList.add('show-actions'), o.win ? 2050 : 1600);
+  // art and the map's scale-to-fit start together (win: the garden grows during the same move); then the buttons
+  result.classList.add('show-art', 'show-map');
+  game.fitView(mapRect, 800);
+  later(() => result.classList.add('show-actions'), o.win ? 1200 : 800);
 }
 
 let pendingWin = null;
@@ -245,6 +241,7 @@ const game = new Game($('game'), {
       sub: `<b>${levels[levelIdx].name}</b> · ${praise} · ${note}`,
       next: last ? 'You grew every garden!' : `Next: ${levels[levelIdx + 1].name}`,
       onClaim: () => startLevel(last ? 0 : levelIdx + 1),
+      onHome: showHome,
     });
   },
   onFail: () => {
@@ -441,9 +438,14 @@ function renderLevels() {
     const locked = !isUnlocked(i);
     const stars = starsFor(progress, l.id);
     const b = document.createElement('button');
-    b.className = `lv-card${locked ? ' locked' : ''}${i === cur && !locked ? ' current' : ''}`;
-    b.setAttribute('aria-label', `Level ${l.id}${locked ? ', locked' : `, ${stars} of 3 stars`}`);
+    const state = locked ? '' : stars >= 3 ? ' perfect' : stars > 0 ? ' partial' : '';
+    b.className = `lv-card${locked ? ' locked' : ''}${state}${i === cur && !locked ? ' current' : ''}`;
+    b.setAttribute('aria-label', `Level ${l.id}${locked ? ', locked' : stars >= 3 ? ', completed with 3 stars' : `, ${stars} of 3 stars, replay for the missing ${3 - stars}`}`);
+    const badge = locked ? '' : stars >= 3
+      ? '<span class="badge ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>'
+      : stars > 0 ? `<span class="badge miss" aria-hidden="true">+${3 - stars}★</span>` : '';
     b.innerHTML =
+      badge +
       `<span class="num">${l.id}</span>` +
       (locked
         ? lockSvg

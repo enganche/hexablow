@@ -1237,9 +1237,10 @@ export class Game {
     // 2) numbers vanish, the tiles merge into one lawn, flowers sprout, the finish cell grows a cottage
     setTimeout(() => {
       if (this._winToken !== token) return;
-      this._growGarden(() => {
-        setTimeout(() => this._winToken === token && this.hooks.onWin(), 500);
-      });
+      // garden growth and the result screen (with its map scale-to-fit) play together.
+      // _growGarden builds the plan synchronously, so the fit already accounts for the cottage.
+      this._growGarden();
+      this.hooks.onWin();
     }, N * step + 120);
   }
   _pulse(t) {
