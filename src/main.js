@@ -362,8 +362,8 @@ function startLevel(i) {
   saveLevelIndex(i);
   const level = levels[i];
   $('level-name').textContent = level.name;
-  // level 1 keeps its fixed tray order (tutorial); later levels shuffle the tray randomly
-  game.loadLevel(level, { randomOrder: level.id !== 1 });
+  // levels 1-2 keep an ascending tray order (gentle start); from level 3 the tray is shuffled each play
+  game.loadLevel(level, { randomOrder: level.id > 2 });
   tut.start(level);
 }
 
