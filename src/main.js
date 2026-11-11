@@ -566,20 +566,35 @@ const note = $('settings-note');
 const inputs = [...document.querySelectorAll('input[data-setting]')];
 inputs.forEach((inp) => (inp.checked = !!settings[inp.dataset.setting]));
 
+let settingsOpener = null;
+function closeSettings() {
+  audio.tap();
+  panel.classList.add('hidden');
+  settingsOpener?.focus();
+}
 for (const id of ['settings-btn', 'home-settings']) {
   $(id).addEventListener('click', () => {
     audio.unlock();
     audio.tap();
     note.textContent = '';
+    settingsOpener = $(id);
     panel.classList.remove('hidden');
+    $('settings-close').focus();
   });
 }
-$('settings-close').addEventListener('click', () => {
-  audio.tap();
-  panel.classList.add('hidden');
-});
+$('settings-close').addEventListener('click', closeSettings);
 panel.addEventListener('click', (e) => {
-  if (e.target === panel) panel.classList.add('hidden');
+  if (e.target === panel) closeSettings();
+});
+
+panel.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.preventDefault(); closeSettings(); }
+  if (e.key === 'Tab') {
+    const controls = [...panel.querySelectorAll('button, input')];
+    const first = controls[0], last = controls[controls.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
 });
 
 inputs.forEach((inp) =>
