@@ -53,14 +53,44 @@ function leaf(x, y, rot, len, fill) {
   <path d="M0 -3V${f1(-len * 0.7)}" transform="translate(${f1(x)} ${f1(y)}) rotate(${f1(rot)})" stroke="#3a8a3a" stroke-width="2" stroke-linecap="round" opacity=".45"/>`;
 }
 
-/** A curved leafy sprig sweeping up the left side; mirrored for the right. */
+function flower(x, y, r, petal, edge, rot = 0) {
+  let s = `<g transform="translate(${f1(x)} ${f1(y)}) rotate(${rot})">`;
+  for (let i = 0; i < 5; i++) {
+    s += `<ellipse cx="0" cy="${f1(-r * 0.78)}" rx="${f1(r * 0.5)}" ry="${f1(r * 0.62)}" fill="${petal}" stroke="${edge}" stroke-width="2" transform="rotate(${i * 72})"/>`;
+  }
+  return s + `<circle r="${f1(r * 0.42)}" fill="#ffe27b" stroke="#e0a928" stroke-width="2"/><circle cx="${f1(-r * 0.12)}" cy="${f1(-r * 0.14)}" r="${f1(r * 0.12)}" fill="#fff" opacity=".8"/></g>`;
+}
+
+/** One lush leafy branch hugging an arc over the stars (left side); mirrored for the right. */
 function sprig(side) {
-  const g = '#8fe05a', g2 = '#6bcf4a';
-  const inner = `<path d="M92 196C58 170 50 120 78 62" fill="none" stroke="#3a8a3a" stroke-width="5" stroke-linecap="round"/>
-    ${leaf(83, 182, -60, 30, g2)}${leaf(69, 156, 62, 30, g)}${leaf(60, 128, -64, 29, g2)}${leaf(58, 100, 58, 28, g)}${leaf(66, 76, -50, 26, g2)}${leaf(78, 60, 8, 24, g)}
-    <circle cx="48" cy="150" r="7" fill="#ffb3cc" stroke="#e0709a" stroke-width="3"/><circle cx="48" cy="150" r="2.6" fill="#ffe27b"/>
-    <circle cx="94" cy="104" r="6" fill="#fff" stroke="#d7cfb9" stroke-width="3"/><circle cx="94" cy="104" r="2.4" fill="#ffd84a"/>`;
+  const cx = 200, cy = 136, r = 130;
+  const pt = (deg) => [cx + r * Math.cos(rad(deg)), cy - r * Math.sin(rad(deg))];
+  const [x0, y0] = pt(208), [x2, y2] = pt(96);
+  let inner = `<path d="M${f1(x0)} ${f1(y0)}A${r} ${r} 0 0 1 ${f1(x2)} ${f1(y2)}" fill="none" stroke="#2f7a3c" stroke-width="5" stroke-linecap="round"/>`;
+  const greens = ['#7fdc54', '#5cc447', '#9be866'];
+  let k = 0;
+  for (let deg = 204; deg >= 98; deg -= 9) {
+    const [x, y] = pt(deg);
+    const len = 36 - (204 - deg) * 0.12;
+    const rot = 180 - deg;
+    inner += leaf(x, y, rot - 42, len, greens[k % 3]);
+    inner += leaf(x, y, rot + 42, len * 0.9, greens[(k + 1) % 3]);
+    k++;
+  }
+  const [fx, fy] = pt(172), [gx, gy] = pt(126), [bx, by] = pt(190), [dx, dy] = pt(110);
+  inner += flower(fx - 6, fy - 4, 12, '#ffb3cc', '#e0709a', 10);
+  inner += flower(gx - 4, gy - 8, 9.5, '#fff', '#d9cfb4', -8);
+  inner += `<circle cx="${f1(bx - 4)}" cy="${f1(by - 14)}" r="4.5" fill="#ff9ec2" stroke="#e0709a" stroke-width="2"/><circle cx="${f1(dx)}" cy="${f1(dy - 12)}" r="4" fill="#ffd84a" stroke="#e0a928" stroke-width="2"/>`;
   return side < 0 ? inner : `<g transform="translate(400 0) scale(-1 1)">${inner}</g>`;
+}
+
+/** A drooping, wilted flower for the lose screen. */
+function wilt(x, y, flip) {
+  return `<g transform="translate(${x} ${y}) scale(${flip ? -1 : 1} 1)">
+    <path d="M0 40C0 18 4 4 22 -2" fill="none" stroke="#6aa04a" stroke-width="5" stroke-linecap="round"/>
+    <path d="M2 30C-12 26-16 16-14 8C-2 10 4 20 2 30Z" fill="#8cc06a" stroke="#5e8f45" stroke-width="2.5" stroke-linejoin="round"/>
+    <g transform="translate(24 4) rotate(100)">${[0, 1, 2, 3, 4].map((i) => `<ellipse cx="0" cy="-9" rx="5.5" ry="7.5" fill="#e6c9d6" stroke="#b996a9" stroke-width="2" transform="rotate(${i * 72})"/>`).join('')}<circle r="5" fill="#e8d28a" stroke="#bda55a" stroke-width="2"/></g>
+  </g>`;
 }
 
 function ribbon(text, c1, c2, edge, tail, fs) {
@@ -70,9 +100,12 @@ function ribbon(text, c1, c2, edge, tail, fs) {
     <path d="M382 184H330V244H382L360 214Z" fill="${tail}" stroke="${edge}" stroke-width="5" stroke-linejoin="round"/>
     <path d="M46 228L70 232V246Z" fill="${edge}" stroke="${edge}" stroke-width="4" stroke-linejoin="round"/>
     <path d="M354 228L330 232V246Z" fill="${edge}" stroke="${edge}" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M70 232V246L58 238Z" fill="#000" opacity=".18"/>
+    <path d="M330 232V246L342 238Z" fill="#000" opacity=".18"/>
     <path d="M58 168Q200 154 342 168Q352 169 352 180V226Q352 237 342 238Q200 252 58 238Q48 237 48 226V180Q48 169 58 168Z" fill="url(#ra-rib)" stroke="${edge}" stroke-width="6" stroke-linejoin="round"/>
     <path d="M62 177Q200 164 338 177" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".4"/>
     <path d="M66 230Q200 243 334 230" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 8" opacity=".55"/>
+    <circle cx="66" cy="203" r="4" fill="#fff" opacity=".75"/><circle cx="334" cy="203" r="4" fill="#fff" opacity=".75"/>
     <text x="200" y="215" text-anchor="middle" font-family="Nunito, ui-rounded, system-ui, sans-serif" font-weight="900" font-size="${fs}" fill="#fffef0" stroke="${edge}" stroke-width="8" paint-order="stroke" stroke-linejoin="round" >${text}</text>
   </g>
   <defs><linearGradient id="ra-rib" x2="0" y2="1"><stop stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;
@@ -97,6 +130,8 @@ export function winArt({ title, stars }) {
     <circle r="150" fill="url(#ra-glow)"/>
     <g class="ra-rays">${rays(10, 'rgba(255,250,200,.4)')}</g>
   </g>
+  <circle cx="200" cy="118" r="92" fill="#fffbe0" opacity=".45"/>
+  <circle cx="200" cy="118" r="92" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" opacity=".8"/>
   <g>${sparkle(52, 70, 1, 0)}${sparkle(352, 48, 1.1, 0.4)}${sparkle(330, 128, 0.7, 0.8)}${sparkle(102, 28, 0.8, 1.2)}${sparkle(300, 20, 0.6, 0.2)}</g>
   <g class="ra-laurel">${sprig(-1)}${sprig(1)}</g>
   ${star(122, 122, 36, -14, stars >= 1, 0)}
@@ -139,9 +174,10 @@ export function loseArt({ title }) {
     <circle r="140" fill="url(#ra-glow)" opacity=".5"/>
     <g class="ra-rays">${rays(10, 'rgba(255,220,214,.3)')}</g>
   </g>
+  ${wilt(62, 112, false)}${wilt(338, 112, true)}
   ${half('ra-cl', -9, 2, -7, 'ra-half l', -1)}
   ${half('ra-cr', 9, 6, 6, 'ra-half r', 1)}
-  <g fill="#fff" opacity=".9"><circle cx="150" cy="52" r="3.5"/><circle cx="255" cy="58" r="3"/><circle cx="278" cy="96" r="2.6"/></g>
+  <g fill="#fff" opacity=".9"><circle cx="150" cy="52" r="3.5"/><path d="M118 70q-4 8 0 11q4-3 0-11ZM284 40q-4 8 0 11q4-3 0-11Z" fill="#cfe9ff" stroke="#8cc4ee" stroke-width="1.6"/><circle cx="255" cy="58" r="3"/><circle cx="278" cy="96" r="2.6"/></g>
   ${ribbon(title, '#b9a0dc', '#8a66b8', '#5d4585', '#7a5a9e', 31)}
 </svg>`;
 }
