@@ -774,3 +774,40 @@ body {
 #result[data-outcome=lose] #result-revive .coin { font-size:6cqw; }
 #result[data-outcome=lose] #result-btn { grid-area:revive; padding:2.6cqw 2cqw; font-size:4.4cqw; border-radius:5cqw; white-space:nowrap; background:#fffaff; color:#79618d; border:.7cqw solid #e6def2; box-shadow:0 1.2cqw #b9aacb; text-shadow:none; }
 #result[data-outcome=lose] #result-btn:active { transform:translateY(.8cqw); box-shadow:0 .4cqw #b9aacb; }
+
+/* ---- Settings: chunky garden-game popup ---- */
+#settings.modal { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7cqw; padding:6cqw; background:radial-gradient(ellipse at 50% 40%,#2f5d3acc,#1b3a2ae6); backdrop-filter:blur(2px); animation:fp-fade .25s both; }
+#settings.modal.hidden { display:none; }
+.st-card { position:relative; width:84cqw; padding:15cqw 6cqw 5cqw; border-radius:8cqw; border:1.2cqw solid #fff; text-align:left;
+  background:
+    radial-gradient(circle at 50% 0,#ffffff88,#fff0 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cpath d='M28 2l26 15v30L28 62 2 47V17zM28 64l26 15M28 64L2 79M28 95V64' fill='none' stroke='%23a9d27a' stroke-opacity='.35' stroke-width='2'/%3E%3C/svg%3E"),
+    linear-gradient(#fffbe6,#f3f8d0);
+  box-shadow:0 2cqw 0 #6aa84a, 0 0 0 1.2cqw #8cc65d, 0 5cqw 8cqw #0006; animation:fp-card .5s cubic-bezier(.2,1.5,.4,1) both; }
+.st-banner { position:absolute; left:50%; top:-6cqw; transform:translateX(-50%); width:66cqw; padding:2.6cqw 0 3cqw; text-align:center; border:1cqw solid #fff9df; border-radius:6cqw;
+  background:linear-gradient(#ffd56a,#ffb12f 60%,#ff9d32); box-shadow:0 1.6cqw 0 #ca6c23, inset 0 .8cqw 0 #ffe9a0; }
+.st-banner h2 { margin:0; font-size:8cqw; font-weight:900; letter-spacing:.6cqw; color:#fff; text-shadow:0 .8cqw 0 #c06a1c, 0 0 2cqw #c06a1c88; }
+.st-leaf { position:absolute; top:-5cqw; font-size:9cqw; filter:drop-shadow(0 .8cqw 0 #2f7d2c66); }
+.st-leaf.l { left:-4cqw; transform:rotate(-30deg); }
+.st-leaf.r { right:-4cqw; transform:scaleX(-1) rotate(-30deg); }
+.st-card .rows { margin:0 0 2cqw; }
+.st-card .rows li { gap:4cqw; padding:3.2cqw 1cqw; border-bottom:.6cqw dashed #b7c99a; font-size:5.2cqw; color:#416e3d; }
+.st-card .rows li span { flex:1; }
+.st-ic { flex:none; width:11cqw; height:12.6cqw; display:grid; place-items:center; font-style:normal; font-size:5.8cqw; clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  background:linear-gradient(#ffe9a0,#ffc23f); box-shadow:inset 0 -1cqw 0 #e09a1f; }
+.st-card .switch { width:17cqw; height:9.4cqw; }
+.st-card .switch i { border-radius:5cqw; background:linear-gradient(#cfc4aa,#e0d6bf); box-shadow:inset 0 .8cqw 1.2cqw #0003, 0 .6cqw 0 #fff; }
+.st-card .switch i::after { top:.8cqw; left:.8cqw; width:7.8cqw; height:7.8cqw; background:radial-gradient(circle at 35% 30%,#fff,#efe8d6); box-shadow:0 .6cqw 0 #a99d82, 0 1cqw 1.4cqw #0003; transition:transform .2s cubic-bezier(.3,1.5,.5,1); }
+.st-card .switch input:checked + i { background:linear-gradient(#59b238,#8be04e); }
+.st-card .switch input:checked + i::after { transform:translateX(7.6cqw); background:radial-gradient(circle at 35% 30%,#fff,#e8ffc7); box-shadow:0 .6cqw 0 #3a8a2c, 0 1cqw 1.4cqw #0003; }
+.st-card .note { min-height:0; margin:0 !important; font-size:3.2cqw; text-align:center; color:#b4552f; }
+.st-card .note:empty { display:none; }
+.st-close { appearance:none; flex:none; width:15cqw; height:15cqw; padding:3.4cqw; border:1cqw solid #fff; border-radius:50%; cursor:pointer;
+  background:radial-gradient(circle at 50% 30%,#ff8a7a,#e8443a 70%); box-shadow:0 1.6cqw 0 #a82a22, 0 3cqw 4cqw #0005, inset 0 .8cqw 0 #ffb3a8; transition:transform .12s, box-shadow .12s; }
+.st-close:active { transform:translateY(1cqw); box-shadow:0 .6cqw 0 #a82a22; }
+.st-card .rows li:last-child { border-bottom:0; }
+
+/* settings tweaks: close X back in the top-right corner, tighter rows */
+.st-card .st-close { position:absolute; top:-5cqw; right:-4cqw; width:11cqw; height:11cqw; padding:2.6cqw; z-index:2; }
+.st-card .rows li { padding:1.8cqw 1cqw; }
+.st-card { padding-top:14cqw; }
