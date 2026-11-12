@@ -412,7 +412,7 @@ const game = new Game($('game'), {
       find,
       sub: `<b>${levels[levelIdx].name}</b> · ${praise} · ${note}`,
       next: last ? 'You grew every garden!' : `Next: ${levels[levelIdx + 1].name}`,
-      onClaim: () => startLevel(last ? 0 : levelIdx + 1),
+      onClaim: () => { startLevel(last ? 0 : levelIdx + 1); playLevelIntro(); },
       onHome: showHome,
     });
   },
@@ -432,7 +432,7 @@ const game = new Game($('game'), {
           renderCoins();
         }
       },
-      onRetry: () => startLevel(levelIndex),
+      onRetry: () => { startLevel(levelIndex); playLevelIntro(); },
       onHome: showHome,
     });
   },
@@ -529,10 +529,46 @@ function showHome() {
   const cur = continueIndex();
   $('home-level').textContent = `${levels[cur].name} · ★ ${totalStars(progress)}/${levels.length * 3}`;
   $('play-btn').querySelector('span').textContent = completedCount(progress) === 0 && cur === 0 ? 'Play' : 'Continue';
+  home.classList.remove('leaving');
   home.classList.remove('hidden');
 }
 function hideHome() {
   home.classList.add('hidden');
+}
+
+// ---- Home -> level transition: home content slides away, then the HUD, board, tray and boosters build in ----
+const stageEl = $('stage');
+const calmMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+let introTimer = 0;
+let entering = false;
+function playLevelIntro() {
+  if (calmMotion) return;
+  stageEl.classList.remove('intro');
+  void stageEl.offsetWidth;
+  stageEl.classList.add('intro');
+  game.playIntro();
+  clearTimeout(introTimer);
+  introTimer = setTimeout(() => stageEl.classList.remove('intro'), 1600);
+}
+/** Start level i from the home / level-picker screens with the entrance animation. */
+function enterLevel(i) {
+  if (entering) return;
+  if (calmMotion || home.classList.contains('hidden')) {
+    hideLevels();
+    hideHome();
+    startLevel(i);
+    return;
+  }
+  entering = true;
+  const fromPicker = !levelsEl.classList.contains('hidden');
+  home.classList.add('leaving');
+  hideLevels();
+  setTimeout(() => {
+    hideHome();
+    startLevel(i);
+    playLevelIntro();
+    entering = false;
+  }, fromPicker ? 200 : 270);
 }
 
 // ---- Shop ----
@@ -675,9 +711,7 @@ function renderLevels() {
         return;
       }
       audio.tap();
-      hideLevels();
-      hideHome();
-      startLevel(i);
+      enterLevel(i);
     };
     grid.appendChild(b);
   });
@@ -701,8 +735,7 @@ $('levels-back').addEventListener('click', () => {
 $('play-btn').addEventListener('click', () => {
   audio.unlock();
   audio.tap();
-  startLevel(continueIndex());
-  hideHome();
+  enterLevel(continueIndex());
 });
 $('back-btn').addEventListener('click', () => {
   audio.tap();
@@ -786,8 +819,9 @@ applyCosmetics();
 showHome();
 // very first launch: jump straight into level 1
 if (!hasOpenedLevel() && completedCount(progress) === 0) {
-  startLevel(0);
   hideHome();
+  startLevel(0);
+  playLevelIntro();
 }
 
 // ---- Debug level picker: press ` (backtick) to toggle ----

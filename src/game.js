@@ -546,6 +546,42 @@ export class Game {
     this._layout();
   }
 
+  /**
+   * Entrance animation after loadLevel: board cells ripple outward from the centre, the given tiles pop in,
+   * then the tray pieces rise one by one. Works on the already-built objects so layout/input are untouched.
+   */
+  playIntro() {
+    if (!this.level) return;
+    const items = [];
+    const cx = this.boardScreenX, cy = this.boardScreenY;
+    const reach = Math.max(1, this.R * 4.5);
+    const add = (obj, delay, dur, rise, piece) => {
+      items.push({ obj, delay, dur, rise, piece, k: obj.scale.x, y: obj.position.y });
+      obj.scale.setScalar(0.0001);
+    };
+    const dist = (o) => Math.min(1, Math.hypot(o.position.x - cx, this.H - o.position.y - cy) / reach);
+    for (const o of this.boardGroup.children) add(o, 80 + dist(o) * 380, 420, this.R * 0.28);
+    for (const o of this.contentGroup.children) add(o, 330 + dist(o) * 380, 420, this.R * 0.4);
+    this.pieces.forEach((p, i) => add(p.group, 560 + Math.min(i, 8) * 70, 440, 34, p));
+    const total = Math.max(...items.map((it) => it.delay + it.dur));
+    const skip = (it) => !it.obj.parent || (it.piece && (it.piece === this.dragPiece || it.obj.parent !== this.trayGroup));
+    this._tween(total, (k) => {
+      const t = k * total;
+      for (const it of items) {
+        if (skip(it)) continue;
+        const u = clamp((t - it.delay) / it.dur, 0, 1);
+        it.obj.scale.setScalar(Math.max(0.0001, it.k * easeOutBack(u)));
+        it.obj.position.y = it.y - it.rise * (1 - easeOut(u));
+      }
+    }, () => {
+      for (const it of items) {
+        if (skip(it)) continue;
+        it.obj.scale.setScalar(it.k);
+        it.obj.position.y = it.y;
+      }
+    });
+  }
+
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
