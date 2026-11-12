@@ -771,10 +771,6 @@ export class Game {
     this._applyClear();
   }
 
-  refreshHints() {
-    this._updateHighlights(this._dragCells || null);
-  }
-
   /** HUD bottom edge in stage coordinates (the stage may be letterboxed inside the window). */
   _hudBottom() {
     const h = document.getElementById('hud')?.getBoundingClientRect();
@@ -1611,7 +1607,6 @@ export class Game {
   // ---------- highlights (ghost + optional hints) ----------
   _updateHighlights(drag) {
     this._clear(this.hlGroup);
-    const settings = this.hooks.getSettings();
     const add = (q, r, color, opacity, z, outline = false) => {
       const s = this._cellScreen(q, r);
       const m = new THREE.Mesh(outline ? OUTLINE_GEO : HEX_GEO, basicMat(color, opacity));
@@ -1625,38 +1620,12 @@ export class Game {
         add(q, r, 0xe0932a, 0.95, this.R * 0.2, true);
       }
     }
-    const active = drag?.piece || this.selected;
-    if (settings.hints && active && !this.locked) {
-      for (const anchor of this._candidateAnchors(active)) add(anchor[0], anchor[1], COLORS.hint, 0.55, this.R * 0.15);
-    }
     if (drag) {
       const ok = this._fits(drag.cells);
       for (const [q, r] of drag.cells) {
         if (this.cellKeys.has(key(q, r))) add(q, r, ok ? COLORS.ghostOk : COLORS.ghostBad, 0.95, this.R * 0.25, true);
       }
     }
-  }
-
-  /** Soft hint: anchor cells where the piece fits and agrees with already-placed neighbours. */
-  _candidateAnchors(p) {
-    const known = new Map();
-    for (const [n, c] of Object.entries(this.level.givens)) known.set(Number(n), c);
-    for (const [n, c] of this.placed) known.set(n, c);
-    const out = [];
-    for (const [q, r] of this.level.cells) {
-      const cells = this._pieceCells(p, [q, r]);
-      if (!this._fits(cells)) continue;
-      let ok = true;
-      p.numbers.forEach((n, i) => {
-        for (const m of [n - 1, n + 1]) {
-          if (p.numbers.includes(m)) continue;
-          const k = known.get(m);
-          if (k && !areAdjacent(k, cells[i])) ok = false;
-        }
-      });
-      if (ok) out.push([q, r]);
-    }
-    return out;
   }
 
   // ---------- win ----------

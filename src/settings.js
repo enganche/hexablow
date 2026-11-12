@@ -6,13 +6,18 @@ export const DEFAULT_SETTINGS = {
   music: true,
   vibration: true,
   notifications: false,
-  hints: false,
+  hints: true, // auto-hint when the player is stuck (on by default)
 };
 
 export function loadSettings() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    if (raw) {
+      const saved = JSON.parse(raw);
+      // hints used to be an opt-in highlight (default off): switch everyone to the new default-on auto hint once
+      if (!saved.hintsV2) { saved.hints = true; saved.hintsV2 = true; }
+      return { ...DEFAULT_SETTINGS, ...saved };
+    }
   } catch {
     /* storage unavailable */
   }

@@ -5,6 +5,7 @@ import levels from './levels.json';
 import { Game } from './game.js';
 import { AudioManager, vibrate } from './audio.js';
 import { Praise } from './praise.js';
+import { pickHint, HINT_IDLE_SECONDS } from './hint.js';
 import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex, hasOpenedLevel } from './settings.js';
 import economy from './economy.json';
 import { winArt, loseArt, confetti } from './resultArt.js';
@@ -362,7 +363,7 @@ const game = new Game($('game'), {
   getSettings: () => settings,
   getFound: () => progress.found,
   onModeChange: () => syncModeUI(),
-  onCellJump: (n) => tut.cellJumped(n),
+  onCellJump: (n, to) => { tut.cellJumped(n); hint.cellJumped(n, to); },
   onBoosterUsed: (id) => {
     useBooster(progress, id);
     renderBoosters();
@@ -378,6 +379,7 @@ const game = new Game($('game'), {
   },
   onPlace: (count, pos, isLast) => {
     audio.place(count);
+    hint.reset(); // progress: restart the stuck timer
     vibrate(settings, 12);
     praise.hit(pos, count, isLast);
   },
@@ -615,6 +617,84 @@ const tut = {
   },
 };
 
+// ---- Auto hint: stuck for a while -> point at the easiest tile (by the difficulty rule), via tap-to-jump ----
+// 1) a hand asks the player to tap a number on the grid  2) the list jumps to the tile  3) hand drags it in.
+const NOT_PLAYING = '.result-mode, :has(#home:not(.hidden)), :has(#levels:not(.hidden)), :has(#shop:not(.hidden)), :has(#album:not(.hidden)), :has(#settings:not(.hidden))';
+const hint = {
+  active: false,
+  phase: 'tap', // 'tap' (tap a grid number) | 'focus' (drag the tile in)
+  info: null,
+  last: performance.now(), // last time the player made progress (or the hint was reset)
+  running: false,
+  enabled: () => settings.hints !== false,
+  canShow() {
+    return this.enabled() && !tut.active && !!game.level && !game.locked && !game.resultMode && !game.dragPiece &&
+      !game.selected && !game.mode && game.pieces.length > 0 && !stageEl.matches(NOT_PLAYING);
+  },
+  reset() {
+    this.hide();
+    this.last = performance.now();
+  },
+  hide() {
+    if (!this.active) return;
+    this.active = false;
+    this.info = null;
+    if (!tut.active) tut.el.classList.add('hidden');
+    tut.el.classList.remove('hint-mode');
+  },
+  check() {
+    if (document.hidden || !this.canShow()) { this.reset(); return; }
+    if (this.active) {
+      if (!game.pieces.includes(this.info.piece)) this.reset(); // placed (or level changed)
+      return;
+    }
+    if (performance.now() - this.last < HINT_IDLE_SECONDS * 1000) return;
+    const info = pickHint(game.level, game.placed, game.pieces);
+    if (!info) { this.last = performance.now(); return; }
+    game._jumpFrom = null; // so the first tap on the grid number lands on the hinted tile
+    this.info = info;
+    this.phase = game.maxScroll > 0 ? 'tap' : 'focus'; // nothing to scroll: go straight to showing the tile
+    this.active = true;
+    tut.el.classList.add('hint-mode');
+    tut.el.classList.remove('hidden');
+    this.t0 = performance.now();
+    if (!this.running) { this.running = true; this.tick(); }
+  },
+  tick() {
+    if (!this.active) { this.running = false; return; }
+    this.render();
+    requestAnimationFrame(() => this.tick());
+  },
+  /** The list jumped after a tap on grid number n; `to` is the first number of the tile it landed on. */
+  cellJumped(n, to) {
+    if (this.active && this.phase === 'tap' && n === this.info.tapNumber && to === this.info.piece.numbers[0]) {
+      this.phase = 'focus';
+      this.t0 = performance.now();
+    }
+  },
+  /** Only the hand: on the grid number to tap, then dragging the tile from the list to its cell. */
+  render() {
+    const { piece, tapCell } = this.info;
+    const hand = $('tut-hand');
+    hand.style.display = '';
+    if (this.phase === 'tap') {
+      const s = game._cellScreen(tapCell[0], tapCell[1]);
+      const bob = Math.sin(performance.now() / 180) * 6;
+      hand.style.transform = `translate(${s.x - 14}px, ${s.y - 4 + bob}px)`;
+      hand.style.opacity = '1';
+      return;
+    }
+    const info = game.tutorialInfo(piece.numbers[0]);
+    if (!info) return; // mid-drag
+    const k = ((performance.now() - this.t0) % 1800) / 1800;
+    const e = Math.min(1, k / 0.7);
+    const sm = e * e * (3 - 2 * e);
+    hand.style.transform = `translate(${info.from.x + (info.to.x - info.from.x) * sm - 14}px, ${info.from.y + (info.to.y - info.from.y) * sm - 4}px)`;
+    hand.style.opacity = k > 0.9 ? String((1 - k) * 10) : '1';
+  },
+};
+setInterval(() => hint.check(), 400);
+
 function startLevel(i) {
   pendingWin = null;
   leaveResult();
@@ -631,6 +711,7 @@ function startLevel(i) {
   syncModeUI();
   renderCoins();
   tut.start(level);
+  hint.reset();
 }
 
 /** Where Continue goes: the first level not yet cleared (or the last one when everything is cleared). */
@@ -1038,7 +1119,7 @@ inputs.forEach((inp) =>
 
     saveSettings(settings);
     if (name === 'music') audio.syncMusic();
-    if (name === 'hints') game.refreshHints();
+    if (name === 'hints') hint.reset();
     audio.tap();
     if (name === 'vibration') vibrate(settings, 20);
   })

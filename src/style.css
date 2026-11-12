@@ -1198,3 +1198,6 @@ body {
 #stage.bare-level #hud .hud-side, #stage.bare-level #hud #hearts { opacity:0 !important; visibility:hidden !important; pointer-events:none !important; }
 /* no booster bar on levels 1-2: the tray drops down into its space */
 #stage.bare-level { --bar-h: 28px; }
+
+/* auto hint: reuse the tutorial overlay but show only the hand (no ring, no speech bubble) */
+#tutorial.hint-mode #tut-bubble, #tutorial.hint-mode .tut-ring { display: none; }
