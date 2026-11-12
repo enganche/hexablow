@@ -25,7 +25,8 @@ const BOARD_GAP = 6; // HUD bottom -> board top on every other level
 const MAX_CELL_R = 46; // cap for tiny maps (e.g. level 1) so they don't dwarf the normal levels
 const TRAY_GAP = 20;
 const BAR_H = 92; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
-const TRAY_BOTTOM = BAR_H + 14 + 6; // booster bar + scrollbar + gap
+const BARE_BAR_H = 28; // levels 1-2 have no booster bar (keep in sync with .bare-level --bar-h)
+const trayBottomFor = (barH) => barH + 14 + 6; // booster bar + scrollbar + gap
 
 // ---- Shared geometry (unit circumradius, y-up world) ----
 function roundedHexShape(radius = 1, corner = 0.18) {
@@ -530,6 +531,7 @@ export class Game {
     this._clearGarden();
     this._winToken++;
     this.level = level;
+    this.bare = !!opts.bare; // no booster bar: the tray sits lower
     this.hearts = MAX_HEARTS;
     this.locked = false;
     this.selected = null;
@@ -786,7 +788,8 @@ export class Game {
     if (this.mode) this._setMode(null); // a resize closes any open booster mode
     const hud = this._hudBottom();
     const trayMaxH = Math.max(1, ...this.pieces.map((pc) => pieceBounds(pc.offsets).h));
-    const trayBottomPad = TRAY_BOTTOM;
+    this.barH = this.bare ? BARE_BAR_H : BAR_H;
+    const trayBottomPad = trayBottomFor(this.barH);
     this.trayBottomPad = trayBottomPad;
     const availBottom = H - trayBottomPad;
     // fixed gap under the HUD (room for the tutorial bubble) so the board never moves when it shows
@@ -1136,7 +1139,7 @@ export class Game {
   _openPickerView() {
     const HEAD = 46, PADY = 12, GAPX = 12, GAPY = 10, MX = 8;
     const hud = this._hudBottom();
-    const panelBottom = this.H - BAR_H - 4;
+    const panelBottom = this.H - (this.barH ?? BAR_H) - 4;
     const maxH = panelBottom - (hud + 20);
     const availW = this.W - 2 * (MX + 14);
     const list = [...this.pieces].sort((a, b) => a.numbers[0] - b.numbers[0]);
@@ -1182,7 +1185,7 @@ export class Game {
     panel.position.set(this.W / 2, cyw, 125);
     this.pickerGroup.add(dim, border, panel);
     this.pickerDim = dim;
-    this.pickerSlide = panelH + BAR_H;
+    this.pickerSlide = panelH + (this.barH ?? BAR_H);
     this.trayGroup.position.z = 150;
     this.pickerHead.style.display = 'flex';
     this.pickerHead.style.top = `${panelTop + 6}px`;
@@ -1330,7 +1333,41 @@ export class Game {
       } else {
         this._select(null);
       }
+    } else {
+      // tapping a numbered cell scrolls the list to the tile with the number right after/before it
+      const cell = this._screenToCell(pt.x, pt.y);
+      const k = key(cell[0], cell[1]);
+      if (this.cellKeys.has(k) && this._occupied(k)) this._scrollToNeighbor(k);
     }
+  }
+
+  _numberAt(k) {
+    for (const [n, c] of Object.entries(this.level.givens)) if (key(c[0], c[1]) === k) return Number(n);
+    for (const [n, c] of this.placed) if (key(c[0], c[1]) === k) return n;
+    return null;
+  }
+
+  /** Scroll the tray to the tile holding n-1 (or n+1). Tapping the same cell again flips between the two. */
+  _scrollToNeighbor(k) {
+    const n = this._numberAt(k);
+    if (n == null || !(this.maxScroll > 0)) return;
+    const find = (m) => this.pieces.find((x) => x.numbers.includes(m));
+    const opts = [find(n - 1), find(n + 1)].filter(Boolean);
+    if (!opts.length) return;
+    let i = 0;
+    if (this._jumpFrom === k && opts.length > 1) i = (this._jumpIdx + 1) % opts.length;
+    this._jumpFrom = k;
+    this._jumpIdx = i;
+    const p = opts[i];
+    const from = this.scroll;
+    const to = clamp(p.slotX - this.W / 2, 0, this.maxScroll);
+    const id = (this._scrollTween = (this._scrollTween || 0) + 1);
+    this._tween(380, (t) => {
+      if (id !== this._scrollTween || this.ptr?.mode === 'scroll') return;
+      this.scroll = from + (to - from) * easeOut(t);
+      this._positionTray();
+    });
+    this.hooks.onCellJump?.(n, p.numbers[0]);
   }
 
   _select(p) {

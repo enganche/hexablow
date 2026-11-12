@@ -531,9 +531,9 @@ body {
 .cloud-left {left:-8cqw;top:34cqw;transform:rotate(-6deg);}
 .cloud-right {right:-10cqw;top:64cqw;transform:scale(.8);}
 .h-brand {text-align:center;margin-top:14cqw;z-index:2;transform:rotate(-4deg);}
-.h-title {margin:0;font-size:17cqw;line-height:.89;font-weight:800;letter-spacing:-.65cqw;paint-order:stroke fill;-webkit-text-stroke:1.3cqw #fffde6;filter:drop-shadow(0 1.3cqw 0 #438243) drop-shadow(0 1cqw 1cqw #568d5530);}
+.h-title {margin:0;font-size:min(20cqw,10.8dvh);line-height:.89;font-weight:800;letter-spacing:-.65cqw;paint-order:stroke fill;-webkit-text-stroke:1.3cqw #fffde6;filter:drop-shadow(0 1.3cqw 0 #438243) drop-shadow(0 1cqw 1cqw #568d5530);}
 .h-title span {display:block;color:#68bb3c;text-shadow:0 .6cqw 0 #398c34;}
-.h-title span+span {color:#ffce47;text-shadow:0 .6cqw 0 #dc8d24;font-size:19cqw;letter-spacing:-.7cqw;}
+.h-title span+span {color:#ffce47;text-shadow:0 .6cqw 0 #dc8d24;font-size:min(22.5cqw,12.2dvh);letter-spacing:-.8cqw;}
 .h-brand p {font-size:2.8cqw;font-weight:800;letter-spacing:.65cqw;color:#447b62;margin:5cqw 0 0;transform:rotate(4deg);}
 .h-hero {position:relative;width:83cqw;margin-top:0;text-align:center;z-index:2;}
 .h-board {display:block;width:100%;filter:drop-shadow(0 2cqw 1cqw #52782a22);animation:garden-breathe 5s ease-in-out infinite;}
@@ -1159,15 +1159,15 @@ body {
 .profile-use { display:block; width:48%; margin:auto; padding:2cqw; border:.6cqw solid #eaffd0; border-radius:3cqw; background:linear-gradient(#a9de68,#6eb83e); box-shadow:0 1cqw 0 #538c35; color:white; font:800 5cqw Nunito,sans-serif; cursor:pointer; }
 .profile-use:disabled { background:#aab8a2; border-color:#d9e1d3; box-shadow:0 1cqw 0 #7d8d73; cursor:default; }
 
-#home { padding-bottom:22cqw; }
-#home .h-brand { margin-top:19cqw; }
+#home { padding-bottom:22cqw; justify-content:space-evenly; } /* tall screens: spare height is shared between title, board and buttons */
+#home .h-brand { margin-top:15cqw; }
 #home .h-hero { width:68cqw; flex-shrink:0; }
 #home .h-actions { margin-top:3cqw; gap:2.5cqw; }
 
 .home-nav { grid-template-rows:1fr; }
 .home-nav-item { height:14cqw; }
 .home-nav-item.current { height:18cqw; margin:0 1cqw; }
-#home .h-hero { width:64cqw; }
+#home .h-hero { width:min(76cqw,37dvh); }
 
 .home-nav { grid-template-rows:minmax(0,1fr); }
 
@@ -1192,4 +1192,9 @@ body {
 /* the tutorial bubble replaces the booster hint tip */
 #stage:has(#tutorial:not(.hidden)) > #boost-tip { display:none !important; }
 /* level 1 tutorial: only the tutorial UI shows (no menu bar, no boosters) */
-#stage.tutorial-mode > #hud, #stage.tutorial-mode > #boosters, #stage.tutorial-mode > #coin-hud, #stage.tutorial-mode > #boost-tip { opacity:0 !important; visibility:hidden !important; pointer-events:none !important; }
+/* levels 1-2 never show the top bar or boosters (class set per level, not per tutorial) */
+#stage.tutorial-mode > #boosters, #stage.tutorial-mode > #coin-hud, #stage.tutorial-mode > #boost-tip,
+#stage.bare-level > #boosters, #stage.bare-level > #coin-hud, #stage.bare-level > #boost-tip,
+#stage.bare-level #hud .hud-side, #stage.bare-level #hud #hearts { opacity:0 !important; visibility:hidden !important; pointer-events:none !important; }
+/* no booster bar on levels 1-2: the tray drops down into its space */
+#stage.bare-level { --bar-h: 28px; }

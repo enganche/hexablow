@@ -362,6 +362,7 @@ const game = new Game($('game'), {
   getSettings: () => settings,
   getFound: () => progress.found,
   onModeChange: () => syncModeUI(),
+  onCellJump: (n) => tut.cellJumped(n),
   onBoosterUsed: (id) => {
     useBooster(progress, id);
     renderBoosters();
@@ -465,9 +466,18 @@ const tut = {
     // only teach until the level has been cleared once; replays skip the tutorial
     const first = starsFor(progress, level.id) === 0;
     const bid = first ? BOOSTER_TUTORIAL[level.id] : null;
-    this.kind = bid ? 'booster' : 'place';
+    const jump = !bid && first && level.id === 2 && game.maxScroll > 0;
+    this.kind = bid ? 'booster' : jump ? 'jump' : 'place';
     this.booster = bid ?? null;
-    if (bid) {
+    if (jump) {
+      this.steps = [0];
+      this.jumpSteps = [[1, 2], [3, 4], [6, 5]]; // [number to tap, neighbour the list jumps to]
+      this.jumpIdx = 0;
+      this.jumpPhase = 'tap';
+      this.jumpSteps = [[1, 2], [3, 4], [6, 5]]; // [number to tap, neighbour the list jumps to]
+      this.jumpIdx = 0;
+      this.jumpPhase = 'tap';
+    } else if (bid) {
       this.steps = [0];
       // gift 2: one is used in the lesson, one is left to play with afterwards (only once: restarts keep what's owned)
       const missing = 2 - boosterCount(progress, bid);
@@ -477,7 +487,7 @@ const tut = {
     }
     this.active = this.steps.length > 0;
     this.el.classList.toggle('hidden', !this.active);
-    stageEl.classList.toggle('tutorial-mode', this.active && !bid);
+    stageEl.classList.toggle('tutorial-mode', this.active && !bid); // level 1 + level 2 hide the other UI
     for (const id of ['tut-from', 'tut-to', 'tut-hand']) $(id).style.display = '';
     this.t0 = performance.now();
     if (this.active && !this.running) {
@@ -526,11 +536,58 @@ const tut = {
     }
     $('tut-bubble').style.top = `${game._hudBottom() + 4}px`;
   },
+  /** Level 2 lesson, 3 rounds: tap a board number -> the list jumps to its neighbour -> drag that tile in. */
+  renderJump() {
+    const step = this.jumpSteps[this.jumpIdx];
+    if (!step) return this.stop();
+    const [tapN, goalN] = step;
+    if (game.placed.has(goalN)) { this.jumpIdx++; this.jumpPhase = 'tap'; this.t0 = performance.now(); return; }
+    const from = $('tut-from'), to = $('tut-to'), hand = $('tut-hand');
+    const setText = (text) => { if ($('tut-text').textContent !== text) $('tut-text').textContent = text; };
+    if (this.jumpPhase === 'tap') {
+      setText(`Tap ${tapN} to find the tile next to it`);
+      const c = game.level.givens[tapN] ?? game.placed.get(tapN);
+      const s = game._cellScreen(c[0], c[1]);
+      from.style.display = 'none';
+      to.style.display = '';
+      hand.style.display = '';
+      hand.style.opacity = '1';
+      to.style.left = `${s.x}px`;
+      to.style.top = `${s.y}px`;
+      const bob = Math.sin(performance.now() / 180) * 6;
+      hand.style.transform = `translate(${s.x - 14}px, ${s.y - 4 + bob}px)`;
+      $('tut-bubble').style.top = `${game._hudBottom() + 4}px`;
+      return;
+    }
+    // focus: ring on the tray tile and its cell, hand drags one to the other
+    const info = game.tutorialInfo(goalN);
+    if (!info) return; // mid-drag
+    setText(goalN > tapN ? `${goalN} goes after ${tapN}. Drag it in!` : `${goalN} goes before ${tapN}. Drag it in!`);
+    from.style.display = '';
+    to.style.display = '';
+    hand.style.display = '';
+    from.style.left = `${info.from.x}px`; from.style.top = `${info.from.y}px`;
+    to.style.left = `${info.to.x}px`; to.style.top = `${info.to.y}px`;
+    const k = (((performance.now() - this.t0) % 1800) / 1800);
+    const e = Math.min(1, k / 0.7);
+    const sm = e * e * (3 - 2 * e);
+    hand.style.transform = `translate(${info.from.x + (info.to.x - info.from.x) * sm - 14}px, ${info.from.y + (info.to.y - info.from.y) * sm - 4}px)`;
+    hand.style.opacity = k > 0.9 ? String((1 - k) * 10) : '1';
+    $('tut-bubble').style.top = `${info.hudBottom + 4}px`;
+  },
+  /** The player tapped a board number and the list scrolled: show the tile it landed on. */
+  cellJumped(n) {
+    if (this.active && this.kind === 'jump' && this.jumpPhase === 'tap' && n === this.jumpSteps[this.jumpIdx]?.[0]) {
+      this.jumpPhase = 'focus';
+      this.t0 = performance.now();
+    }
+  },
   /** The booster being taught was used: lesson over. */
   boosterUsed(id) {
     if (this.active && this.kind === 'booster' && id === this.booster) this.stop();
   },
   render() {
+    if (this.kind === 'jump') return this.renderJump();
     if (this.kind === 'booster') return this.renderBooster();
     const todo =this.steps.filter((n) => !game.placed.has(n));
     if (!todo.length) return this.stop();
@@ -568,7 +625,9 @@ function startLevel(i) {
   $('level-name').textContent = level.name;
   // levels 1-2 keep an ascending tray order (gentle start); from level 3 the tray is shuffled each play
   praise.reset();
-  game.loadLevel(level, { randomOrder: level.id > 2 });
+  const bare = level.id <= 2 && starsFor(progress, level.id) === 0; // levels 1-2 until first cleared: no top bar, no boosters
+  stageEl.classList.toggle('bare-level', bare);
+  game.loadLevel(level, { randomOrder: level.id > 2, bare });
   syncModeUI();
   renderCoins();
   tut.start(level);
@@ -584,6 +643,7 @@ function continueIndex() {
 const home = $('home');
 function showHome() {
   tut.stop();
+  stageEl.classList.remove('bare-level');
   game.cancelMode();
   closeBuyPop();
   boostBar.classList.add('hidden');
