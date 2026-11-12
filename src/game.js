@@ -790,7 +790,7 @@ export class Game {
     this.trayBottomPad = trayBottomPad;
     const availBottom = H - trayBottomPad;
     // fixed gap under the HUD (room for the tutorial bubble) so the board never moves when it shows
-    const areaTop = hud + (level.id === 1 ? TUTORIAL_GAP : BOARD_GAP);
+    const areaTop = hud + ([1, 4, 6, 8].includes(level.id) ? TUTORIAL_GAP : BOARD_GAP);
     const avail = availBottom - areaTop - 12;
 
     // board extents in unit space

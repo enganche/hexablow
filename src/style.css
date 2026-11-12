@@ -29,15 +29,15 @@ body {
   -webkit-user-select: none;
 }
 
-/* Game frame: always 9:16 (mobile shape), fitted to the window and centred,
-   whatever the window orientation. */
+/* Game frame: fills the window while its shape stays between 9:16 and the iPhone ratio (9:19.5);
+   beyond either extreme it clamps to that ratio and is centred. */
 #stage {
   position: fixed;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   width: min(100vw, calc(100vh * 9 / 16));
-  height: min(100vh, calc(100vw * 16 / 9));
+  height: min(100vh, calc(100vw * 19.5 / 9));
   background: var(--bg);
   overflow: hidden;
 }
@@ -983,6 +983,21 @@ body {
 .buy-opt.best { margin-top:7px; background:linear-gradient(#c6e99a,#94c65f); color:#476b32; border-color:#f4ffdb; box-shadow:inset 0 2px #e0f5bc,0 4px #6b9845; text-shadow:0 1px #dcf0bc; }
 .buy-opt.best small { background:#fff0b1; color:#805022; border-color:#fff9dc; }
 .buy-opt.poor { background:linear-gradient(#e8dfbd,#cfc59e); border-color:#fbf3d5; box-shadow:0 4px #a49b79; color:#817453; text-shadow:none; }
+/* Jewel-bright miniature scenes, with the same cream rim as the avatars. */
+.boost[data-id="reveal"],.buy-ic.b-reveal { --c1:#d7a4ff; --c2:#a763e5; --cd:#7040ac; --shine:#f4d8ff; }
+.boost[data-id="find"],.buy-ic.b-find { --c1:#8cf3de; --c2:#26bda9; --cd:#178878; --shine:#d6fff1; }
+.boost[data-id="picker"],.buy-ic.b-picker { --c1:#ffcf88; --c2:#ff8c70; --cd:#c75b59; --shine:#fff0bd; }
+.boost:not(.locked),.buy-ic.b-reveal,.buy-ic.b-find,.buy-ic.b-picker {
+  background:radial-gradient(ellipse at 50% 34%,#ffffff70 0%,#ffffff00 60%),linear-gradient(160deg,var(--c1),var(--c2));
+  border-color:#fff6d8;
+  box-shadow:inset 0 3px 0 var(--shine),inset 0 -4px 0 #54255b18,0 5px 0 var(--cd),0 8px 0 #407b5026;
+}
+.boost .b-ic { position:relative; z-index:1; }
+.boost .b-ic svg { filter:drop-shadow(0 2px 1px #46316b30); }
+.boost .b-badge,.boost .b-badge.plus { z-index:2; background:linear-gradient(#bcf579,#59bf45); border-color:#fffbdc; box-shadow:inset 0 2px 0 #e4ffb5,0 2px 0 #3b8a3f; text-shadow:0 1px 1px #39752e; }
+.boost.on:not(.locked) { transform:translateY(-3px); box-shadow:inset 0 3px 0 var(--shine),0 7px 0 var(--cd),0 0 0 3px #ffe77d,0 0 16px #fff3a5; }
+.boost:not(.locked):active { transform:translateY(3px); box-shadow:inset 0 2px 0 var(--shine),0 2px 0 var(--cd); }
+@media(hover:hover) { .boost:not(.locked):hover { filter:brightness(1.08) saturate(1.08); } }
 @media(prefers-reduced-motion:reduce) { .buy-card,#boost-tip { animation:none; } .boost { transition:none; } }
 
 /* Booster purchase: raised title, showcase and two side-by-side packs. */
@@ -1171,5 +1186,7 @@ body {
 .st-danger:active { transform:translateY(.8cqw); box-shadow:0 .2cqw 0 #9f3038; }
 .st-danger.armed { background:linear-gradient(#c93144,#8f1f2e); }
 
+/* the tutorial bubble replaces the booster hint tip */
+#stage:has(#tutorial:not(.hidden)) > #boost-tip { display:none !important; }
 /* level 1 tutorial: only the tutorial UI shows (no menu bar, no boosters) */
 #stage.tutorial-mode > #hud, #stage.tutorial-mode > #boosters, #stage.tutorial-mode > #coin-hud, #stage.tutorial-mode > #boost-tip { opacity:0 !important; visibility:hidden !important; pointer-events:none !important; }

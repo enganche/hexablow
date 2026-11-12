@@ -1,4 +1,5 @@
 import './style.css';
+import { boosterArt } from './boosterArt.js';
 import { initProfile } from './profile.js';
 import levels from './levels.json';
 import { Game } from './game.js';
@@ -100,11 +101,6 @@ function showCoinHud() {
 const BOOSTERS = economy.boosters;
 const boostBar = $('boosters');
 const boostTip = $('boost-tip');
-const BOOST_ICON = {
-  reveal: '<svg viewBox="0 0 64 64" aria-hidden="true" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path fill="#ffc842" stroke="#ad651c" d="M5 30Q32 5 59 30Q32 55 5 30Z"/><path fill="#fffbea" stroke="none" d="M10 30Q32 13 54 30Q32 47 10 30Z"/><circle cx="32" cy="30" r="13" fill="#9ac36b" stroke="#698344"/><circle cx="32" cy="30" r="7" fill="#526d39" stroke="none"/><circle cx="28" cy="25" r="4" fill="white" stroke="none"/><path d="m48 7 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fff5a6" stroke="#d9a634"/></svg>',
-  find: '<svg viewBox="0 0 64 64" aria-hidden="true" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="m39 39 15 15" stroke="#734320" stroke-width="13"/><path d="m39 38 15 15" stroke="#ffba43" stroke-width="9"/><circle cx="27" cy="26" r="20" fill="#ffd66a" stroke="#ac7427"/><circle cx="27" cy="26" r="15" fill="#dceeb1" stroke="#fff5bf" stroke-width="3"/><path d="M17 23q1-9 10-10" fill="none" stroke="white" stroke-width="5"/><path d="m29 21 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#fffdeb" stroke="none"/></svg>',
-  picker: '<svg viewBox="0 0 64 64" aria-hidden="true" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"><path d="M7 35h50v20Q32 64 7 55Z" fill="#84ad57" stroke="#526f38"/><path d="m7 35 12-9h26l12 9-13 9H20Z" fill="#d9ecac" stroke="#6b8945"/><path d="m23 31 9-5 9 5v11l-9 5-9-5Z" fill="#ffcf4f" stroke="#c38a26"/><path d="M32 30V6m-9 9 9-9 9 9" fill="none" stroke="#fff7cb" stroke-width="9"/><path d="M32 28V7m-8 8 8-8 8 8" fill="none" stroke="#8ab55b" stroke-width="5"/></svg>',
-};
 const BOOST_TIP = { find: 'Tap an empty cell' };
 const DEBUG_AUTOBUY_KEY = 'hexablow.debug.autobuy';
 let debugAutoBuy = false;
@@ -114,12 +110,12 @@ try { debugAutoBuy = localStorage.getItem(DEBUG_AUTOBUY_KEY) === '1'; } catch { 
 
 boostBar.innerHTML = BOOSTERS.order
   .map((id) => `<button type="button" class="boost" data-boost="${id}" data-id="${id}" aria-label="${BOOSTERS[id].name}">
-      <span class="b-ic">${BOOST_ICON[id]}</span><span class="b-nm">${BOOSTERS[id].name}</span><i class="b-badge"></i>
+      <span class="b-ic">${boosterArt[id]}</span><span class="b-nm">${BOOSTERS[id].name}</span><i class="b-badge"></i>
       <svg class="b-lock" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zm2 0h6V8a3 3 0 0 0-6 0z"/></svg>
     </button>`)
   .join('');
 
-/** Booster unlock gate: each booster has a level to unlock at (all level 1 for now; tutorials come later). */
+/** Booster unlock gate: each booster has a level to unlock at (see economy.json; 4 / 6 / 8). */
 function boosterUnlocked(id) {
   return levels[levelIndex].id >= BOOSTERS[id].unlockLevel;
 }
@@ -168,7 +164,7 @@ function openBuyPop(id) {
   buyCard.innerHTML =
     `<h3 id="buy-title">Add ${cfg.name}</h3>
      <button class="buy-x" type="button" aria-label="Close">×</button>
-     <div class="buy-showcase"><div class="buy-ic b-${id}">${BOOST_ICON[id]}</div><span class="buy-spark" aria-hidden="true">✦</span></div>
+     <div class="buy-showcase"><div class="buy-ic b-${id}">${boosterArt[id]}</div><span class="buy-spark" aria-hidden="true">✦</span></div>
      <p class="buy-desc">${cfg.desc}</p>
      <p class="buy-have">You have <b>${boosterCount(progress, id)}</b> · ${COIN} <b>${coinsOf(progress)}</b></p>
      <div class="buy-actions">
@@ -201,6 +197,7 @@ window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && buyingId) 
 function onBoosterTap(id, btn) {
   audio.unlock();
   if (!boosterUnlocked(id)) return shakeEl(btn);
+  if (tut.active && tut.kind === 'booster' && id !== tut.booster) return shakeEl(btn); // lesson: only the new booster
   if (game.mode === id) { audio.tap(); return game.cancelMode(); } // tap again = cancel
   if (game.mode) game.cancelMode();
   if (!game.canBoost()) return shakeEl(btn);
@@ -214,7 +211,7 @@ function onBoosterTap(id, btn) {
   }
   audio.tap();
   if (id === 'reveal') {
-    if (game.reveal()) { useBooster(progress, id); renderBoosters(); } else shakeEl(btn);
+    if (game.reveal()) { useBooster(progress, id); renderBoosters(); tut.boosterUsed(id); } else shakeEl(btn);
   } else if (id === 'find') {
     game.beginFind();
   } else if (id === 'picker') {
@@ -368,6 +365,7 @@ const game = new Game($('game'), {
   onBoosterUsed: (id) => {
     useBooster(progress, id);
     renderBoosters();
+    tut.boosterUsed(id);
   },
   onHearts: (left, lostOne) => {
     heartsLeft = left;
@@ -443,6 +441,9 @@ const game = new Game($('game'), {
   },
 });
 
+/** Level -> booster it unlocks (and teaches the first time). */
+const BOOSTER_TUTORIAL = { 4: 'reveal', 6: 'find', 8: 'picker' };
+
 // ---- Level 1 tutorial: place the missing numbers in order, guided by a bee + hand ----
 const tut = {
   el: $('tutorial'),
@@ -453,12 +454,31 @@ const tut = {
     next: '{n} goes after {p}',
     last: '{n} goes between {p} and {s}',
   },
+  kind: 'place', // 'place' (level 1) | 'booster' (levels that unlock a booster)
+  booster: null,
+  boosterTexts: {
+    reveal: { tap: 'New booster! Tap Reveal to see a cell\'s number' },
+    find: { tap: 'New booster! Tap Find, then pick a cell', cell: 'Tap an empty cell', },
+    picker: { tap: 'New booster! Tap Picker to browse all tiles', pick: 'Tap a tile to send it to its cell' },
+  },
   start(level) {
-    // only teach until level 1 has been cleared once; replays skip the tutorial
-    this.steps = level.id === 1 && starsFor(progress, level.id) === 0 ? Object.keys(level.solution).map(Number).filter((n) => !level.givens[n]) : [];
+    // only teach until the level has been cleared once; replays skip the tutorial
+    const first = starsFor(progress, level.id) === 0;
+    const bid = first ? BOOSTER_TUTORIAL[level.id] : null;
+    this.kind = bid ? 'booster' : 'place';
+    this.booster = bid ?? null;
+    if (bid) {
+      this.steps = [0];
+      // gift 2: one is used in the lesson, one is left to play with afterwards (only once: restarts keep what's owned)
+      const missing = 2 - boosterCount(progress, bid);
+      if (missing > 0) { grantBooster(progress, bid, missing); renderBoosters(); }
+    } else {
+      this.steps = level.id === 1 && first ? Object.keys(level.solution).map(Number).filter((n) => !level.givens[n]) : [];
+    }
     this.active = this.steps.length > 0;
     this.el.classList.toggle('hidden', !this.active);
-    stageEl.classList.toggle('tutorial-mode', this.active);
+    stageEl.classList.toggle('tutorial-mode', this.active && !bid);
+    for (const id of ['tut-from', 'tut-to', 'tut-hand']) $(id).style.display = '';
     this.t0 = performance.now();
     if (this.active && !this.running) {
       this.running = true;
@@ -476,8 +496,43 @@ const tut = {
     this.render();
     requestAnimationFrame(() => this.tick());
   },
+  /** Booster lesson: ring + hand on the booster button, then (Find) on the target cell or (Picker) just a hint. */
+  renderBooster() {
+    const stRect = stageEl.getBoundingClientRect();
+    const scale = stRect.width / stageEl.clientWidth || 1;
+    const toStage = (x, y) => ({ x: (x - stRect.left) / scale, y: (y - stRect.top) / scale });
+    const phase = game.mode === 'find' ? 'cell' : game.mode === 'picker' ? 'pick' : 'tap';
+    const text = this.boosterTexts[this.booster][phase];
+    if ($('tut-text').textContent !== text) $('tut-text').textContent = text;
+    const from = $('tut-from'), to = $('tut-to'), hand = $('tut-hand');
+    from.style.display = phase === 'tap' ? '' : 'none';
+    to.style.display = phase === 'cell' ? '' : 'none';
+    hand.style.display = phase === 'pick' ? 'none' : '';
+    hand.style.opacity = '1';
+    const bob = Math.sin(performance.now() / 180) * 6;
+    if (phase === 'tap') {
+      const r = boostBar.querySelector(`[data-id="${this.booster}"]`).getBoundingClientRect();
+      const p = toStage(r.left + r.width / 2, r.top + r.height / 2);
+      from.style.left = `${p.x}px`;
+      from.style.top = `${p.y}px`;
+      hand.style.transform = `translate(${p.x - 14}px, ${p.y + 6 + bob}px)`;
+    } else if (phase === 'cell') {
+      const info = game.pieces[0] && game.tutorialInfo(game.pieces[0].numbers[0]);
+      if (info) {
+        to.style.left = `${info.to.x}px`;
+        to.style.top = `${info.to.y}px`;
+        hand.style.transform = `translate(${info.to.x - 14}px, ${info.to.y - 4 + bob}px)`;
+      }
+    }
+    $('tut-bubble').style.top = `${game._hudBottom() + 4}px`;
+  },
+  /** The booster being taught was used: lesson over. */
+  boosterUsed(id) {
+    if (this.active && this.kind === 'booster' && id === this.booster) this.stop();
+  },
   render() {
-    const todo = this.steps.filter((n) => !game.placed.has(n));
+    if (this.kind === 'booster') return this.renderBooster();
+    const todo =this.steps.filter((n) => !game.placed.has(n));
     if (!todo.length) return this.stop();
     const n = todo[0];
     const info = game.tutorialInfo(n);
