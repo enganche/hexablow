@@ -1,4 +1,5 @@
 import './style.css';
+import { initProfile } from './profile.js';
 import levels from './levels.json';
 import { Game } from './game.js';
 import { AudioManager, vibrate } from './audio.js';
@@ -17,6 +18,7 @@ const settings = loadSettings();
 const audio = new AudioManager(() => settings);
 let levelIndex = loadLevelIndex(levels.length);
 const progress = loadProgress();
+initProfile(progress, audio);
 
 // ---- HUD ----
 const heartsEl = $('hearts');
