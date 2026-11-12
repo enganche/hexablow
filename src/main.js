@@ -618,11 +618,10 @@ const tut = {
 };
 
 // ---- Auto hint: stuck for a while -> point at the easiest tile (by the difficulty rule), via tap-to-jump ----
-// 1) a hand asks the player to tap a number on the grid  2) the list jumps to the tile  3) hand drags it in.
+// A hand asks the player to tap a number on the grid; the tap makes the list jump to the tile. That is the whole hint.
 const NOT_PLAYING = '.result-mode, :has(#home:not(.hidden)), :has(#levels:not(.hidden)), :has(#shop:not(.hidden)), :has(#album:not(.hidden)), :has(#settings:not(.hidden))';
 const hint = {
   active: false,
-  phase: 'tap', // 'tap' (tap a grid number) | 'focus' (drag the tile in)
   info: null,
   last: performance.now(), // last time the player made progress (or the hint was reset)
   running: false,
@@ -649,15 +648,13 @@ const hint = {
       return;
     }
     if (performance.now() - this.last < HINT_IDLE_SECONDS * 1000) return;
-    const info = pickHint(game.level, game.placed, game.pieces);
+    const info = game.maxScroll > 0 ? pickHint(game.level, game.placed, game.pieces) : null; // nothing to scroll: nothing to show
     if (!info) { this.last = performance.now(); return; }
     game._jumpFrom = null; // so the first tap on the grid number lands on the hinted tile
     this.info = info;
-    this.phase = game.maxScroll > 0 ? 'tap' : 'focus'; // nothing to scroll: go straight to showing the tile
     this.active = true;
     tut.el.classList.add('hint-mode');
     tut.el.classList.remove('hidden');
-    this.t0 = performance.now();
     if (!this.running) { this.running = true; this.tick(); }
   },
   tick() {
@@ -667,30 +664,19 @@ const hint = {
   },
   /** The list jumped after a tap on grid number n; `to` is the first number of the tile it landed on. */
   cellJumped(n, to) {
-    if (this.active && this.phase === 'tap' && n === this.info.tapNumber && to === this.info.piece.numbers[0]) {
-      this.phase = 'focus';
-      this.t0 = performance.now();
-    }
+    // the player followed the hint: done (the timer restarts, so a new hint comes only if they stay stuck)
+    if (this.active && n === this.info.tapNumber && to === this.info.piece.numbers[0]) this.reset();
   },
-  /** Only the hand: on the grid number to tap, then dragging the tile from the list to its cell. */
+  /** Only the hand, bobbing on the grid number to tap. */
   render() {
-    const { piece, tapCell } = this.info;
+    const { tapCell } = this.info;
     const hand = $('tut-hand');
+    const DX = 14, DY = 28; // hand sits below-right of the target so the fingertip points at it without covering the number
+    const s = game._cellScreen(tapCell[0], tapCell[1]);
+    const bob = Math.sin(performance.now() / 180) * 6;
     hand.style.display = '';
-    if (this.phase === 'tap') {
-      const s = game._cellScreen(tapCell[0], tapCell[1]);
-      const bob = Math.sin(performance.now() / 180) * 6;
-      hand.style.transform = `translate(${s.x - 14}px, ${s.y - 4 + bob}px)`;
-      hand.style.opacity = '1';
-      return;
-    }
-    const info = game.tutorialInfo(piece.numbers[0]);
-    if (!info) return; // mid-drag
-    const k = ((performance.now() - this.t0) % 1800) / 1800;
-    const e = Math.min(1, k / 0.7);
-    const sm = e * e * (3 - 2 * e);
-    hand.style.transform = `translate(${info.from.x + (info.to.x - info.from.x) * sm - 14}px, ${info.from.y + (info.to.y - info.from.y) * sm - 4}px)`;
-    hand.style.opacity = k > 0.9 ? String((1 - k) * 10) : '1';
+    hand.style.transform = `translate(${s.x - 14 + DX}px, ${s.y - 4 + DY + bob}px)`;
+    hand.style.opacity = '1';
   },
 };
 setInterval(() => hint.check(), 400);
