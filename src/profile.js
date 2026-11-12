@@ -1,9 +1,10 @@
 // Local player identity, independent of gameplay saves.
 const KEY = 'gardendoku.profile.v1';
-const milestones = [0, 1, 3, 5, 7, 9, 11, 13, 15];
+import { coinsOf, spend } from './progress.js';
+const prices = [0, 0, 0, 50, 50, 50, 100, 100, 100];
 const avatars = [ ['🐱', 'Cat'], ['🐮', 'Cow'], ['🦊', 'Fox'], ['🐥', 'Chick'], ['🐷', 'Pig'], ['🐑', 'Sheep'], ['🐰', 'Rabbit'], ['🐝', 'Bee'], ['🦆', 'Duck'] ];
 
-export function initProfile(progress, audio) {
+export function initProfile(progress, audio, onCoinsChange = () => {}) {
   const home = document.getElementById('home');
   const trigger = document.createElement('button');
   trigger.className = 'h-gear profile-trigger';
@@ -27,7 +28,7 @@ export function initProfile(progress, audio) {
   let saved;
   try { saved = JSON.parse(localStorage.getItem(KEY)); } catch { /* unavailable storage */ }
   const uid = typeof saved?.uid === 'string' && /^[a-z0-9-]{8,50}$/i.test(saved.uid) ? saved.uid : crypto.randomUUID();
-  const player = { uid, name: typeof saved?.name === 'string' && saved.name.trim() ? saved.name.trim().slice(0,20) : `Gardener_${uid.slice(0,5)}`, avatar: Number.isInteger(saved?.avatar) && avatars[saved.avatar] ? saved.avatar : 0 };
+  const player = { uid, name: typeof saved?.name === 'string' && saved.name.trim() ? saved.name.trim().slice(0,20) : `Gardener_${uid.slice(0,5)}`, avatar: Number.isInteger(saved?.avatar) && avatars[saved.avatar] ? saved.avatar : 0, owned: [...new Set((Array.isArray(saved?.owned) ? saved.owned : []).filter((i) => Number.isInteger(i) && avatars[i]))] };
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(player)); return true; } catch { return false; } };
   persist();
   const modal = document.createElement('div');
@@ -41,7 +42,7 @@ export function initProfile(progress, audio) {
   const status = modal.querySelector('.profile-status');
   const use = modal.querySelector('.profile-use');
   let selected = player.avatar;
-  const unlocked = (i) => Object.keys(progress.stars).length >= milestones[i];
+  const unlocked = (i) => prices[i] === 0 || player.owned.includes(i);
   const refreshTrigger = () => { trigger.textContent = avatars[player.avatar][0]; };
   const render = () => {
     modal.querySelector('.profile-portrait').textContent = avatars[selected][0];
@@ -51,19 +52,22 @@ export function initProfile(progress, audio) {
       const locked = !unlocked(i);
       const b = document.createElement('button');
       b.className = `profile-avatar${i === selected ? ' selected' : ''}${locked ? ' locked' : ''}`;
-      b.setAttribute('aria-label', `${label}${locked ? `, complete ${milestones[i]} levels to unlock` : ''}`);
+      b.setAttribute('aria-label', `${label}${locked ? `, ${prices[i]} gold to unlock` : ''}`);
       b.setAttribute('aria-pressed', String(i === selected));
-      b.setAttribute('aria-disabled', String(locked));
-      b.innerHTML = `<span aria-hidden="true">${icon}</span><small>${locked ? '🔒' : i === player.avatar ? '✓' : ''}</small>`;
+      b.innerHTML = `<span aria-hidden="true">${icon}</span>${locked ? `<small class="price"><i class="coin"></i>${prices[i]}</small>` : i === player.avatar ? '<small class="check">✓</small>' : ''}`;
       b.onclick = () => {
         audio.tap();
-        if (locked) { status.textContent = `Complete ${milestones[i]} levels to unlock ${label}.`; return; }
         selected = i; status.textContent = ''; render(); grid.children[i].focus();
       };
       grid.append(b);
     });
-    use.disabled = selected === player.avatar || !unlocked(selected);
-    use.textContent = selected === player.avatar ? 'USED' : 'USE';
+    if (!unlocked(selected)) {
+      use.disabled = coinsOf(progress) < prices[selected];
+      use.innerHTML = `BUY <i class="coin"></i>${prices[selected]}`;
+    } else {
+      use.disabled = selected === player.avatar;
+      use.textContent = selected === player.avatar ? 'USED' : 'USE';
+    }
   };
   const close = () => { modal.classList.add('hidden'); home.inert = false; trigger.focus(); };
   trigger.onclick = () => {
@@ -87,7 +91,10 @@ export function initProfile(progress, audio) {
     catch { status.textContent = `Player ID: ${uid}`; }
   };
   use.onclick = () => {
-    if (!unlocked(selected)) return;
+    if (!unlocked(selected)) {
+      if (!spend(progress, prices[selected])) { status.textContent = 'Not enough gold.'; return; }
+      player.owned.push(selected); onCoinsChange();
+    }
     player.avatar = selected; const stored = persist(); refreshTrigger(); render();
     status.textContent = stored ? 'Avatar updated!' : 'Changed for this session. Storage is unavailable.';
   };

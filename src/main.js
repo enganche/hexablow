@@ -18,7 +18,7 @@ const settings = loadSettings();
 const audio = new AudioManager(() => settings);
 let levelIndex = loadLevelIndex(levels.length);
 const progress = loadProgress();
-initProfile(progress, audio);
+initProfile(progress, audio, () => renderCoins());
 
 // ---- HUD ----
 const heartsEl = $('hearts');
