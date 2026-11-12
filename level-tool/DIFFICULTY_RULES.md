@@ -1,0 +1,142 @@
+# Rule độ khó — Hexablow
+
+> Tài liệu cho GD / level designer. Phần **định nghĩa ô Dễ / Trung bình / Khó** lấy đúng theo yêu cầu gốc;
+> phần **bậc level (tier)** là đề xuất của tool để có cái so sánh — GD chỉnh trong tab **Luật** hoặc trong `js/rules.js` (`HB.DEFAULT_RULES`).
+> Code thực thi rule: [`js/rules.js`](js/rules.js). Báo cáo áp rule lên 15 level hiện có: [`ANALYSIS_15_LEVELS.md`](ANALYSIS_15_LEVELS.md).
+
+---
+
+## 1. Thuật ngữ
+
+| Từ | Nghĩa |
+|---|---|
+| **Lưới / grid** | Bản đồ hex. Mỗi ô lưới là *trống*, *đã có số*, hoặc *bị chắn* (nước / ngoài bản đồ). |
+| **Given** | Ô số cho sẵn trên lưới, cố định. |
+| **Ô khay / tile** | Một mảnh trong khay (list giải): 1, 2 hoặc 3 số, **giữ nguyên hình dạng, không xoay**. Mảnh 2–3 số được cắt theo *vị trí*, nên có thể chứa số không liên tiếp (vd `2+14`). |
+| **Mốc / anchor** | Một số đang nằm trên lưới mà liền kề (n−1 hoặc n+1) với một số của ô khay. Ô khay `5` có mốc nếu `4` hoặc `6` đang trên lưới. |
+| **Vị trí kéo vào được** | Một cách đặt *cả ô khay* lên lưới sao cho tạo được cặp liền kề thoả mãn với một mốc (xem mục 2). **Chưa xét đúng/sai.** |
+
+---
+
+## 2. Vị trí kéo vào được (candidate)
+
+Với một ô khay và các số hiện có trên lưới:
+
+1. Với mỗi số `m` trong ô khay có mốc `v` (`v = m−1` hoặc `m+1`, đang trên lưới): lấy 6 ô quanh mốc `v` làm chỗ đặt `m`. Vì ô khay giữ nguyên hình, mỗi chỗ đặt `m` quy ra đúng **một** vị trí đặt cả ô.
+2. Gộp các vị trí trùng nhau (từ nhiều mốc / nhiều số) thành **một**.
+3. **Loại** vị trí nếu (đúng 3 trường hợp trong yêu cầu gốc):
+   - **Bị che** — ô cần đặt đã có số khác (given hoặc ô đã đặt);
+   - **Bị chắn** — ô cần đặt là tường / nước / ngoài bản đồ;
+   - **Hình dạng** — ô khay 2–3 số có phần *khác* rơi vào chỗ bị che / chắn.
+4. **Chế độ đếm** (`tile.anchorMode`):
+   - **`strict` (mặc định)** — vị trí còn phải chạm *mọi* số n−1 / n+1 đã có trên lưới (không chỉ một mốc). Ví dụ ô `2` kẹp giữa given `1` và `3`: chỉ đặt được ở ô chạm cả `1` lẫn `3` (tối đa 2 chỗ), chứ không phải mọi ô quanh `1` *hoặc* `3`.
+   - **`loose`** — chỉ cần chạm *một* mốc. Đúng nghĩa đen hơn của câu "lắp được một cặp liền kề", nhưng làm ô kẹp giữa hai given bị tính khó oan.
+   - Cả hai chế độ đều **luôn chứa vị trí đúng** nếu ô có mốc (lời giải thật luôn chạm đủ hàng xóm của nó).
+5. Số vị trí còn lại = **`count`**.
+
+> Rule **không** xét suy luận sâu hơn (vd khoảng cách tới given xa, ô trống bị cô lập). Đó là việc của bộ giải; rule chỉ đo cái người chơi *nhìn thấy ngay* khi cầm ô lên.
+
+### Ví dụ thật (Level 1: given `1,3,6,7`, khay `2`, `4`, `5`)
+
+| Ô | Mốc trên lưới | Vị trí kéo vào được | Phân loại |
+|---|---|---|---|
+| `2` | `1`, `3` | chỉ ô chạm cả `1` và `3` → **1** | Dễ |
+| `4` | `3` (5 chưa có) | 2 ô trống quanh `3` → **2** | Trung bình |
+| `5` | `6` (4 chưa có) | 1 ô trống quanh `6` → **1** | Dễ |
+
+(Ở chế độ `loose` ô `2` thành 2 vị trí → Trung bình.)
+
+---
+
+## 3. Phân loại ô khay
+
+| Loại | Điều kiện (`tile`) | Ý nghĩa |
+|---|---|---|
+| **Dễ** | `count ≤ easyMax` (= **1**) | Chỉ có 1 chỗ kéo vào được, và đó cũng chính là chỗ đúng. |
+| **Trung bình** | `easyMax < count ≤ mediumMax` (= **2 – 3**) | Phải chọn giữa 2–3 chỗ. |
+| **Khó** | `count > mediumMax` (= **> 3**) | Nhiều hơn 3 chỗ. |
+| **Mồ côi** *(bổ sung)* | không có mốc nào trên lưới (`count = 0`) | Chưa có số n±1 nào để bám — chỉ suy ra được từ các ô khác. Tính vào loại `tile.orphanClass` (mặc định **Khó**) và báo riêng. |
+
+Tool hiển thị từng ô với màu xanh (Dễ) / vàng (TB) / đỏ (Khó) / xám (mồ côi); bấm một ô trong bảng để thấy **mọi vị trí kéo vào được** (viền nét đứt, vị trí đúng viền xanh liền) và **lý do các vị trí bị loại** (che / chắn / hình / chặt).
+
+---
+
+## 4. Độ khó của cả level
+
+Tính trên **toàn bộ khay ở trạng thái ban đầu** (chỉ có given trên lưới) — đây là rule chính.
+
+| Chỉ số | Công thức | Dùng để |
+|---|---|---|
+| `easyPct`, `mediumPct`, `hardPct` | số ô mỗi loại / tổng ô khay (mồ côi tính theo `orphanClass`) | mô tả "mặt" của level |
+| `orphanPct` | số ô mồ côi / tổng ô khay | giới hạn ô không có mốc |
+| `size3Pct` | số ô 3 số / tổng ô khay | giới hạn độ phức tạp hình dạng |
+| **`index`** (Chỉ số độ khó) | `(1·Dễ + 2·TB + 3·Khó) / tổng ô` (trọng số `weights`) | một con số **1.00 – 3.00** để so level với nhau |
+| `avgCandidates`, `maxCandidates` | trung bình / lớn nhất của `count` (ô có mốc) | tham khảo |
+| `givenPct` | given / tổng ô | tham khảo (không bị ràng buộc) |
+
+### 4.1 Bậc level (đề xuất — **GD chỉnh**)
+
+Mỗi bậc là dải `[min, max]` cho từng chỉ số; level "đạt rule" khi mọi chỉ số nằm trong dải của bậc chứa id của nó.
+
+| Bậc | Level | Dễ | Trung bình | Khó | Mồ côi | Ô ba | Index |
+|---|---|---|---|---|---|---|---|
+| T1 Làm quen | 1 – 3 | 60 – 100% | 0 – 40% | 0 – 10% | 0 – 10% | 0% | 1.00 – 1.40 |
+| T2 Khởi động | 4 – 7 | 35 – 80% | 15 – 50% | 0 – 25% | 0 – 25% | 0 – 25% | 1.20 – 1.80 |
+| T3 Trung bình | 8 – 11 | 20 – 55% | 20 – 50% | 10 – 40% | 0 – 35% | 0 – 40% | 1.60 – 2.20 |
+| T4 Khó | 12+ | 10 – 40% | 20 – 50% | 25 – 55% | 0 – 45% | 5 – 60% | 1.90 – 2.50 |
+
+Ý tưởng đường cong: **Dễ giảm dần, Khó tăng dần, Index đi lên** theo bậc; level được gắn nhãn `hard` nên nằm ở nửa trên của bậc.
+Các dải này là *giả thuyết ban đầu* chưa qua playtest — hãy chỉnh theo cảm giác chơi rồi để tool kiểm lại 15 level.
+
+### 4.2 Chỉ số động (play-through) — chỉ để tham khảo
+
+Tool mô phỏng người chơi tỉnh táo: luôn đặt ô **ít vị trí nhất** vào đúng chỗ, rồi đếm lại (các ô đã đặt thành mốc mới, ô còn lại dần có mốc).
+Báo: dãy `count` theo từng bước, **đỉnh** (`peak`, bước khó nhất bắt buộc) và số lần **kẹt** (không ô nào có mốc).
+`peak = 1` nghĩa là lúc nào cũng có sẵn một ô "Dễ" để đặt — level không bao giờ ép người chơi cân nhắc giữa nhiều chỗ.
+Chưa ràng buộc trong tier; xem mục 6.
+
+---
+
+## 5. Ràng buộc để level hợp lệ (tool kiểm cùng rule)
+
+- Đường đi 1 → N phủ **mọi ô chơi đúng một lần**, hai số liên tiếp luôn kề nhau.
+- Mỗi ô khay là 1–3 ô **kề nhau**, không chứa given.
+- **Giải được bằng suy luận** (bộ giải propagate: cung nhất quán + "chỉ còn một chỗ" + hình dạng ô khay) — không cần đoán. Level chỉ giải được bằng thử-sai, đa nghiệm hoặc vô nghiệm bị đánh dấu ✗.
+- 1 và N nên là given (GDD §2) — chỉ cảnh báo.
+
+---
+
+## 6. Điều cần GD quyết
+
+1. **`strict` hay `loose`?** Mặc định `strict` vì `loose` cộng dồn các ô quanh *cả hai* given nên ô kẹp giữa hai given bị tính nhiều vị trí (dễ thành Trung bình / Khó) trong khi thực tế nó thuộc loại dễ nhất. Đổi ở tab *Phân tích* hoặc `tile.anchorMode`.
+2. **Ô mồ côi** tính là Khó (mặc định) hay loại khỏi thống kê? (`tile.orphanClass`: `hard` / `medium` / `easy`.)
+3. **Ngưỡng** `easyMax = 1`, `mediumMax = 3` (theo yêu cầu gốc) — có thể đổi.
+4. **Dải bậc level** ở 4.1 và cách chia bậc theo id level.
+5. **Có thêm ràng buộc động** không? Ví dụ "từ T3 trở đi `peak ≥ 2`" để mỗi level có ít nhất một lúc phải cân nhắc.
+6. Mảnh **không xoay** (đúng GDD hiện tại). Nếu sau này cho xoay, số vị trí kéo vào được sẽ nhân lên và ngưỡng phải tính lại.
+
+---
+
+## 7. Tham số cấu hình (`HB.DEFAULT_RULES`)
+
+```jsonc
+{
+  "tile":   { "easyMax": 1, "mediumMax": 3, "anchorMode": "strict", "orphanClass": "hard" },
+  "weights":{ "easy": 1, "medium": 2, "hard": 3 },
+  "tiers": [
+    { "name": "T1 Làm quen", "from": 1, "to": 3,
+      "easy": [0.60, 1], "medium": [0, 0.40], "hard": [0, 0.10],
+      "orphan": [0, 0.10], "index": [1.00, 1.40], "size3": [0, 0] }
+    // ...
+  ]
+}
+```
+
+## 8. Tạo level theo độ khó (tab "Tạo tự động")
+
+Đầu vào: bản đồ hiện tại + **mục tiêu** `{Dễ%, TB%, Khó%}` (lấy trung điểm của một bậc hoặc kéo tay) + sai số, cỡ ô tối đa, dải % given, % mồ côi tối đa, cờ *giữ đường đi / given / cách cắt*.
+
+1. Tìm đường Hamiltonian phủ bản đồ (DFS ngẫu nhiên + Warnsdorff, ưu tiên ít rẽ) — hoặc dùng đường GD đã vẽ.
+2. Khởi tạo given (cách đều, luôn có 1 và N) và cách cắt ô; thêm given cho tới khi giải được bằng suy luận.
+3. Mô phỏng ủ nhiệt: thêm / bớt / dời given, ghép / tách ô khay; **chỉ nhận trạng thái vẫn giải được**; điểm = tổng lệch của 3 tỉ lệ + phạt vi phạm ràng buộc.
+4. Trả tối đa 5 kết quả "trúng mục tiêu" (mỗi tỉ lệ trong sai số); nếu không có thì trả kết quả gần nhất. GD bấm **Áp dụng** rồi chỉnh tay tiếp.

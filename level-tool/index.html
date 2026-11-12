@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hexablow · Level Tool</title>
+<link rel="stylesheet" href="tool.css">
+</head>
+<body data-view="edit">
+
+<header class="top">
+  <div class="brand">⬡ Hexablow <span>Level Tool</span></div>
+  <div class="menu">
+    <button id="btnOpen" title="Mở file levels.json (hoặc kéo thả vào trang)">📂 Mở</button>
+    <button id="btnFetch" title="Chỉ chạy khi mở qua http server">⟳ Nạp src</button>
+    <button id="btnPaste" title="Dán JSON levels / 1 level">📋 Dán</button>
+    <button id="btnCopy" title="Copy JSON của level đang mở">⧉ Copy level</button>
+    <button id="btnSave" class="primary" title="Tải levels.json về máy">⬇ Lưu levels.json</button>
+    <input type="file" id="fileIn" accept=".json,application/json" hidden>
+  </div>
+  <span id="fileInfo" class="muted"></span>
+  <div class="spacer"></div>
+  <div class="seg" id="viewSeg">
+    <button data-view="edit" class="on">✎ Biên tập</button>
+    <button data-view="play">▶ Playtest</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- level list -->
+  <nav id="levelPane">
+    <div class="paneHead"><b>Level</b>
+      <span><button id="lvNew" title="Level mới">＋</button><button id="lvDup" title="Nhân bản">⧉</button><button id="lvDel" title="Xoá">🗑</button></span>
+    </div>
+    <div id="levelList"></div>
+    <div class="legend"><i class="dot ok"></i> đạt rule · <i class="dot fail"></i> lệch · <i class="dot inc"></i> chưa xong</div>
+  </nav>
+
+  <!-- tool palette -->
+  <div id="toolbar">
+    <div class="grp">Bản đồ</div>
+    <button class="tool" data-tool="paint" title="Vẽ ô chơi (B)"><i>⬢</i><span>Vẽ ô</span><kbd>B</kbd></button>
+    <button class="tool" data-tool="water" title="Vẽ ô nước / chặn (W)"><i>≈</i><span>Nước</span><kbd>W</kbd></button>
+    <button class="tool" data-tool="erase" title="Xoá ô (E)"><i>⌫</i><span>Xoá</span><kbd>E</kbd></button>
+    <div class="grp">Đường đi</div>
+    <button class="tool" data-tool="path" title="Vẽ đường 1→N (P)"><i>〰</i><span>Vẽ đường</span><kbd>P</kbd></button>
+    <div class="grp">Khay</div>
+    <button class="tool" data-tool="given" title="Bật/tắt given (G)"><i>📌</i><span>Given</span><kbd>G</kbd></button>
+    <button class="tool" data-tool="group" title="Ghép 2–3 ô kề nhau thành 1 ô khay (H)"><i>⛓</i><span>Ghép ô</span><kbd>H</kbd></button>
+    <button class="tool" data-tool="split" title="Tách ô ghép (X)"><i>✂</i><span>Tách ô</span><kbd>X</kbd></button>
+    <div class="grp">Xem</div>
+    <button class="tool" data-tool="select" title="Chọn ô khay để xem vị trí kéo vào được (V)"><i>🔍</i><span>Soi ô</span><kbd>V</kbd></button>
+  </div>
+
+  <main>
+    <div class="steps" id="stepper"></div>
+    <div class="stage" id="stage">
+      <svg id="board" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+      <div id="toolHint" class="toolHint"></div>
+      <div class="floatBar">
+        <button id="btnUndo" title="Hoàn tác (Ctrl+Z)">↶</button>
+        <button id="btnRedo" title="Làm lại (Ctrl+Shift+Z)">↷</button>
+        <span class="sep"></span>
+        <button id="zIn" title="Phóng to">＋</button>
+        <button id="zOut" title="Thu nhỏ">－</button>
+        <button id="zFit" title="Vừa khung (F)">⤢</button>
+        <span class="sep"></span>
+        <label class="chk" title="Tô màu ô theo độ khó (D)"><input type="checkbox" id="optDiff" checked> độ khó</label>
+        <label class="chk" title="Hiện số"><input type="checkbox" id="optNums" checked> số</label>
+        <label class="chk" title="Hiện đường đi"><input type="checkbox" id="optPath"> đường</label>
+      </div>
+      <div id="tip" class="tip" hidden></div>
+
+      <div id="playWrap" hidden>
+        <div id="playHud" class="hud">
+          <span>Tim <b data-hud="hearts"></b></span>
+          <span>Sai <b data-hud="mist">0</b></span>
+          <span>Còn <b data-hud="left">0</b></span>
+          <span>Giờ <b data-hud="time">0:00</b></span>
+          <button id="pRestart">↺ Chơi lại</button>
+          <button id="pUndo">↶ Hoàn tác</button>
+          <button id="pHint">💡 Gợi ý</button>
+          <label class="chk"><input type="checkbox" id="pCls"> tô màu độ khó</label>
+        </div>
+        <svg id="playBoard" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+        <div id="playMsg" class="playMsg"></div>
+        <div id="playTray" class="tray"></div>
+        <div id="playResult" class="result" hidden></div>
+      </div>
+    </div>
+    <div id="statusBar" class="status"></div>
+  </main>
+
+  <aside id="side">
+    <details class="card" open>
+      <summary>Level</summary>
+      <div class="meta">
+        <label>ID <input type="number" id="mId" min="1"></label>
+        <label>Tên <input type="text" id="mName"></label>
+        <label>Nhãn <select id="mDiff"><option>normal</option><option>hard</option><option>expert</option></select></label>
+      </div>
+      <div class="row">
+        <label>Mẫu hex r<select id="mapRadius"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
+        <button id="mapHex">Tạo</button><button id="mapFlower" title="Bán kính 3, bỏ 6 góc">Hoa</button><button id="mapClear">Xoá hết</button>
+      </div>
+      <div class="kv" id="mapInfo"></div>
+    </details>
+
+    <details class="card" id="cardDiff" open>
+      <summary>Độ khó <span id="diffBadge"></span></summary>
+      <div id="anaSummary"></div>
+      <label class="row">Cách đếm
+        <select id="anaMode"><option value="strict">Chặt — chạm đủ n−1 và n+1 đã có</option><option value="loose">Lỏng — chạm 1 mốc là đủ</option></select>
+      </label>
+      <h4>Ô trong khay <small>bấm để soi vị trí kéo vào được</small></h4>
+      <div id="anaTiles"></div>
+      <h4>Chơi theo thứ tự dễ → khó</h4>
+      <div id="anaSteps"></div>
+    </details>
+
+    <details class="card" open>
+      <summary>Tự động</summary>
+      <div class="auto">
+        <div class="arow"><b>Đường đi</b>
+          <select id="pathStyle"><option value="straight">Đều</option><option value="any">Ngẫu nhiên</option><option value="wiggly">Ngoằn ngoèo</option></select>
+          <button id="pathAuto" class="primary" title="Giữ đoạn đã vẽ làm phần đầu và nối tiếp">Tự vẽ</button>
+          <button id="pathRev">Đảo</button><button id="pathClear">Xoá</button>
+        </div>
+        <div class="arow"><b>Given</b>
+          <input type="range" id="gvDensity" min="12" max="60" value="32"><span id="gvDensityV">32%</span>
+          <button id="gvAuto" class="primary">Tự đặt</button><button id="gvTopUp" title="Thêm given đến khi giải được">+ Cho đủ giải</button>
+        </div>
+        <div class="arow"><b>Cắt ô</b>
+          <select id="cutMax"><option value="1">≤1</option><option value="2">≤2</option><option value="3" selected>≤3</option></select>
+          <input type="text" id="cutW" value="1:5:2" size="6" title="Tỉ lệ ô 1:2:3">
+          <button id="cutAuto" class="primary">Tự cắt</button><button id="cutReset" title="Tất cả ô lẻ">Lẻ hết</button>
+        </div>
+        <div class="kv" id="cutInfo"></div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary>Tạo level theo độ khó</summary>
+      <p class="hint">Dùng bản đồ hiện tại, tìm đường + given + cách cắt để tỉ lệ ô sát mục tiêu mà vẫn giải được bằng suy luận.</p>
+      <label class="row">Mục tiêu <select id="gTier"></select></label>
+      <div class="sl"><span>Dễ</span><input type="range" id="gE" min="0" max="100"><b id="gEv"></b></div>
+      <div class="sl"><span>Trung bình</span><input type="range" id="gM" min="0" max="100"><b id="gMv"></b></div>
+      <div class="sl"><span>Khó</span><input type="range" id="gH" min="0" max="100"><b id="gHv"></b></div>
+      <div class="row">
+        <label>Sai số ±<input type="number" id="gTol" value="10" min="2" max="40" class="n2">%</label>
+        <label>Ô tối đa <select id="gMax"><option>1</option><option>2</option><option selected>3</option></select></label>
+        <label>Mồ côi ≤<input type="number" id="gOrph" value="40" min="0" max="100" class="n2">%</label>
+      </div>
+      <div class="row">
+        <label>Given <input type="number" id="gGmin" value="20" min="8" max="80" class="n2">–<input type="number" id="gGmax" value="40" min="8" max="90" class="n2">%</label>
+        <label>Đường <select id="gStyle"><option value="straight">đều</option><option value="any">ngẫu nhiên</option><option value="wiggly">ngoằn ngoèo</option></select></label>
+      </div>
+      <div class="row">
+        <label class="chk"><input type="checkbox" id="gKeepPath"> giữ đường</label>
+        <label class="chk"><input type="checkbox" id="gKeepGiv"> giữ given</label>
+        <label class="chk"><input type="checkbox" id="gKeepGrp"> giữ cách cắt</label>
+      </div>
+      <div class="row">
+        <label>Thời gian <input type="number" id="gTime" value="6" min="1" max="60" class="n2">s</label>
+        <label>Seed <input type="number" id="gSeed" value="1" class="n3"></label>
+        <button id="gGo" class="primary">Tạo</button><button id="gStop">Dừng</button>
+      </div>
+      <div id="gProg" class="muted"></div>
+      <div id="gResults"></div>
+    </details>
+
+    <details class="card" id="cardPlay" hidden>
+      <summary>Kết quả playtest</summary>
+      <p class="hint">Kéo ô trong khay lên bản đồ (hoặc bấm ô rồi bấm vị trí). Đặt sai chỗ hợp lệ mất 1 tim.</p>
+      <div id="playStats"></div>
+    </details>
+
+    <details class="card">
+      <summary>Luật độ khó (JSON)</summary>
+      <p class="hint">Ngưỡng ô, cách đếm, trọng số và các bậc level. Xem <code>DIFFICULTY_RULES.md</code>.</p>
+      <textarea id="rulesText" spellcheck="false"></textarea>
+      <div class="row"><button id="rulesApply" class="primary">Áp dụng</button><button id="rulesReset">Mặc định</button><button id="rulesCopy">Copy</button></div>
+      <div id="rulesMsg" class="muted"></div>
+    </details>
+  </aside>
+</div>
+
+<div id="toasts"></div>
+
+<dialog id="dlgPaste">
+  <form method="dialog">
+    <p>Dán JSON (mảng levels hoặc 1 level):</p>
+    <textarea id="pasteText" spellcheck="false"></textarea>
+    <div class="row"><button value="ok" id="pasteOk" class="primary">Nạp</button><button value="cancel">Huỷ</button></div>
+  </form>
+</dialog>
+
+<script src="js/hexcore.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/solver.js"></script>
+<script src="js/model.js"></script>
+<script src="js/generator.js"></script>
+<script src="js/view.js"></script>
+<script src="js/playtest.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
