@@ -108,6 +108,8 @@ const BOOST_ICON = {
 const BOOST_TIP = { find: 'Tap an empty cell' };
 const DEBUG_AUTOBUY_KEY = 'hexablow.debug.autobuy';
 let debugAutoBuy = false;
+let debugAutoPlay = false;
+let debugAutoTimer = 0;
 try { debugAutoBuy = localStorage.getItem(DEBUG_AUTOBUY_KEY) === '1'; } catch { /* ignore */ }
 
 boostBar.innerHTML = BOOSTERS.order
@@ -456,6 +458,7 @@ const tut = {
     this.steps = level.id === 1 && starsFor(progress, level.id) === 0 ? Object.keys(level.solution).map(Number).filter((n) => !level.givens[n]) : [];
     this.active = this.steps.length > 0;
     this.el.classList.toggle('hidden', !this.active);
+    stageEl.classList.toggle('tutorial-mode', this.active);
     this.t0 = performance.now();
     if (this.active && !this.running) {
       this.running = true;
@@ -466,6 +469,7 @@ const tut = {
     this.active = false;
     this.running = false;
     this.el.classList.add('hidden');
+    stageEl.classList.remove('tutorial-mode');
   },
   tick() {
     if (!this.active) { this.running = false; return; }
@@ -863,6 +867,24 @@ for (const id of ['settings-btn', 'home-settings']) {
   });
 }
 $('settings-close').addEventListener('click', closeSettings);
+// Delete account: two-tap confirm, then wipe all saved data and reload from scratch.
+const delBtn = $('delete-account');
+let delTimer = 0;
+delBtn.addEventListener('click', () => {
+  if (!delBtn.classList.contains('armed')) {
+    delBtn.classList.add('armed');
+    delBtn.textContent = 'Tap again to erase ALL progress';
+    clearTimeout(delTimer);
+    delTimer = setTimeout(() => { delBtn.classList.remove('armed'); delBtn.textContent = 'Delete account'; }, 4000);
+    return;
+  }
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith('hexablow.') || k.startsWith('gardendoku.')) localStorage.removeItem(k);
+    }
+  } catch { /* ignore */ }
+  location.reload();
+});
 panel.addEventListener('click', (e) => {
   if (e.target === panel) closeSettings();
 });
@@ -998,6 +1020,14 @@ function renderDebug() {
       debugAutoBuy = !debugAutoBuy;
       try { localStorage.setItem(DEBUG_AUTOBUY_KEY, debugAutoBuy ? '1' : '0'); } catch { /* ignore */ }
     }, debugAutoBuy ? '#3f7d3a' : '#8a5a2b'],
+  ]);
+  row('Auto-solve', [
+    ['Place next', () => game.autoPlaceNext()],
+    [`Auto-play: ${debugAutoPlay ? 'ON' : 'OFF'}`, () => {
+      debugAutoPlay = !debugAutoPlay;
+      clearInterval(debugAutoTimer);
+      if (debugAutoPlay) debugAutoTimer = setInterval(() => { if (!game.pieces.length) { debugAutoPlay = false; clearInterval(debugAutoTimer); renderDebug(); } else game.autoPlaceNext(); }, 650);
+    }, debugAutoPlay ? '#3f7d3a' : '#8a5a2b'],
   ]);
   row('Instant win (stars)', [
     ['★', () => debugWin(1), '#3f7d3a'],

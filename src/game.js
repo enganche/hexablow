@@ -707,6 +707,15 @@ export class Game {
     });
   }
 
+  /** Debug: fly the next tray piece to its solved cells, like a normal move. Returns false if nothing can be placed now. */
+  autoPlaceNext() {
+    if (!this.canBoost()) return false;
+    this.cancelMode();
+    this._select(null);
+    this._flyPiece(this.pieces[0]);
+    return true;
+  }
+
   _findCell(cell) {
     const k = key(cell[0], cell[1]);
     const p = this.pieces.find((x) => this._solutionCells(x).some(([q, r]) => key(q, r) === k));
@@ -1730,7 +1739,7 @@ export class Game {
     // fish jumping out of the pond(s)
     objs.fish = [];
     const water = this.level.blocked || [];
-    if (water.length) {
+    if (water.length && (this.hooks.getFound?.() ?? []).includes('koi')) {
       const rf = mulberry(this.level.id * 131 + 5);
       const picks = [...water].sort(() => rf() - 0.5).slice(0, Math.min(2, water.length));
       picks.forEach(([q, r], i) => {

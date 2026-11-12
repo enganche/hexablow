@@ -1166,3 +1166,10 @@ body {
 :is(#shop,#album) .lv-head { grid-template-columns:1fr auto; }
 :is(#shop,#album) .lv-head h2 { justify-self:start; min-width:40cqw; }
 .home-nav-item:focus-visible { outline:.6cqw solid #397c3e; outline-offset:-.8cqw; }
+
+.st-danger { display:block; width:100%; margin-top:3cqw; padding:2.6cqw; border:.6cqw solid #9f3038; border-radius:3cqw; color:#fff; font:inherit; font-size:3.6cqw; font-weight:800; background:linear-gradient(#ff7c71,#ee3549); box-shadow:0 1cqw 0 #9f3038; cursor:pointer; }
+.st-danger:active { transform:translateY(.8cqw); box-shadow:0 .2cqw 0 #9f3038; }
+.st-danger.armed { background:linear-gradient(#c93144,#8f1f2e); }
+
+/* level 1 tutorial: only the tutorial UI shows (no menu bar, no boosters) */
+#stage.tutorial-mode > #hud, #stage.tutorial-mode > #boosters, #stage.tutorial-mode > #coin-hud, #stage.tutorial-mode > #boost-tip { opacity:0 !important; visibility:hidden !important; pointer-events:none !important; }
