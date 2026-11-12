@@ -5,6 +5,7 @@ import {
   houseMaterial, HOUSE_SIZE, HOUSE_ANCHOR, HOUSE_REACH,
   fishMaterial, rippleMaterial, butterflyMaterial,
   dogMaterial, DOG_FRAMES, DOG_ASPECT, DOG_ANCHOR,
+  PLANT_SPECIES, CRITTERS, critterMaterial, CRITTER_ANCHOR,
 } from './garden.js';
 
 // ---- Honeycomb palette ----
@@ -1653,6 +1654,9 @@ export class Game {
     const rnd = mulberry(level.id * 9973 + N * 31 + 7);
     const houseCell = level.solution[N];
     const plants = [];
+    // unlocked collection plants (apple tree, mushroom) join the usual flower pool
+    const found = this.hooks.getFound?.() ?? [];
+    const kinds = [...FLOWER_KINDS, ...PLANT_SPECIES.filter((s) => found.includes(s))];
     for (const [q, r] of level.cells) {
       if (q === houseCell[0] && r === houseCell[1]) continue;
       // sparse: ~1/3 of the cells stay bare, most get a single plant, a few get two
@@ -1672,10 +1676,10 @@ export class Game {
         // grass tufts removed (looked off); keep the rnd() draw so flower layout stays stable
         const tuft = rnd() < 0.42;
         if (tuft) { rnd(); rnd(); rnd(); rnd(); continue; }
-        const kind = FLOWER_KINDS[Math.floor(rnd() * FLOWER_KINDS.length)];
+        const kind = kinds[Math.floor(rnd() * kinds.length)];
         plants.push({
           q, r, dx, dy, kind,
-          size: 0.78 * (0.85 + rnd() * 0.35),
+          size: (kind === 'apple' ? 1.7 : 0.78) * (0.85 + rnd() * 0.35),
           flip: rnd() < 0.5 ? -1 : 1,
           delay: 450 + rnd() * 1250,
           ph: rnd() * 6.28,
@@ -1747,16 +1751,24 @@ export class Game {
       x0 = Math.min(x0, s.x); x1 = Math.max(x1, s.x); y0 = Math.min(y0, s.y); y1 = Math.max(y1, s.y);
     }
     const rb = mulberry(this.level.id * 17 + 3);
-    for (let i = 0; i < 4; i++) {
-      const m = new THREE.Mesh(spriteGeo(1, 1, 0.5, 0.5), butterflyMaterial(i));
+    const foundIds = this.hooks.getFound?.() ?? [];
+    const flyerDefs = [0, 1, 2, 3].map((i) => ({ mat: butterflyMaterial(i), size: 0.55, fm: 1, flap: 0.016, flapMin: 0.25, flip: false }));
+    for (const id of foundIds) {
+      const sp = CRITTERS[id];
+      if (sp?.type === 'fly') flyerDefs.push({ mat: critterMaterial(id), size: sp.size, fm: sp.fm, flap: sp.flap, flapMin: sp.flapMin, flip: sp.flip });
+    }
+    // fliers stay over the map: lawn cells plus the ponds
+    objs.mapKeys = new Set([...this.cellKeys, ...(this.level.blocked || []).map(([q, r]) => key(q, r))]);
+    flyerDefs.forEach((d, i) => {
+      const m = new THREE.Mesh(spriteGeo(1, 1, 0.5, 0.5), d.mat);
       m.visible = false;
       this.gardenGroup.add(m);
       objs.butterflies.push({
-        m, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, ax: (x1 - x0) / 2 + R * 0.6, ay: (y1 - y0) / 2 + R * 0.2,
-        fx: 0.00018 + rb() * 0.00014, fy: 0.00024 + rb() * 0.00016, px: rb() * 6.28, py: rb() * 6.28, fl: rb() * 6.28,
-        z: this._tileZ(y1) + R * 2.2,
+        m, d, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, ax: ((x1 - x0) / 2) * 0.72, ay: ((y1 - y0) / 2) * 0.72,
+        fx: (0.00018 + rb() * 0.00014) * d.fm, fy: (0.00024 + rb() * 0.00016) * d.fm, px: rb() * 6.28, py: rb() * 6.28, fl: rb() * 6.28,
+        z: this._tileZ(y1) + R * (2.2 + i * 0.05), rad: d.size * R * 0.5, dir: 1, x: 0, y: 0,
       });
-    }
+    });
     // dog: a wide, looping, curvy route that sweeps the whole lawn but keeps clear of the cottage and the pond
     objs.dog = null;
     {
@@ -1770,12 +1782,12 @@ export class Game {
         const c = this._screenToCell(p.x + ux * R * 0.62 * m, p.y + uy * R * 0.42 * m);
         return this.cellKeys.has(key(c[0], c[1])) && !(c[0] === hq && c[1] === hr);
       });
-      const free = (p, m) => {
+      const free = (p, m, wk = 1.35) => {
         if (!onLawn(p, m)) return false;
         // the cottage is tall: treat it as a wide ellipse reaching well above its cell
         const hx = (p.x - hc.x) / (R * 1.75 * m), hy = (p.y - (hc.y - R * 0.5)) / (R * 1.75 * m);
         if (hx * hx + hy * hy < 1) return false;
-        return water.every((o) => Math.hypot(p.x - o.x, p.y - o.y) > R * 1.35 * m);
+        return water.every((o) => Math.hypot(p.x - o.x, p.y - o.y) > R * wk * m);
       };
 
       // closed Catmull-Rom through the waypoints, sampled into a fine polyline
@@ -1830,8 +1842,45 @@ export class Game {
         const mesh = new THREE.Mesh(spriteGeo(DOG_ASPECT, 1, DOG_ANCHOR.ax, DOG_ANCHOR.ay), dogMaterial(0));
         mesh.visible = false;
         this.gardenGroup.add(mesh);
-        objs.dog = { mesh, segs, total, dir: 1 };
+        objs.dog = { mesh, segs, total, dir: 1, d: 0, run: 1, blockT: 0, rad: R * 0.37, x: best[0].x, y: best[0].y };
       }
+
+      // ---- ground critters from the collection: wander the lawn on their own, never overlapping each other or the dog ----
+      objs.walkers = [];
+      const rw = mulberry(this.level.id * 53 + 19);
+      const ids = (this.hooks.getFound?.() ?? []).filter((id) => CRITTERS[id]?.type === 'walk');
+      for (const id of ids) {
+        const sp = CRITTERS[id];
+        const fox = id === 'fox';
+        const m = Math.max(0.4, Math.min(1, sp.size / 0.62));
+        const rad = sp.size * R * (fox ? 0.6 : 0.4);
+        const wk = sp.pond && water.length ? 0.9 : 1.35;
+        let spots = grid.filter((p) => free(p, m, wk));
+        if (sp.pond && water.length) {
+          const near = spots.filter((p) => water.some((o) => Math.hypot(p.x - o.x, p.y - o.y) < R * 2.3));
+          if (near.length) spots = near;
+        }
+        if (spots.length < 2) continue;
+        // start somewhere clear of the dog and of everyone already placed
+        const others = [...objs.walkers, ...(objs.dog ? [objs.dog] : [])];
+        let start = null;
+        for (let n = 0; n < 80 && !start; n++) {
+          const c = spots[Math.floor(rw() * spots.length)];
+          if (others.every((o) => this._critterDist(c, o) > (o.rad + rad) * 1.3)) start = c;
+        }
+        if (!start) continue;
+        const mesh = new THREE.Mesh(
+          fox ? spriteGeo(DOG_ASPECT, 1, DOG_ANCHOR.ax, DOG_ANCHOR.ay) : spriteGeo(1, 1, CRITTER_ANCHOR.ax, CRITTER_ANCHOR.ay),
+          fox ? dogMaterial(0, 'fox') : critterMaterial(id)
+        );
+        mesh.visible = false;
+        this.gardenGroup.add(mesh);
+        objs.walkers.push({
+          id, sp, mesh, m, wk, rad, spots, fox, x: start.x, y: start.y, tx: start.x, ty: start.y,
+          wait: 400 + rw() * 1500, burst: 0, dir: rw() < 0.5 ? 1 : -1, born: null, moving: false, hopK: 0, f: -1,
+        });
+      }
+      objs.freeAt = free;
     }
     this.gardenObjs = objs;
   }
@@ -1881,17 +1930,40 @@ export class Game {
   /** Ambient life on the finished garden: koi leaping from the pond, butterflies drifting about. */
   _animateWildlife(now) {
     const R = this.R;
-    const dog = this.gardenObjs.dog;
+    const objs = this.gardenObjs;
+    const dog = objs.dog;
+    const dt = Math.max(0, Math.min(50, objs.lastT == null ? 16 : now - objs.lastT));
+    objs.lastT = now;
+    const walkers = objs.walkers || [];
     if (dog) {
-      const speed = R * 1.9 / 1000; // px per ms
       // speed up and slow down along the route (sprint / trot)
-      const dRaw = (now - 2200) * speed + Math.sin(now / 1700) * R * 0.7;
-      const d = ((dRaw % dog.total) + dog.total) % dog.total;
-      const seg = dog.segs.find((s) => d >= s.at && d < s.at + s.len) || dog.segs[0];
-      const k = (d - seg.at) / seg.len;
-      const x = seg.a.x + (seg.b.x - seg.a.x) * k;
-      const y = seg.a.y + (seg.b.y - seg.a.y) * k;
-      const f = Math.floor(now / 70) % DOG_FRAMES;
+      const step = (R * 1.9 / 1000) * (1 + 0.37 * Math.sin(now / 1700)) * dt;
+      const wrap = (v) => ((v % dog.total) + dog.total) % dog.total;
+      const segOf = (d) => dog.segs.find((s) => d >= s.at && d < s.at + s.len) || dog.segs[0];
+      const pos = (d) => {
+        const s = segOf(d), k = (d - s.at) / s.len;
+        return { x: s.a.x + (s.b.x - s.a.x) * k, y: s.a.y + (s.b.y - s.a.y) * k };
+      };
+      // never step into another critter: wait a moment, then run the loop the other way round
+      const nd = wrap(dog.d + dog.run * step);
+      const np = pos(nd);
+      const hit = walkers.some((w) => {
+        const dn = this._critterDist(np, w);
+        return dn < dog.rad + w.rad && dn < this._critterDist(dog, w);
+      });
+      if (hit) {
+        dog.blockT += dt;
+        if (dog.blockT > 350) { dog.run = -dog.run; dog.blockT = 0; }
+      } else {
+        dog.blockT = 0;
+        dog.d = nd;
+      }
+      const d = dog.d;
+      const seg = segOf(d);
+      const { x, y } = pos(d);
+      dog.x = x;
+      dog.y = y;
+      const f = hit ? 0 : Math.floor(now / 70) % DOG_FRAMES;
       const bounce = Math.abs(Math.sin(now / 70 / DOG_FRAMES * Math.PI * 2)) * R * 0.07;
       dog.mesh.visible = true;
       if (dog.f !== f) { dog.mesh.material = dogMaterial(f); dog.f = f; }
@@ -1899,11 +1971,12 @@ export class Game {
       dog.mesh.position.y += R * TILE_TOP_LIFT;
       const h = R * 0.62;
       // look a little ahead so the facing follows the curve without flickering at the turns
-      const ahead = dog.segs.find((q) => (d + R * 0.5) % dog.total >= q.at && (d + R * 0.5) % dog.total < q.at + q.len) || seg;
-      const vx = ahead.b.x - ahead.a.x;
+      const ahead = segOf(wrap(d + dog.run * R * 0.5));
+      const vx = (ahead.b.x - ahead.a.x) * dog.run;
       if (Math.abs(vx) > ahead.len * 0.25) dog.dir = vx >= 0 ? 1 : -1;
       dog.mesh.scale.set(dog.dir * h, h, 1);
     }
+    for (const w of walkers) this._stepWalker(w, now, dt, walkers, dog);
     for (const f of this.gardenObjs.fish || []) {
       const ph = ((now + f.off) % f.per) / f.per;
       const jump = 0.26; // fraction of the cycle spent airborne
@@ -1925,15 +1998,138 @@ export class Game {
       f.ring.scale.set(rs, rs, 1);
       f.ring.material.opacity = 1 - rk;
     }
-    for (const b of this.gardenObjs.butterflies || []) {
-      const x = b.cx + Math.sin(now * b.fx + b.px) * b.ax + Math.sin(now * b.fx * 3.1) * R * 0.15;
-      const y = b.cy + Math.sin(now * b.fy + b.py) * b.ay + Math.sin(now * 0.006 + b.fl) * R * 0.05;
+    // fliers (butterflies, bees, owls) drift on smooth loops; afterwards overlapping pairs are nudged apart
+    const fliers = this.gardenObjs.butterflies || [];
+    for (const b of fliers) {
+      b.x = b.cx + Math.sin(now * b.fx + b.px) * b.ax + Math.sin(now * b.fx * 3.1) * R * 0.15;
+      b.y = b.cy + Math.sin(now * b.fy + b.py) * b.ay + Math.sin(now * 0.006 + b.fl) * R * 0.05;
+    }
+    const mapKeys = this.gardenObjs.mapKeys;
+    const inMap = (b) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].every(([ux, uy]) => {
+      const c = this._screenToCell(b.x + ux * b.rad * 0.8, b.y + uy * b.rad * 0.6);
+      return mapKeys.has(key(c[0], c[1]));
+    });
+    const clampToMap = () => {
+      for (const b of fliers) {
+        for (let n = 0; n < 40 && !inMap(b); n++) {
+          b.x += (b.cx - b.x) * 0.12;
+          b.y += (b.cy - b.y) * 0.12;
+        }
+      }
+    };
+    clampToMap();
+    for (let it = 0; it < 3; it++) {
+      for (let i = 0; i < fliers.length; i++) {
+        for (let j = i + 1; j < fliers.length; j++) {
+          const a = fliers[i], c = fliers[j];
+          let dx = c.x - a.x, dy = (c.y - a.y) * 1.4;
+          let dist = Math.hypot(dx, dy);
+          const min = (a.rad + c.rad) * 1.15;
+          if (dist >= min) continue;
+          if (dist < 1e-4) { dx = 1; dy = 0; dist = 1; }
+          const push = (min - dist) / 2;
+          const ux = dx / dist, uy = dy / dist / 1.4;
+          // push both apart; whoever would leave the map stays put and the other takes the whole push
+          const ax0 = a.x, ay0 = a.y, cx0 = c.x, cy0 = c.y;
+          a.x -= ux * push; a.y -= uy * push;
+          c.x += ux * push; c.y += uy * push;
+          const aOut = !inMap(a), cOut = !inMap(c);
+          if (aOut) { a.x = ax0; a.y = ay0; }
+          if (cOut) { c.x = cx0; c.y = cy0; }
+          if (aOut && !cOut) { c.x += ux * push; c.y += uy * push; if (!inMap(c)) { c.x = cx0; c.y = cy0; } }
+          if (cOut && !aOut) { a.x -= ux * push; a.y -= uy * push; if (!inMap(a)) { a.x = ax0; a.y = ay0; } }
+        }
+      }
+    }
+    clampToMap();
+    for (const b of fliers) {
       const vx = Math.cos(now * b.fx + b.px) * b.fx * b.ax;
       b.m.visible = true;
-      b.m.position.copy(this._w(x, y, b.z));
-      const flap = 0.25 + 0.75 * Math.abs(Math.sin(now * 0.016 + b.fl));
-      b.m.scale.set(R * 0.55 * flap, R * 0.55, 1);
-      b.m.rotation.z = -Math.max(-1, Math.min(1, vx * 6)) * 0.35;
+      b.m.position.copy(this._w(b.x, b.y, b.z));
+      const flap = b.d.flapMin + (1 - b.d.flapMin) * Math.abs(Math.sin(now * b.d.flap + b.fl));
+      if (b.d.flip && Math.abs(vx) > 1e-5) b.dir = vx >= 0 ? 1 : -1;
+      b.m.scale.set(R * b.d.size * flap * b.dir, R * b.d.size, 1);
+      b.m.rotation.z = -Math.max(-1, Math.min(1, vx * 6 * (b.d.fm > 1 ? 0.5 : 1))) * 0.35 * b.dir;
+    }
+  }
+
+  /** Distance between two critters on the lawn (vertical gaps count more: sprites stack upward). */
+  _critterDist(a, b) {
+    return Math.hypot(a.x - b.x, (a.y - b.y) * 1.5);
+  }
+
+  /** Advance one ground critter: stand still, pick a nearby spot, walk / hop there, never touching another critter. */
+  _stepWalker(w, now, dt, all, dog) {
+    const R = this.R;
+    const sp = w.sp;
+    const objs = this.gardenObjs;
+    if (w.born == null) w.born = now;
+    const others = all.filter((o) => o !== w);
+    if (dog) others.push(dog);
+    const clear = (p) => others.every((o) => {
+      const dn = this._critterDist(p, o);
+      return dn >= w.rad + o.rad || dn >= this._critterDist(w, o);
+    });
+    const pickTarget = () => {
+      const range = sp.range * R;
+      for (let n = 0; n < 24; n++) {
+        const c = w.spots[Math.floor(Math.random() * w.spots.length)];
+        const dist = Math.hypot(c.x - w.x, c.y - w.y);
+        if (dist < R * 0.35 || dist > range) continue;
+        // the straight walk there must stay on the lawn
+        let ok = true;
+        for (let s = 1; s <= 5 && ok; s++) ok = objs.freeAt({ x: w.x + ((c.x - w.x) * s) / 5, y: w.y + ((c.y - w.y) * s) / 5 }, w.m, w.wk);
+        if (ok) { w.tx = c.x; w.ty = c.y; return true; }
+      }
+      return false;
+    };
+    const rest = () => {
+      w.wait = sp.pause[0] + Math.random() * (sp.pause[1] - sp.pause[0]);
+      w.moving = false;
+      w.hopK = 0;
+    };
+    if (w.moving === false && w.wait <= 0) {
+      if (pickTarget()) { w.moving = true; w.burst = sp.hop || 1e9; } else rest();
+    }
+    if (w.moving) {
+      const dx = w.tx - w.x, dy = w.ty - w.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < R * 0.05 || w.burst <= 0) {
+        rest();
+      } else {
+        const stepLen = Math.min(dist, sp.speed * R * dt / 1000 * (sp.hop ? 1 + 0.6 * Math.sin(Math.PI * (1 - w.burst / sp.hop)) : 1));
+        const np = { x: w.x + (dx / dist) * stepLen, y: w.y + (dy / dist) * stepLen };
+        if (objs.freeAt(np, w.m, w.wk) && clear(np)) {
+          w.x = np.x;
+          w.y = np.y;
+          if (Math.abs(dx) > Math.abs(dy) * 0.3) w.dir = dx >= 0 ? 1 : -1;
+          w.burst -= dt;
+          if (sp.hop) w.hopK = 1 - Math.max(0, w.burst) / sp.hop;
+        } else {
+          rest();
+          w.wait = Math.min(w.wait, 500);
+        }
+      }
+    } else {
+      w.wait -= dt;
+    }
+
+    // ---- draw ----
+    const h = R * sp.size;
+    const born = Math.min(1, (now - w.born) / 450);
+    const grow = born < 1 ? easeOutBack(born) : 1;
+    const walkPhase = now / (sp.runner ? 90 : 260 + 600 * (1 - Math.min(1, sp.speed)));
+    let lift = 0;
+    if (sp.hop) lift = w.moving ? Math.sin(Math.PI * w.hopK) * R * 0.2 : 0;
+    else if (w.moving && sp.bob) lift = Math.abs(Math.sin(walkPhase * 2)) * R * sp.bob;
+    w.mesh.visible = true;
+    w.mesh.position.copy(this._w(w.x, w.y - lift, this._gardenZ(w.y) + R * 0.8));
+    w.mesh.position.y += R * TILE_TOP_LIFT;
+    w.mesh.scale.set(w.dir * h * grow, h * Math.max(0.001, grow), 1);
+    w.mesh.rotation.z = w.moving && sp.bob ? Math.sin(walkPhase * 2) * 0.05 * w.dir : sp.hop && w.moving ? (0.5 - w.hopK) * 0.5 * w.dir : 0;
+    if (w.fox) {
+      const f = w.moving ? Math.floor(now / 80) % DOG_FRAMES : 2;
+      if (w.f !== f) { w.mesh.material = dogMaterial(f, 'fox'); w.f = f; }
     }
   }
 

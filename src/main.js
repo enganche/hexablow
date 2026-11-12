@@ -361,6 +361,7 @@ const praise = new Praise($('stage'), audio, () => settings);
 // ---- Game ----
 const game = new Game($('game'), {
   getSettings: () => settings,
+  getFound: () => progress.found,
   onModeChange: () => syncModeUI(),
   onBoosterUsed: (id) => {
     useBooster(progress, id);

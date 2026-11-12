@@ -212,6 +212,8 @@ const FLOWERS = {
   tulip: {},
 };
 export const FLOWER_KINDS = Object.keys(FLOWERS);
+/** Collection species that grow as plants once unlocked (on top of the usual flowers). */
+export const PLANT_SPECIES = ['apple', 'mushroom'];
 
 const plantCache = new Map();
 export function plantMaterial(kind) {
@@ -247,6 +249,78 @@ export function plantMaterial(kind) {
       g.lineWidth = 3;
       g.stroke();
     }
+  } else if (kind === 'apple') {
+    // small apple tree
+    g.fillStyle = '#9a6535';
+    g.strokeStyle = '#5e3a1a';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.moveTo(cx - 9, P_BASE);
+    g.quadraticCurveTo(cx - 5, P_BASE - 40, cx - 6, P_BASE - 66);
+    g.lineTo(cx + 6, P_BASE - 66);
+    g.quadraticCurveTo(cx + 5, P_BASE - 40, cx + 9, P_BASE);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    for (const [dx, dy, rr, col] of [[-28, -78, 28, '#4fae35'], [28, -78, 28, '#4fae35'], [0, -106, 36, '#62c94a'], [-4, -82, 30, '#58b83a']]) {
+      g.beginPath();
+      g.arc(cx + dx, P_BASE + dy, rr, 0, Math.PI * 2);
+      g.fillStyle = col;
+      g.fill();
+      g.strokeStyle = '#2f7d2c';
+      g.lineWidth = 4;
+      g.stroke();
+    }
+    for (const [dx, dy] of [[-30, -84], [22, -92], [-6, -110], [32, -70], [-14, -66]]) {
+      g.beginPath();
+      g.arc(cx + dx, P_BASE + dy, 8, 0, Math.PI * 2);
+      g.fillStyle = '#ee3f43';
+      g.fill();
+      g.strokeStyle = '#a82229';
+      g.lineWidth = 3;
+      g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.65)';
+      g.beginPath();
+      g.arc(cx + dx - 3, P_BASE + dy - 3, 2.2, 0, Math.PI * 2);
+      g.fill();
+    }
+  } else if (kind === 'mushroom') {
+    const shroom = (x, base, sc, cap, capEdge) => {
+      g.save();
+      g.translate(x, base);
+      g.scale(sc, sc);
+      g.beginPath();
+      g.moveTo(-12, 0);
+      g.quadraticCurveTo(-9, -26, -11, -40);
+      g.lineTo(11, -40);
+      g.quadraticCurveTo(9, -26, 12, 0);
+      g.closePath();
+      g.fillStyle = '#fff1d6';
+      g.fill();
+      g.strokeStyle = '#c9a97a';
+      g.lineWidth = 3.5;
+      g.stroke();
+      g.beginPath();
+      g.moveTo(-44, -38);
+      g.quadraticCurveTo(-44, -88, 0, -90);
+      g.quadraticCurveTo(44, -88, 44, -38);
+      g.quadraticCurveTo(0, -30, -44, -38);
+      g.closePath();
+      g.fillStyle = cap;
+      g.fill();
+      g.strokeStyle = capEdge;
+      g.lineWidth = 3.5;
+      g.stroke();
+      g.fillStyle = '#fff';
+      for (const [dx, dy, rr] of [[-20, -56, 7], [6, -72, 6.5], [22, -52, 6], [-4, -50, 4]]) {
+        g.beginPath();
+        g.arc(dx, dy, rr, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.restore();
+    };
+    shroom(cx + 26, P_BASE - 2, 0.62, '#f08a3c', '#a8501c');
+    shroom(cx - 8, P_BASE, 1, '#ee4d4d', '#a62a2a');
   } else {
     const bx = cx + 8, by = P_BASE - 104;
     // stem
@@ -620,12 +694,18 @@ export function butterflyMaterial(kind = 0) {
 }
 
 // ---------- dog (runs around the lawn) ----------
-const dogCache = [];
+const dogCache = {};
 export const DOG_FRAMES = 6;
-/** Side-view corgi-ish pup facing right, 6-frame gallop cycle. Origin: feet-level centre. */
-export function dogMaterial(frame) {
+const DOG_PALETTES = {
+  dog: { OUT: '#8a4f1f', FUR: '#f0a24a', LIGHT: '#fff1d6', DARK: '#c97a2c' },
+  fox: { OUT: '#6e2f12', FUR: '#ec7a2e', LIGHT: '#fff4e6', DARK: '#92401a' },
+};
+/** Side-view corgi-ish pup (or fox) facing right, 6-frame gallop cycle. Origin: feet-level centre. */
+export function dogMaterial(frame, variant = 'dog') {
   const f = ((frame % DOG_FRAMES) + DOG_FRAMES) % DOG_FRAMES;
-  if (dogCache[f]) return dogCache[f];
+  const ck = variant + f;
+  if (dogCache[ck]) return dogCache[ck];
+  const fox = variant === 'fox';
   const W = 192, H = 144;
   const c = document.createElement('canvas');
   c.width = W;
@@ -633,7 +713,7 @@ export function dogMaterial(frame) {
   const g = c.getContext('2d');
   g.lineCap = g.lineJoin = 'round';
   const ph = (f / DOG_FRAMES) * Math.PI * 2;
-  const OUT = '#8a4f1f', FUR = '#f0a24a', LIGHT = '#fff1d6', DARK = '#c97a2c';
+  const { OUT, FUR, LIGHT, DARK } = DOG_PALETTES[variant];
   const gy = 124; // ground line
   // shadow
   g.fillStyle = 'rgba(36,96,24,0.28)';
@@ -664,14 +744,20 @@ export function dogMaterial(frame) {
   leg(120, 94, 0, true);
   // tail (wags with the cycle)
   g.strokeStyle = OUT;
-  g.lineWidth = 13;
+  g.lineWidth = fox ? 24 : 13;
   g.beginPath();
   g.moveTo(44, 72);
   g.quadraticCurveTo(24, 54 + Math.sin(ph * 2) * 8, 28, 40 + Math.sin(ph * 2) * 8);
   g.stroke();
   g.strokeStyle = FUR;
-  g.lineWidth = 7;
+  g.lineWidth = fox ? 16 : 7;
   g.stroke();
+  if (fox) {
+    g.fillStyle = LIGHT;
+    g.beginPath();
+    g.arc(28, 40 + Math.sin(ph * 2) * 8, 9, 0, Math.PI * 2);
+    g.fill();
+  }
   // body
   g.beginPath();
   g.ellipse(92, 82, 52, 29, 0, 0, Math.PI * 2);
@@ -714,7 +800,12 @@ export function dogMaterial(frame) {
   g.translate(132, 46);
   g.rotate(-0.5 + Math.sin(ph + 1) * 0.25);
   g.beginPath();
-  g.ellipse(0, 12, 10, 20, 0, 0, Math.PI * 2);
+  if (fox) {
+    g.moveTo(-10, 12);
+    g.lineTo(2, -24);
+    g.lineTo(13, 12);
+    g.closePath();
+  } else g.ellipse(0, 12, 10, 20, 0, 0, Math.PI * 2);
   g.fillStyle = DARK;
   g.fill();
   g.strokeStyle = OUT;
@@ -731,14 +822,207 @@ export function dogMaterial(frame) {
   g.arc(154.5, 52.5, 1.4, 0, Math.PI * 2);
   g.fill();
   // collar
-  g.strokeStyle = '#e8503a';
-  g.lineWidth = 6;
-  g.beginPath();
-  g.moveTo(128, 76);
-  g.quadraticCurveTo(136, 86, 142, 80);
-  g.stroke();
-  dogCache[f] = canvasMat(c);
-  return dogCache[f];
+  if (!fox) {
+    g.strokeStyle = '#e8503a';
+    g.lineWidth = 6;
+    g.beginPath();
+    g.moveTo(128, 76);
+    g.quadraticCurveTo(136, 86, 142, 80);
+    g.stroke();
+  }
+  dogCache[ck] = canvasMat(c);
+  return dogCache[ck];
 }
 export const DOG_ASPECT = 192 / 144;
 export const DOG_ANCHOR = { ax: 0.5, ay: 20 / 144 };
+
+// ---------- collection critters ----------
+/**
+ * Behaviour of each collection species that roams the finished lawn.
+ * walk: ground animal. size = sprite height in cell radii, speed = cell radii / second while moving,
+ *   pause = [min, max] ms standing still between moves, range = how far (radii) it wanders per move,
+ *   hop = ms per hop (frog), pond = stays around the water, bob = walking bounce.
+ * fly: flutters like the butterflies. fm = path speed multiplier, flap = wing rate, flapMin = narrowest wing squeeze.
+ */
+export const CRITTERS = {
+  ladybug: { type: 'walk', size: 0.3, speed: 0.4, pause: [300, 1300], range: 2.2, bob: 0.02 },
+  turtle: { type: 'walk', size: 0.42, speed: 0.08, pause: [1800, 4500], range: 1.6, bob: 0.008 },
+  frog: { type: 'walk', size: 0.38, speed: 1.1, hop: 340, pause: [800, 2600], range: 2.0 },
+  duck: { type: 'walk', size: 0.46, speed: 0.3, pause: [900, 2800], range: 2.6, bob: 0.03, pond: true },
+  snail: { type: 'walk', size: 0.4, speed: 0.035, pause: [2500, 6000], range: 1.1, bob: 0.004 },
+  hedgehog: { type: 'walk', size: 0.42, speed: 0.3, pause: [900, 2600], range: 2.4, bob: 0.02 },
+  fox: { type: 'walk', size: 0.5, speed: 1.15, pause: [700, 2400], range: 5, runner: true },
+  bee: { type: 'fly', size: 0.36, fm: 2.4, flap: 0.05, flapMin: 0.8, flip: true },
+  owl: { type: 'fly', size: 0.8, fm: 0.4, flap: 0.007, flapMin: 0.7, flip: false },
+};
+export const CRITTER_CANVAS = 128;
+const CG = 112; // ground line of a critter canvas
+export const CRITTER_ANCHOR = { ax: 0.5, ay: (CRITTER_CANVAS - CG) / CRITTER_CANVAS };
+
+const critterCache = new Map();
+/** Side-view sprite (facing right) for ground critters; front view for the flying owl / bee. */
+export function critterMaterial(id) {
+  if (critterCache.has(id)) return critterCache.get(id);
+  const c = document.createElement('canvas');
+  c.width = c.height = CRITTER_CANVAS;
+  const g = c.getContext('2d');
+  g.lineCap = g.lineJoin = 'round';
+  const ell = (x, y, rx, ry, fill, stroke, lw = 4, rot = 0) => {
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+    if (fill) { g.fillStyle = fill; g.fill(); }
+    if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); }
+  };
+  const dot = (x, y, r, fill) => ell(x, y, r, r, fill, null);
+  const eye = (x, y, r = 4) => { dot(x, y, r, '#2b1a10'); dot(x + r * 0.3, y - r * 0.3, r * 0.35, '#fff'); };
+  const ground = (rx = 40) => ell(64, CG + 2, rx, 7, 'rgba(36,96,24,0.28)', null);
+  const flying = CRITTERS[id]?.type === 'fly';
+  if (!flying) ground(id === 'snail' ? 46 : 38);
+
+  switch (id) {
+    case 'ladybug': {
+      g.strokeStyle = '#2b2b2b';
+      g.lineWidth = 5;
+      for (const x of [40, 58, 76]) { g.beginPath(); g.moveTo(x, 94); g.lineTo(x - 4, CG); g.stroke(); }
+      g.beginPath();
+      g.ellipse(58, 98, 38, 38, 0, Math.PI, 0);
+      g.closePath();
+      g.fillStyle = '#e8392e';
+      g.fill();
+      g.strokeStyle = '#7a1612';
+      g.lineWidth = 4;
+      g.stroke();
+      g.beginPath(); g.moveTo(58, 60); g.lineTo(58, 98); g.stroke();
+      for (const [x, y, r] of [[40, 86, 6], [76, 86, 6], [48, 72, 5], [68, 72, 5]]) dot(x, y, r, '#2b2b2b');
+      ell(100, 94, 14, 13, '#2b2b2b', null);
+      dot(105, 90, 3, '#fff');
+      g.strokeStyle = '#2b2b2b'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(106, 84); g.quadraticCurveTo(112, 70, 120, 68); g.stroke();
+      break;
+    }
+    case 'turtle': {
+      ell(34, 100, 11, 10, '#9bc96a', '#4f8a38');
+      ell(82, 100, 11, 10, '#9bc96a', '#4f8a38');
+      g.beginPath(); g.moveTo(18, 92); g.lineTo(6, 98); g.lineTo(20, 100); g.closePath();
+      g.fillStyle = '#9bc96a'; g.fill(); g.strokeStyle = '#4f8a38'; g.lineWidth = 3; g.stroke();
+      ell(108, 80, 14, 12, '#9bc96a', '#4f8a38');
+      eye(113, 77, 3.4);
+      g.beginPath();
+      g.ellipse(58, 94, 42, 38, 0, Math.PI, 0);
+      g.closePath();
+      g.fillStyle = '#5da84a'; g.fill();
+      g.strokeStyle = '#2f6b2a'; g.lineWidth = 4; g.stroke();
+      ell(58, 96, 42, 8, '#f2e2a8', '#b79d52', 3);
+      g.strokeStyle = '#2f6b2a'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(38, 94); g.lineTo(44, 70); g.lineTo(72, 70); g.lineTo(78, 94); g.stroke();
+      g.beginPath(); g.moveTo(58, 70); g.lineTo(58, 58); g.stroke();
+      break;
+    }
+    case 'frog': {
+      ell(36, 100, 20, 12, '#5fb642', '#2f7d2c', 4, -0.2);
+      ell(60, 88, 36, 26, '#6cc24a', '#2f7d2c');
+      ell(66, 100, 24, 10, '#d7f2a8', null);
+      ell(88, 104, 8, 9, '#5fb642', '#2f7d2c', 3.5);
+      ell(88, 72, 24, 19, '#6cc24a', '#2f7d2c');
+      ell(94, 54, 11, 11, '#6cc24a', '#2f7d2c');
+      dot(96, 54, 7, '#fff'); eye(98, 54, 4.4);
+      g.strokeStyle = '#2f7d2c'; g.lineWidth = 3.5;
+      g.beginPath(); g.moveTo(84, 82); g.quadraticCurveTo(100, 90, 112, 78); g.stroke();
+      dot(92, 80, 4, 'rgba(255,130,150,0.7)');
+      break;
+    }
+    case 'duck': {
+      g.strokeStyle = '#ff9a3c'; g.lineWidth = 5;
+      for (const x of [52, 68]) { g.beginPath(); g.moveTo(x, 100); g.lineTo(x, CG); g.lineTo(x + 8, CG); g.stroke(); }
+      g.beginPath(); g.moveTo(24, 76); g.lineTo(10, 66); g.lineTo(26, 92); g.closePath();
+      g.fillStyle = '#ffd84a'; g.fill(); g.strokeStyle = '#d99a1c'; g.lineWidth = 4; g.stroke();
+      ell(56, 88, 34, 24, '#ffd84a', '#d99a1c');
+      ell(50, 90, 18, 11, '#ffe98a', '#d99a1c', 3);
+      ell(88, 58, 17, 17, '#ffd84a', '#d99a1c');
+      ell(108, 62, 12, 6, '#ff9a3c', '#c96f1c', 3);
+      eye(92, 53, 3.6);
+      break;
+    }
+    case 'snail': {
+      ell(66, 104, 46, 10, '#ecdcae', '#b59a5c', 3.5);
+      g.beginPath(); g.moveTo(98, 108); g.quadraticCurveTo(108, 96, 108, 80); g.lineTo(122, 84); g.quadraticCurveTo(122, 100, 118, 110); g.closePath();
+      g.fillStyle = '#ecdcae'; g.fill(); g.strokeStyle = '#b59a5c'; g.lineWidth = 3.5; g.stroke();
+      g.strokeStyle = '#b59a5c'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(110, 82); g.lineTo(106, 62); g.moveTo(119, 84); g.lineTo(124, 64); g.stroke();
+      dot(106, 60, 4, '#2b1a10'); dot(124, 62, 4, '#2b1a10');
+      ell(52, 76, 30, 30, '#d8934f', '#8a4f1f');
+      g.strokeStyle = '#8a4f1f'; g.lineWidth = 3.5;
+      g.beginPath();
+      for (let a = 0; a < 11; a += 0.2) {
+        const rr = 2 + a * 2.4;
+        const x = 52 + Math.cos(a) * rr, y = 76 + Math.sin(a) * rr;
+        if (a === 0) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.stroke();
+      break;
+    }
+    case 'hedgehog': {
+      ell(48, 106, 9, 6, '#f0d2a8', '#8a6a44', 3);
+      ell(76, 106, 9, 6, '#f0d2a8', '#8a6a44', 3);
+      g.fillStyle = '#6e4a2a';
+      g.strokeStyle = '#3f2814';
+      g.lineWidth = 3;
+      for (let a = Math.PI * 0.82; a <= Math.PI * 2.18; a += 0.17) {
+        const x = 54 + Math.cos(a) * 36, y = 88 + Math.sin(a) * 30;
+        g.beginPath();
+        g.moveTo(54 + Math.cos(a - 0.1) * 32, 88 + Math.sin(a - 0.1) * 26);
+        g.lineTo(54 + Math.cos(a) * 49, 88 + Math.sin(a) * 42);
+        g.lineTo(54 + Math.cos(a + 0.1) * 32, 88 + Math.sin(a + 0.1) * 26);
+        g.closePath(); g.fill(); g.stroke();
+      }
+      ell(54, 88, 38, 28, '#7a5230', '#3f2814');
+      ell(96, 96, 22, 15, '#f0d2a8', '#8a6a44');
+      dot(116, 96, 5, '#2b1a10');
+      eye(104, 90, 3.4);
+      ell(90, 80, 7, 8, '#d9b184', '#8a6a44', 3);
+      break;
+    }
+    case 'bee': {
+      ell(34, 36, 15, 20, 'rgba(255,255,255,0.8)', '#9cc7e6', 3, -0.5);
+      ell(58, 34, 15, 20, 'rgba(255,255,255,0.8)', '#9cc7e6', 3, 0.5);
+      g.save();
+      g.beginPath(); g.ellipse(48, 58, 26, 18, 0, 0, Math.PI * 2); g.clip();
+      g.fillStyle = '#ffd84a'; g.fillRect(0, 0, 128, 128);
+      g.fillStyle = '#3a2a1a';
+      for (const x of [34, 48, 62]) g.fillRect(x - 4, 0, 8, 128);
+      g.restore();
+      ell(48, 58, 26, 18, null, '#7a5a1a');
+      g.beginPath(); g.moveTo(22, 58); g.lineTo(10, 62); g.lineTo(22, 63); g.closePath(); g.fillStyle = '#3a2a1a'; g.fill();
+      ell(76, 54, 11, 11, '#3a2a1a', null);
+      dot(80, 51, 3, '#fff');
+      g.strokeStyle = '#3a2a1a'; g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(80, 44); g.quadraticCurveTo(84, 36, 92, 36); g.stroke();
+      break;
+    }
+    case 'owl': {
+      ell(30, 66, 24, 12, '#7d5430', '#4a2f18', 4, -0.5);
+      ell(98, 66, 24, 12, '#7d5430', '#4a2f18', 4, 0.5);
+      ell(64, 74, 22, 30, '#9a6b3f', '#4a2f18');
+      ell(64, 82, 13, 19, '#ecd6a8', null);
+      g.strokeStyle = '#b8935c'; g.lineWidth = 2.5;
+      for (const y of [74, 82, 90]) { g.beginPath(); g.moveTo(57, y); g.quadraticCurveTo(64, y + 5, 71, y); g.stroke(); }
+      g.beginPath(); g.moveTo(46, 30); g.lineTo(50, 14); g.lineTo(60, 26); g.closePath();
+      g.moveTo(82, 30); g.lineTo(78, 14); g.lineTo(68, 26); g.closePath();
+      g.fillStyle = '#9a6b3f'; g.fill(); g.strokeStyle = '#4a2f18'; g.lineWidth = 4; g.stroke();
+      ell(64, 38, 20, 17, '#a9764a', '#4a2f18');
+      ell(55, 38, 9, 9, '#fff6dc', '#4a2f18', 3);
+      ell(73, 38, 9, 9, '#fff6dc', '#4a2f18', 3);
+      eye(55, 39, 4.4); eye(73, 39, 4.4);
+      g.beginPath(); g.moveTo(60, 44); g.lineTo(68, 44); g.lineTo(64, 53); g.closePath();
+      g.fillStyle = '#ff9a3c'; g.fill(); g.strokeStyle = '#c96f1c'; g.lineWidth = 2.5; g.stroke();
+      g.strokeStyle = '#ff9a3c'; g.lineWidth = 4;
+      for (const x of [56, 72]) { g.beginPath(); g.moveTo(x, 102); g.lineTo(x, 108); g.stroke(); }
+      break;
+    }
+    default:
+      break;
+  }
+  const m = canvasMat(c);
+  critterCache.set(id, m);
+  return m;
+}
