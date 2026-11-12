@@ -24,7 +24,7 @@ const BOARD_GAP = 6; // HUD bottom -> board top on every other level
 const MAX_CELL_R = 46; // cap for tiny maps (e.g. level 1) so they don't dwarf the normal levels
 const TRAY_GAP = 20;
 const BAR_H = 92; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
-const TRAY_BOTTOM = BAR_H + 14 + 12; // booster bar + scrollbar + gap
+const TRAY_BOTTOM = BAR_H + 14 + 6; // booster bar + scrollbar + gap
 
 // ---- Shared geometry (unit circumradius, y-up world) ----
 function roundedHexShape(radius = 1, corner = 0.18) {
@@ -763,14 +763,15 @@ export class Game {
     // Board and tray share the height under the HUD: solve for a board scale where both fit (tray pieces
     // at ~85% of a board cell); height left over on width-limited boards goes to the tray.
     this.R = Math.min((W - padX * 2) / bw, (avail - 8) / (bh + 0.85 * trayMaxH), MAX_CELL_R);
-    const trayH = Math.min(avail - bh * this.R, 220);
+    // the tray (and its panel) only takes what its pieces need; spare height goes to the board
+    const trayH = Math.min(avail - bh * this.R, 220, trayMaxH * Math.min(this.R, 46) + 34);
     this.trayCenterY = availBottom - trayH / 2;
     this.trayTop = availBottom - trayH;
     this.boardCx = (minX + maxX) / 2;
     this.boardCy = (minY + maxY) / 2;
     this.boardScreenX = W / 2;
     // centred in the space between the HUD and the tray
-    this.boardScreenY = (areaTop + this.trayTop - 8) / 2;
+    this.boardScreenY = (areaTop + this.trayTop - 16) / 2;
     this.boardBox = {
       x0: this.boardScreenX - (bw * this.R) / 2,
       x1: this.boardScreenX + (bw * this.R) / 2,
@@ -787,7 +788,7 @@ export class Game {
     }
     this._applyView();
     // bottom panel card starts just above the tray area
-    this.canvas.parentElement?.style.setProperty('--panel-top', `${Math.round(this.trayTop - 12)}px`);
+    this.canvas.parentElement?.style.setProperty('--panel-top', `${Math.round(this.trayTop - 2)}px`);
     this.hooks.onLayout?.({ trayTop: this.trayTop });
   }
 
