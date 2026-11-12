@@ -574,7 +574,7 @@ async function returnToHome() {
     animate(home.querySelector('.h-brand'), [{ opacity:0, translate:'0 -24px' }, { opacity:1, translate:'0 0' }], 380);
     animate(home.querySelector('.h-hero'), [{ opacity:0, scale:'.92' }, { opacity:1, scale:'1' }], 420, 40);
     animate(home.querySelector('.h-actions'), [{ opacity:0, translate:'0 24px' }, { opacity:1, translate:'0 0' }], 360, 90);
-    animate(home.querySelector('.home-nav'), [{ opacity:0, translate:'0 100%' }, { opacity:1, translate:'0 0' }], 360, 60);
+    animate(stageEl.querySelector('.home-nav'), [{ opacity:0, translate:'0 60%' }, { opacity:1, translate:'0 0' }], 520, 120);
     for (const el of home.querySelectorAll('.h-gear')) {
       animate(el, [{ opacity:0, scale:'.8' }, { opacity:1, scale:'1' }], 300, 80);
     }
@@ -675,13 +675,9 @@ function renderShop() {
 $('home-shop').addEventListener('click', () => {
   audio.unlock();
   audio.tap();
-  renderShop();
-  shopEl.classList.remove('hidden');
+  void switchMenuTab('shop');
 });
-$('shop-back').addEventListener('click', () => {
-  audio.tap();
-  shopEl.classList.add('hidden');
-});
+
 
 // ---- Garden album (collection) ----
 const albumEl = $('album');
@@ -711,13 +707,69 @@ function renderAlbum() {
 $('home-album').addEventListener('click', () => {
   audio.unlock();
   audio.tap();
-  renderAlbum();
-  albumEl.classList.remove('hidden');
+  void switchMenuTab('album');
 });
-$('album-back').addEventListener('click', () => {
-  audio.tap();
-  albumEl.classList.add('hidden');
-});
+
+
+// ---- Shared Shop / Home / Album navigation ----
+const menuPages = { shop:shopEl, home, album:albumEl };
+const menuOrder = ['shop', 'home', 'album'];
+const menuButtons = { shop:$('home-shop'), home:$('home-tab'), album:$('home-album') };
+let activeMenuTab = 'home';
+let slidingMenu = false;
+async function switchMenuTab(next) {
+  if (slidingMenu || entering || returningHome || next === activeMenuTab) return;
+  const previous = activeMenuTab;
+  const outgoing = menuPages[previous], incoming = menuPages[next];
+  if (next === 'shop') renderShop();
+  if (next === 'album') renderAlbum();
+  slidingMenu = true;
+  activeMenuTab = next;
+  for (const [id, button] of Object.entries(menuButtons)) {
+    button.classList.toggle('current', id === next);
+    if (id === next) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  }
+  incoming.classList.remove('hidden');
+  outgoing.inert = true;
+  incoming.inert = true;
+  stageEl.classList.add('menu-sliding');
+  const direction = menuOrder.indexOf(next) > menuOrder.indexOf(previous) ? 1 : -1;
+  const animations = [];
+  try {
+    if (!calmMotion) {
+      const options = { duration:330, easing:'cubic-bezier(.22,.75,.25,1)', fill:'both' };
+      animations.push(outgoing.animate([{ transform:'translateX(0)' }, { transform:`translateX(${-direction * 100}%)` }], options));
+      animations.push(incoming.animate([{ transform:`translateX(${direction * 100}%)` }, { transform:'translateX(0)' }], options));
+      await Promise.all(animations.map((animation) => animation.finished));
+    }
+  } finally {
+    // Home stays mounted behind the other tabs to retain the menu/game visibility rules.
+    if (previous !== 'home') outgoing.classList.add('hidden');
+    incoming.inert = false;
+    stageEl.classList.remove('menu-sliding');
+    animations.forEach((animation) => animation.cancel());
+    slidingMenu = false;
+    menuButtons[next].focus({ preventScroll:true });
+  }
+}
+$('home-tab').addEventListener('click', () => { audio.tap(); void switchMenuTab('home'); });
+let menuSwipe = null;
+for (const page of Object.values(menuPages)) {
+  page.addEventListener('pointerdown', (event) => {
+    if (!event.isPrimary || event.button !== 0 || event.target.closest('button,input,select,textarea')) return;
+    menuSwipe = { id:event.pointerId, x:event.clientX, y:event.clientY };
+  });
+  page.addEventListener('pointerup', (event) => {
+    if (!menuSwipe || menuSwipe.id !== event.pointerId) return;
+    const dx = event.clientX - menuSwipe.x, dy = event.clientY - menuSwipe.y;
+    menuSwipe = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const next = menuOrder[menuOrder.indexOf(activeMenuTab) + (dx < 0 ? 1 : -1)];
+    if (next) { audio.tap(); void switchMenuTab(next); }
+  });
+  page.addEventListener('pointercancel', () => { menuSwipe = null; });
+}
 
 // ---- Level select ----
 const levelsEl = $('levels');

@@ -32,12 +32,14 @@ export function initProfile(progress, audio, onCoinsChange = () => {}) {
     button.className = 'home-nav-item';
     button.insertAdjacentHTML('beforeend', `<span>${label}</span>`);
   }
-  const current = document.createElement('div');
+  const current = document.createElement('button');
+  current.id = 'home-tab';
+  current.type = 'button';
   current.className = 'home-nav-item current';
   current.setAttribute('aria-current', 'page');
-  current.innerHTML = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 23 24 6l19 17-4 4-3-3v18H12V24l-3 3Z" fill="#a7d96e" stroke="#47783d" stroke-width="2.5" stroke-linejoin="round"/><path d="M20 42V28h9v14" fill="#fff6cd" stroke="#47783d" stroke-width="2"/></svg><span>Home</span>';
+  current.innerHTML = '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33" y="8" width="5" height="10" rx="1" fill="#e9695c" stroke="#8a3a2e" stroke-width="2"/><path d="M9 23h30v19H9Z" fill="#fff0b8" stroke="#8a5a2a" stroke-width="2.4" stroke-linejoin="round"/><path d="M3 25 24 6l21 19-4 3.5L24 13 7 28.5Z" fill="#f2655a" stroke="#8a3a2e" stroke-width="2.4" stroke-linejoin="round"/><path d="M19 42V30q0-3 3-3h4q3 0 3 3v12Z" fill="#4fb4e8" stroke="#2a6a96" stroke-width="2"/><circle cx="28" cy="35" r="1.2" fill="#fff"/><rect x="11.5" y="27" width="5" height="5" rx="1" fill="#bfe9f7" stroke="#2a6a96" stroke-width="1.5"/><circle cx="35" cy="34" r="2.2" fill="#f47e88"/><circle cx="35" cy="34" r=".8" fill="#ffe66b"/><path d="M35 36v5" stroke="#4d9a3a" stroke-width="1.6"/></svg><span>Home</span>';
   nav.append(shop, current, album);
-  home.append(nav);
+  document.getElementById('stage').append(nav);
   let saved;
   try { saved = JSON.parse(localStorage.getItem(KEY)); } catch { /* unavailable storage */ }
   const uid = typeof saved?.uid === 'string' && /^[a-z0-9-]{8,50}$/i.test(saved.uid) ? saved.uid : crypto.randomUUID();
@@ -107,13 +109,13 @@ export function initProfile(progress, audio, onCoinsChange = () => {}) {
       use.textContent = selected === player.avatar ? 'USED' : 'USE';
     }
   };
-  const close = () => { modal.classList.add('hidden'); home.inert = false; trigger.focus(); };
+  const close = () => { modal.classList.add('hidden'); home.inert = false; nav.inert = false; trigger.focus(); };
   trigger.onclick = () => {
     audio.unlock(); audio.tap();
     if (!unlocked(player.avatar)) { player.avatar = 0; persist(); refreshTrigger(); }
     selected = player.avatar; nameValue.textContent = player.name; status.textContent = '';
     modal.querySelector('.profile-uid span').textContent = `UID: ${uid.slice(0,13)}…`;
-    render(); modal.classList.remove('hidden'); home.inert = true; modal.querySelector('.profile-close').focus();
+    render(); modal.classList.remove('hidden'); home.inert = true; nav.inert = true; modal.querySelector('.profile-close').focus();
   };
   modal.querySelector('.profile-close').onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
