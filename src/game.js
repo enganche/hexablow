@@ -1285,11 +1285,16 @@ export class Game {
     const pt = this._pt(e);
     const dx = pt.x - s.start.x;
     const dy = pt.y - s.start.y;
-    if (!s.mode && Math.hypot(dx, dy) > 7) {
-      if (s.piece && (Math.abs(dy) > Math.abs(dx) * 0.8 || this.maxScroll === 0)) s.mode = 'drag';
-      else if (pt.y >= this.trayTop - 10 || s.start.y >= this.trayTop - 10) s.mode = 'scroll';
-      else s.mode = 'none';
-      if (s.mode === 'drag') this._startDrag(s.piece);
+    if (!s.mode) {
+      // Started on a tile: any upward pull (toward the grid) grabs it, whatever the angle.
+      // Only a (nearly) flat sideways move scrolls the list.
+      if (s.piece && (dy < -4 || pt.y < this.trayTop - 10 || (this.maxScroll === 0 && Math.hypot(dx, dy) > 7))) {
+        s.mode = 'drag';
+        this._startDrag(s.piece);
+      } else if (Math.hypot(dx, dy) > 7) {
+        if (pt.y >= this.trayTop - 10 || s.start.y >= this.trayTop - 10) s.mode = 'scroll';
+        else s.mode = 'none';
+      }
     }
     if (s.mode === 'scroll') {
       this.scroll = clamp(s.scrollStart - dx, 0, this.maxScroll);
