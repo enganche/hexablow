@@ -543,6 +543,49 @@ const stageEl = $('stage');
 const calmMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 let introTimer = 0;
 let entering = false;
+let returningHome = false;
+async function returnToHome() {
+  if (returningHome || entering || !home.classList.contains('hidden')) return;
+  if (calmMotion) { showHome(); $('play-btn').focus(); return; }
+  returningHome = true;
+  stageEl.inert = true;
+  tut.stop();
+  game.cancelMode();
+  closeBuyPop();
+  clearTimeout(introTimer);
+  stageEl.classList.remove('intro');
+  const animations = [];
+  const animate = (el, frames, duration, delay = 0) => {
+    if (!el) return;
+    const animation = el.animate(frames, { duration, delay, easing:'cubic-bezier(.22,.75,.25,1)', fill:'both' });
+    animations.push(animation);
+    return animation;
+  };
+  try {
+    animate($('game'), [{ opacity:1, transform:'scale(1)' }, { opacity:0, transform:'scale(.9) translateY(16px)' }], 280);
+    animate($('hud'), [{ opacity:1, translate:'0 0' }, { opacity:0, translate:'0 -35px' }], 230);
+    for (const id of ['tray-panel', 'tray-scroll', 'boosters']) {
+      animate($(id), [{ opacity:1, translate:'0 0' }, { opacity:0, translate:'0 45px' }], 250);
+    }
+    animate($('play-bg'), [{ opacity:1 }, { opacity:0 }], 300);
+    await Promise.all(animations.map((a) => a.finished));
+    showHome();
+    animations.splice(0).forEach((a) => a.cancel());
+    animate(home.querySelector('.h-brand'), [{ opacity:0, translate:'0 -24px' }, { opacity:1, translate:'0 0' }], 380);
+    animate(home.querySelector('.h-hero'), [{ opacity:0, scale:'.92' }, { opacity:1, scale:'1' }], 420, 40);
+    animate(home.querySelector('.h-actions'), [{ opacity:0, translate:'0 24px' }, { opacity:1, translate:'0 0' }], 360, 90);
+    animate(home.querySelector('.home-nav'), [{ opacity:0, translate:'0 100%' }, { opacity:1, translate:'0 0' }], 360, 60);
+    for (const el of home.querySelectorAll('.h-gear')) {
+      animate(el, [{ opacity:0, scale:'.8' }, { opacity:1, scale:'1' }], 300, 80);
+    }
+    await Promise.all(animations.map((a) => a.finished));
+  } finally {
+    animations.forEach((a) => a.cancel());
+    stageEl.inert = false;
+    returningHome = false;
+    if (!home.classList.contains('hidden')) $('play-btn').focus({ preventScroll:true });
+  }
+}
 function playLevelIntro() {
   if (calmMotion) return;
   stageEl.classList.remove('intro');
@@ -554,7 +597,7 @@ function playLevelIntro() {
 }
 /** Start level i from the home / level-picker screens with the entrance animation. */
 function enterLevel(i) {
-  if (entering) return;
+  if (entering || returningHome) return;
   if (calmMotion || home.classList.contains('hidden')) {
     hideLevels();
     hideHome();
@@ -741,7 +784,7 @@ $('play-btn').addEventListener('click', () => {
 });
 $('back-btn').addEventListener('click', () => {
   audio.tap();
-  showHome();
+  void returnToHome();
 });
 
 // ---- Settings ----
