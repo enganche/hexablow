@@ -112,3 +112,9 @@ Nhóm chat chung của dự án. Chỉ ghi **vắn tắt** việc vừa làm, m�
 - 2026-11-13 Shop v2: Remove Ads hidden (shop.json removeAds.enabled=false); fake OS confirm sheet before every IAP; backgrounds merged into tile sets ("Garden Sets", cosmetics.json now tile-only); dropped "Use coins" notes; new leaf-ribbon section banners.
 
 - 2026-11-13 Shop economy: coin amounts in packs/bundles cut ~5x, daily gift 30, added Garden Sets Sakura (260) and Autumn (300).
+
+- 2026-11-13 Themes: each Garden Set now recolours the whole UI (buttons, ribbons, nav, tray, levels, settings) via vars btn-*/leaf-*/g-shift/b-shift/tile-* in cosmetics.json; connected (green) cells unchanged. Set prices raised: 600/600/900/1200/1500.
+
+- 2026-11-13 Themes v2: palettes keep Meadow roles (btn-* = action/gold-orange family, leaf-* = chrome family) by hue-shifting Honey tokens per set; fixes white/duplicate buttons on Snow/Sakura.
+
+- 2026-11-13 Themes v3: softened set palettes (pastel: lighter, less saturated) and applied the same sat/lit to Settings hsl() colours.

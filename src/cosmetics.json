@@ -56,14 +56,30 @@
         "ui-edge": "#a6bf79",
         "ui-selected": "#c8e795",
         "ui-accent": "#9bc85c",
-        "ui-locked": "#ccddb2"
+        "ui-locked": "#ccddb2",
+        "btn-hi": "#ffdc79",
+        "btn-mid": "#ffb64b",
+        "btn-lo": "#f49a31",
+        "btn-edge": "#bf772b",
+        "btn-rim": "#fff9dc",
+        "btn-glow": "#fff0b5",
+        "btn-ink": "#805022",
+        "leaf-hi": "#7fe05a",
+        "leaf-lo": "#3bb53a",
+        "leaf-edge": "#2d6d28",
+        "leaf-glow": "#b6f58e",
+        "leaf-rim": "#e9ffb8",
+        "g-shift": "0",
+        "b-shift": "0",
+        "sat": "1",
+        "lit": "0"
       }
     },
     {
       "id": "tile-ocean",
       "type": "tile",
       "name": "Ocean",
-      "price": 220,
+      "price": 600,
       "face": [
         "#a9e4ff",
         "#4aaee8"
@@ -107,14 +123,30 @@
         "ui-edge": "#96b6ca",
         "ui-selected": "#c6e6f3",
         "ui-accent": "#87b8d0",
-        "ui-locked": "#d2e2ec"
+        "ui-locked": "#d2e2ec",
+        "btn-hi": "#ffcd8e",
+        "btn-mid": "#ffa668",
+        "btn-lo": "#f68c52",
+        "btn-edge": "#d47242",
+        "btn-rim": "#fff5e2",
+        "btn-glow": "#ffe7c1",
+        "btn-ink": "#88543d",
+        "leaf-hi": "#74b9e5",
+        "leaf-lo": "#537bc8",
+        "leaf-edge": "#415778",
+        "leaf-glow": "#a0dff7",
+        "leaf-rim": "#c3fffe",
+        "g-shift": "100",
+        "b-shift": "-11",
+        "sat": "0.92",
+        "lit": "4"
       }
     },
     {
       "id": "tile-lilac",
       "type": "tile",
       "name": "Lilac",
-      "price": 220,
+      "price": 600,
       "face": [
         "#dcc9ff",
         "#9d80e6"
@@ -158,14 +190,30 @@
         "ui-edge": "#c99b73",
         "ui-selected": "#f8d49a",
         "ui-accent": "#d7a15e",
-        "ui-locked": "#ead0af"
+        "ui-locked": "#ead0af",
+        "btn-hi": "#ffef8e",
+        "btn-mid": "#ffd368",
+        "btn-lo": "#f6bd52",
+        "btn-edge": "#d49e42",
+        "btn-rim": "#fffde2",
+        "btn-glow": "#fffac1",
+        "btn-ink": "#886a3d",
+        "leaf-hi": "#aa74e5",
+        "leaf-lo": "#aa53c8",
+        "leaf-edge": "#664178",
+        "leaf-glow": "#bfa0f7",
+        "leaf-rim": "#c7c3ff",
+        "g-shift": "165",
+        "b-shift": "7",
+        "sat": "0.92",
+        "lit": "4"
       }
     },
     {
       "id": "tile-snow",
       "type": "tile",
       "name": "Snow",
-      "price": 350,
+      "price": 1500,
       "face": [
         "#ffffff",
         "#d3e3ee"
@@ -209,14 +257,30 @@
         "ui-edge": "#aaa4cd",
         "ui-selected": "#d8c9f0",
         "ui-accent": "#ac95d0",
-        "ui-locked": "#d6d2e8"
+        "ui-locked": "#d6d2e8",
+        "btn-hi": "#fffa8e",
+        "btn-mid": "#ffe268",
+        "btn-lo": "#f6ce52",
+        "btn-edge": "#d4ad42",
+        "btn-rim": "#feffe2",
+        "btn-glow": "#feffc1",
+        "btn-ink": "#88723d",
+        "leaf-hi": "#7481e5",
+        "leaf-lo": "#6553c8",
+        "leaf-edge": "#464178",
+        "leaf-glow": "#a0b3f7",
+        "leaf-rim": "#c3e3ff",
+        "g-shift": "130",
+        "b-shift": "13",
+        "sat": "0.92",
+        "lit": "4"
       }
     },
     {
       "id": "tile-sakura",
       "type": "tile",
       "name": "Sakura",
-      "price": 260,
+      "price": 900,
       "face": [
         "#ffd3e3",
         "#f27fae"
@@ -260,14 +324,30 @@
         "ui-edge": "#d79ab3",
         "ui-selected": "#fbc9db",
         "ui-accent": "#e98bb0",
-        "ui-locked": "#efd3dd"
+        "ui-locked": "#efd3dd",
+        "btn-hi": "#ffef8e",
+        "btn-mid": "#ffd368",
+        "btn-lo": "#f6bd52",
+        "btn-edge": "#d49e42",
+        "btn-rim": "#fffde2",
+        "btn-glow": "#fffac1",
+        "btn-ink": "#886a3d",
+        "leaf-hi": "#e574a6",
+        "leaf-lo": "#c85367",
+        "leaf-edge": "#78414e",
+        "leaf-glow": "#f7a0d0",
+        "leaf-rim": "#ffc3f6",
+        "g-shift": "230",
+        "b-shift": "7",
+        "sat": "0.92",
+        "lit": "4"
       }
     },
     {
       "id": "tile-autumn",
       "type": "tile",
       "name": "Autumn",
-      "price": 300,
+      "price": 1200,
       "face": [
         "#ffb28a",
         "#e5573a"
@@ -311,7 +391,23 @@
         "ui-edge": "#c39a68",
         "ui-selected": "#f0cf94",
         "ui-accent": "#d9894a",
-        "ui-locked": "#e3cda6"
+        "ui-locked": "#e3cda6",
+        "btn-hi": "#fff68e",
+        "btn-mid": "#ffdd68",
+        "btn-lo": "#f6c852",
+        "btn-edge": "#d4a842",
+        "btn-rim": "#ffffe2",
+        "btn-glow": "#fffec1",
+        "btn-ink": "#886f3d",
+        "leaf-hi": "#e58c74",
+        "leaf-lo": "#c88a53",
+        "leaf-edge": "#785841",
+        "leaf-glow": "#f7a8a0",
+        "leaf-rim": "#ffc3d0",
+        "g-shift": "-91",
+        "b-shift": "11",
+        "sat": "0.92",
+        "lit": "4"
       }
     }
   ]
