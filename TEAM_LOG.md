@@ -118,3 +118,21 @@ Nhóm chat chung của dự án. Chỉ ghi **vắn tắt** việc vừa làm, m�
 - 2026-11-13 Themes v2: palettes keep Meadow roles (btn-* = action/gold-orange family, leaf-* = chrome family) by hue-shifting Honey tokens per set; fixes white/duplicate buttons on Snow/Sakura.
 
 - 2026-11-13 Themes v3: softened set palettes (pastel: lighter, less saturated) and applied the same sat/lit to Settings hsl() colours.
+
+- 2026-11-13 Shop tab icon is now a seed shop (striped awning, seed packet, sprout pot); bundle cards made more compact.
+
+- 2026-11-13 In-game HUD back/settings buttons redrawn: glossy leaf-family chrome with white glyphs, recoloured per garden set.
+
+- 2026-11-13 Home settings button now shares the HUD chrome button style.
+
+- 2026-11-13 Booster bar: count badge themed (leaf family) and larger, locked boosters themed and show their unlock level (Lv N).
+
+- 2026-11-13 Themed the gardener speech bubble + avatar, tutorial ring/hand, and the Reveal ghost number (reveal-* vars, game.setRevealColors).
+
+- 2026-11-13 Level map: nodes (current/perfect/partial/locked), road and background themed; top bar rebuilt to match shop/album (plate title, themed pill, chrome back button).
+
+- 2026-11-13 Level map header now floats over the map with a soft fade (no opaque band).
+
+- 2026-11-13 Coin balance: larger, shared themed look on shop pill, in-game coin pill and result reward; booster buy popup themed.
+
+- 2026-11-13 Home nav bar + level pill use their own softer tokens (soft-a/b, pill-a/b) so secondary colours are lighter in every set.

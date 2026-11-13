@@ -72,7 +72,14 @@
         "g-shift": "0",
         "b-shift": "0",
         "sat": "1",
-        "lit": "0"
+        "lit": "0",
+        "reveal-text": "#70a42a",
+        "reveal-fill": "#b6dc7a",
+        "reveal-dash": "#7da84a",
+        "soft-a": "#c0df97",
+        "soft-b": "#9ac17b",
+        "pill-a": "#72bc6e",
+        "pill-b": "#4cab54"
       }
     },
     {
@@ -139,7 +146,14 @@
         "g-shift": "100",
         "b-shift": "-11",
         "sat": "0.92",
-        "lit": "4"
+        "lit": "4",
+        "reveal-text": "#499ba4",
+        "reveal-fill": "#8fdde2",
+        "reveal-dash": "#63afba",
+        "soft-a": "#a8dde3",
+        "soft-b": "#90bdca",
+        "pill-a": "#859ec5",
+        "pill-b": "#667aba"
       }
     },
     {
@@ -206,7 +220,14 @@
         "g-shift": "165",
         "b-shift": "7",
         "sat": "0.92",
-        "lit": "4"
+        "lit": "4",
+        "reveal-text": "#5949a4",
+        "reveal-fill": "#9b8fe2",
+        "reveal-dash": "#7563ba",
+        "soft-a": "#b3a8e3",
+        "soft-b": "#a190ca",
+        "pill-a": "#b285c5",
+        "pill-b": "#ac66ba"
       }
     },
     {
@@ -273,7 +294,14 @@
         "g-shift": "130",
         "b-shift": "13",
         "sat": "0.92",
-        "lit": "4"
+        "lit": "4",
+        "reveal-text": "#496ea4",
+        "reveal-fill": "#8fb4e2",
+        "reveal-dash": "#6384ba",
+        "soft-a": "#a8bfe3",
+        "soft-b": "#90a1ca",
+        "pill-a": "#8c85c5",
+        "pill-b": "#7b66ba"
       }
     },
     {
@@ -340,7 +368,14 @@
         "g-shift": "230",
         "b-shift": "7",
         "sat": "0.92",
-        "lit": "4"
+        "lit": "4",
+        "reveal-text": "#a4498c",
+        "reveal-fill": "#e28fcf",
+        "reveal-dash": "#ba63a1",
+        "soft-a": "#e3a8d3",
+        "soft-b": "#ca90b4",
+        "pill-a": "#c58593",
+        "pill-b": "#ba666c"
       }
     },
     {
@@ -407,7 +442,14 @@
         "g-shift": "-91",
         "b-shift": "11",
         "sat": "0.92",
-        "lit": "4"
+        "lit": "4",
+        "reveal-text": "#a44951",
+        "reveal-fill": "#e28f9a",
+        "reveal-dash": "#ba6368",
+        "soft-a": "#e3a8ad",
+        "soft-b": "#ca9290",
+        "pill-a": "#c5a185",
+        "pill-b": "#ba9666"
       }
     }
   ]

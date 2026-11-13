@@ -118,6 +118,7 @@ function setTileSkinColors(skin) {
   TILE_RIM = waxSurface(skin.rim[0], skin.rim[1], TILE_BODY_GEO);
   TILE_BASE = new THREE.Color(skin.base).getHex();
 }
+let REVEAL = { text: 0x70a42a, fill: 0xb6dc7a, dash: 0x7da84a };
 const FINISH_FACE = waxSurface(0xffb3d3, 0xed77b2, TILE_BODY_GEO);
 const FINISH_RIM = waxSurface(0xffd0e5, 0xf7afd0, TILE_BODY_GEO);
 const LABEL_GEO = new THREE.PlaneGeometry(1.5, 1.5);
@@ -752,6 +753,12 @@ export class Game {
   }
 
   /** Cosmetic: canvas background colour. */
+  /** Cosmetic: colours of the Reveal booster's ghost number (hex strings). */
+  setRevealColors({ text, fill, dash }) {
+    REVEAL = { text: new THREE.Color(text).getHex(), fill: new THREE.Color(fill).getHex(), dash: new THREE.Color(dash).getHex() };
+    if (this.level) this._layout();
+  }
+
   setSocketSkin(socket) {
     setSocketColors(socket);
     if (this.level) this._layout();
@@ -960,13 +967,13 @@ export class Game {
       const s = this._cellScreen(q, r);
       const mark = new THREE.Group();
       // ghost look (clearly not a placed tile): flat pale fill that breathes, dashed outline, faded number
-      const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n, 0x70a42a).clone());
+      const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n, REVEAL.text).clone());
       label.material.opacity = 0.42;
       label.scale.setScalar(0.6);
       label.position.set(0, 0, 0.5);
-      const fill = hexLayer(HEX_GEO, new THREE.MeshBasicMaterial({ color: 0xb6dc7a, transparent: true, opacity: 0.15 }), 0.88, 0, 0.1);
+      const fill = hexLayer(HEX_GEO, new THREE.MeshBasicMaterial({ color: REVEAL.fill, transparent: true, opacity: 0.15 }), 0.88, 0, 0.1);
       mark.add(fill, label);
-      const dashMat = basicMat(0x7da84a, 0.4);
+      const dashMat = basicMat(REVEAL.dash, 0.4);
       for (let e = 0; e < 6; e++) {
         const a0 = ((30 + 60 * e) * Math.PI) / 180, a1 = a0 + Math.PI / 3;
         const ax = Math.cos(a0) * 0.9, ay = Math.sin(a0) * 0.9, bx = Math.cos(a1) * 0.9, by = Math.sin(a1) * 0.9;

@@ -77,6 +77,7 @@ function applyCosmetics() {
   root.style.setProperty('--sub-ink', theme.vars['sub-ink']);
   game.setBackground(theme.game);
   game.setSocketSkin(theme.socket);
+  game.setRevealColors({ text: theme.vars['reveal-text'], fill: theme.vars['reveal-fill'], dash: theme.vars['reveal-dash'] });
   root.style.setProperty('--tile-a', tile.face[0]);
   root.style.setProperty('--tile-b', tile.face[1]);
   root.style.setProperty('--tile-rim', tile.rim[0]);
@@ -100,7 +101,7 @@ function showCoinHud() {
   renderCoins();
   const s = $('settings-btn').getBoundingClientRect();
   const st = stage.getBoundingClientRect();
-  coinHud.style.top = `${s.top - st.top + (s.height - 36) / 2}px`;
+  coinHud.style.top = `${s.top - st.top + (s.height - 38) / 2}px`;
   coinHud.style.right = `${st.right - s.left + 10}px`;
   coinHud.classList.remove('hidden');
 }
@@ -117,9 +118,9 @@ let debugAutoTimer = 0;
 try { debugAutoBuy = localStorage.getItem(DEBUG_AUTOBUY_KEY) === '1'; } catch { /* ignore */ }
 
 boostBar.innerHTML = BOOSTERS.order
-  .map((id) => `<button type="button" class="boost" data-boost="${id}" data-id="${id}" aria-label="${BOOSTERS[id].name}">
+  .map((id) => `<button type="button" class="boost" data-boost="${id}" data-id="${id}" aria-label="${BOOSTERS[id].name} (unlocks at level ${BOOSTERS[id].unlockLevel})">
       <span class="b-ic">${boosterArt[id]}</span><span class="b-nm">${BOOSTERS[id].name}</span><i class="b-badge"></i>
-      <svg class="b-lock" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zm2 0h6V8a3 3 0 0 0-6 0z"/></svg>
+      <svg class="b-lock" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zm2 0h6V8a3 3 0 0 0-6 0z"/></svg><span class="b-unlock">Lv ${BOOSTERS[id].unlockLevel}</span>
     </button>`)
   .join('');
 
