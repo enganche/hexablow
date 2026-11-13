@@ -14,6 +14,7 @@ const empty = () => ({
   stars: {},
   found: [],
   setsClaimed: [],
+  seen: [],
   coins: economy.startCoins,
   boosters: emptyBoosters(),
   owned: [...cosmetics.defaults.owned],
@@ -45,7 +46,8 @@ export function loadProgress() {
         const n = Math.floor(Number(raw.boosters?.[id]));
         if (Number.isFinite(n) && n > 0) boosters[id] = n;
       }
-      return { v: 2, stars, found, setsClaimed, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, boosters, owned, equipped };
+      const seen = [...new Set(Array.isArray(raw.seen) ? raw.seen.filter((x) => typeof x === 'string') : [])];
+      return { v: 2, stars, found, setsClaimed, seen, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, boosters, owned, equipped };
     }
   } catch {
     /* corrupt or unavailable storage: start fresh */
@@ -61,6 +63,17 @@ function save(p) {
   }
 }
 
+/** One-time tips (e.g. the hearts lesson): shown once per save. */
+export function hasSeen(p, id) {
+  return p.seen.includes(id);
+}
+
+export function markSeen(p, id) {
+  if (hasSeen(p, id)) return;
+  p.seen.push(id);
+  save(p);
+}
+
 export function starsFor(p, levelId) {
   return p.stars[levelId] ?? 0;
 }
@@ -71,6 +84,11 @@ export function totalStars(p) {
 
 export function completedCount(p) {
   return Object.keys(p.stars).length;
+}
+
+/** Stars for a finished run: the hearts left (3 hearts -> 3 stars, 1 heart -> 1 star). */
+export function scoreRun(heartsLeft) {
+  return Math.min(3, Math.max(1, heartsLeft));
 }
 
 /** Record a win; keeps the best star count. Returns { prev, best, isNewBest, firstClear }. */
@@ -88,6 +106,7 @@ export function resetProgress(p) {
   p.stars = {};
   p.found = [];
   p.setsClaimed = [];
+  p.seen = [];
   p.coins = economy.startCoins;
   p.boosters = emptyBoosters();
   p.owned = [...cosmetics.defaults.owned];

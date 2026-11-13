@@ -532,6 +532,7 @@ export class Game {
     this._winToken++;
     this.level = level;
     this.bare = !!opts.bare; // no booster bar: the tray sits lower
+    this.freeHearts = !!opts.freeHearts; // levels 1-2 on first play: a wrong drop costs nothing
     this.hearts = MAX_HEARTS;
     this.locked = false;
     this.selected = null;
@@ -1508,8 +1509,10 @@ export class Game {
     // 2) then the heart is lost and the piece goes back to the list
     this._tween(hold, () => {}, () => {
       this.hooks.onMistake?.();
-      this.hearts -= 1;
-      this.hooks.onHearts(this.hearts, true);
+      if (!this.freeHearts) {
+        this.hearts -= 1;
+        this.hooks.onHearts(this.hearts, true);
+      }
       this._returnPiece(p);
       if (this.hearts <= 0) {
         setTimeout(() => this.hooks.onFail(), 450);

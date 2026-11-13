@@ -12,7 +12,7 @@ import { winArt, loseArt, confetti } from './resultArt.js';
 import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
 import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecies, foundCount, discoverForLevel } from './progress.js';
 import { boosterIds, boosterCount, buyBooster, useBooster, packPrice, grantBooster } from './progress.js';
-import { loadProgress, recordWin, starsFor, totalStars, completedCount, resetProgress, coinsOf, canAfford, spend, earn, winReward } from './progress.js';
+import { hasSeen, markSeen, scoreRun, loadProgress, recordWin, starsFor, totalStars, completedCount, resetProgress, coinsOf, canAfford, spend, earn, winReward } from './progress.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -233,6 +233,7 @@ const STAR_SVG =
 const HOME_SVG =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11.5L12 4l8.5 7.5M6 10v9.5h4.5V14h3v5.5H18V10"/></svg>';
 let heartsLeft = 3;
+let freeRun = false; // levels 1-2 on first play: no hearts, always 3 stars
 let resultTimers = [];
 const later = (fn, ms) => resultTimers.push(setTimeout(fn, ms));
 
@@ -326,7 +327,9 @@ function showResult(o) {
   result.classList.add('show-art', 'show-map');
   game.fitView(mapRect, 800);
   later(() => result.classList.add('show-actions'), o.win ? 1200 : 800);
-  if (o.win && o.find?.species) later(() => showFind(o.find), 1500);
+  const afterIntro = () => { if (o.win && o.find?.species) showFind(o.find); };
+  if (o.win && o.starsIntro) later(() => showStarsIntro(afterIntro), 1500);
+  else later(afterIntro, 1500);
 }
 
 /** Reward-style reveal for a newly discovered species: dim backdrop, glowing rays, big bounce-in icon. */
@@ -355,6 +358,32 @@ function showFind({ species, set, bonus }) {
   };
 }
 
+/** Level 3 first clear: explain how stars are earned. */
+function showStarsIntro(done) {
+  const el = $('res-find');
+  const star = (on) => STAR_SVG.replace('<svg', `<svg class="${on ? 'on' : ''}"`);
+  el.innerHTML =
+    '<div class="fp-card si-card">' +
+    '<div class="fp-rays"></div>' +
+    '<span class="fp-new">STARS!</span>' +
+    `<div class="si-stars">${star(1)}${star(1)}${star(1)}</div>` +
+    '<h4>Earn up to 3 stars</h4>' +
+    '<ul class="si-list">' +
+    '<li><b>♥</b> Every heart you lose costs a star</li>' +
+    '</ul>' +
+    '<p class="fp-set">Replay a level from the map to earn the stars you missed.</p>' +
+    '<button class="claim-btn fp-btn">Got it</button>' +
+    '</div>';
+  el.classList.remove('hidden', 'out');
+  confetti($('res-confetti'));
+  audio.win();
+  el.querySelector('.fp-btn').onclick = () => {
+    audio.tap();
+    el.classList.add('out');
+    later(() => { el.classList.add('hidden'); done?.(); }, 260);
+  };
+}
+
 let pendingWin = null;
 const praise = new Praise($('stage'), audio, () => settings);
 
@@ -380,17 +409,19 @@ const game = new Game($('game'), {
   onPlace: (count, pos, isLast) => {
     audio.place(count);
     hint.reset(); // progress: restart the stuck timer
+    tut.placed();
     vibrate(settings, 12);
     praise.hit(pos, count, isLast);
   },
   onMistake: () => {
     praise.miss();
+    tut.placed();
     audio.wrong();
     vibrate(settings, 60);
   },
   onWinStart: () => {
     audio.setLowHealth(false);
-    const stars = Math.max(1, heartsLeft);
+    const stars = freeRun ? 3 : scoreRun(heartsLeft);
     audio.victory(stars);
     vibrate(settings, [20, 40, 20, 40, 80]);
     tut.stop();
@@ -417,6 +448,7 @@ const game = new Game($('game'), {
       reward,
       find,
       sub: `<b>${levels[levelIdx].name}</b> · ${praise} · ${note}`,
+      starsIntro: rec.firstClear && levels[levelIdx].id === 3,
       next: last ? 'You grew every garden!' : `Next: ${levels[levelIdx + 1].name}`,
       onClaim: () => { startLevel(last ? 0 : levelIdx + 1); playLevelIntro(); },
       onHome: showHome,
@@ -457,7 +489,7 @@ const tut = {
     next: '{n} goes after {p}',
     last: '{n} goes between {p} and {s}',
   },
-  kind: 'place', // 'place' (level 1) | 'booster' (levels that unlock a booster)
+  kind: 'place', // 'place' (level 1) | 'jump' (level 2) | 'hearts' (level 3) | 'booster' (levels that unlock a booster)
   booster: null,
   boosterTexts: {
     reveal: { tap: 'New booster! Tap Reveal to see a cell\'s number' },
@@ -469,9 +501,12 @@ const tut = {
     const first = starsFor(progress, level.id) === 0;
     const bid = first ? BOOSTER_TUTORIAL[level.id] : null;
     const jump = !bid && first && level.id === 2 && game.maxScroll > 0;
-    this.kind = bid ? 'booster' : jump ? 'jump' : 'place';
+    const hearts = !bid && first && level.id === 3 && !hasSeen(progress, 'hearts'); // once per save, even if the level is retried
+    this.kind = bid ? 'booster' : hearts ? 'hearts' : jump ? 'jump' : 'place';
     this.booster = bid ?? null;
-    if (jump) {
+    if (hearts) {
+      this.steps = [0];
+    } else if (jump) {
       this.steps = [0];
       this.jumpSteps = [[1, 2], [3, 4], [6, 5]]; // [number to tap, neighbour the list jumps to]
       this.jumpIdx = 0;
@@ -488,20 +523,41 @@ const tut = {
       this.steps = level.id === 1 && first ? Object.keys(level.solution).map(Number).filter((n) => !level.givens[n]) : [];
     }
     this.active = this.steps.length > 0;
+    clearTimeout(this.fadeT);
+    this.el.classList.remove('go', 'fade-out');
+    heartsEl.classList.remove('hearts-intro', 'hearts-go');
     this.el.classList.toggle('hidden', !this.active);
-    stageEl.classList.toggle('tutorial-mode', this.active && !bid); // level 1 + level 2 hide the other UI
+    this.el.classList.toggle('compact', hearts); // hearts lesson: a slim pill that keeps clear of the board
+    stageEl.classList.toggle('tutorial-mode', this.active && !bid && !hearts); // level 1 + level 2 hide the other UI
     for (const id of ['tut-from', 'tut-to', 'tut-hand']) $(id).style.display = '';
     this.t0 = performance.now();
+    if (hearts) {
+      this.t0 += 1100; // wait for the level intro to finish, then play the spotlight
+      heartsEl.classList.add('hearts-intro');
+    }
     if (this.active && !this.running) {
       this.running = true;
       this.tick();
     }
   },
   stop() {
+    const hearts = this.active && this.kind === 'hearts';
     this.active = false;
     this.running = false;
-    this.el.classList.add('hidden');
     stageEl.classList.remove('tutorial-mode');
+    heartsEl.classList.remove('hearts-intro', 'hearts-go');
+    clearTimeout(this.fadeT);
+    if (hearts) {
+      // hearts lesson: the dim and the bubble fade away, then the level carries on as normal
+      this.el.classList.add('fade-out');
+      this.fadeT = setTimeout(() => this.hideNow(), 300);
+      return;
+    }
+    this.hideNow();
+  },
+  hideNow() {
+    this.el.classList.add('hidden');
+    this.el.classList.remove('compact', 'go', 'fade-out');
   },
   tick() {
     if (!this.active) { this.running = false; return; }
@@ -577,6 +633,41 @@ const tut = {
     hand.style.opacity = k > 0.9 ? String((1 - k) * 10) : '1';
     $('tut-bubble').style.top = `${info.hudBottom + 4}px`;
   },
+  /** Level 3 lesson: ring + hand on the hearts. Over once the player places (or misplaces) a tile. */
+  renderHearts() {
+    const text = 'A wrong move costs a heart';
+    if ($('tut-text').textContent !== text) $('tut-text').textContent = text;
+    $('tut-from').style.display = 'none';
+    $('tut-to').style.display = 'none';
+    $('tut-hand').style.display = 'none';
+    const t = performance.now() - this.t0;
+    const go = t >= 0;
+    this.el.classList.toggle('go', go);
+    if (go) markSeen(progress, 'hearts');
+    heartsEl.classList.toggle('hearts-go', go);
+    if (t > 3300) return this.stop(); // spotlight for a few seconds, then back to the level
+    // spotlight cut-out around the three hearts
+    const stRect = stageEl.getBoundingClientRect();
+    const scale = stRect.width / stageEl.clientWidth || 1;
+    // size from the untransformed hearts (offset sizes), so the pop animation never resizes the box
+    const c = heartsEl.getBoundingClientRect();
+    const first = heartsEl.firstElementChild;
+    const gap = parseFloat(getComputedStyle(heartsEl).columnGap) || 0;
+    const w = heartsEl.children.length * first.offsetWidth + (heartsEl.children.length - 1) * gap;
+    const h = first.offsetHeight;
+    const cx = (c.left + c.width / 2 - stRect.left) / scale;
+    const cy = (c.top + c.height / 2 - stRect.top) / scale;
+    const spot = $('heart-spot');
+    spot.style.left = `${cx - w / 2 - 8}px`;
+    spot.style.top = `${cy - h / 2 - 3}px`;
+    spot.style.width = `${w + 16}px`;
+    spot.style.height = `${h + 6}px`;
+    $('tut-bubble').style.top = `${cy + h / 2 + 10}px`;
+  },
+  /** A tile was placed or dropped wrong, or the player touched the stage: the hearts lesson is done. */
+  placed() {
+    if (this.active && this.kind === 'hearts') this.stop();
+  },
   /** The player tapped a board number and the list scrolled: show the tile it landed on. */
   cellJumped(n) {
     if (this.active && this.kind === 'jump' && this.jumpPhase === 'tap' && n === this.jumpSteps[this.jumpIdx]?.[0]) {
@@ -589,6 +680,7 @@ const tut = {
     if (this.active && this.kind === 'booster' && id === this.booster) this.stop();
   },
   render() {
+    if (this.kind === 'hearts') return this.renderHearts();
     if (this.kind === 'jump') return this.renderJump();
     if (this.kind === 'booster') return this.renderBooster();
     const todo =this.steps.filter((n) => !game.placed.has(n));
@@ -680,6 +772,8 @@ const hint = {
   },
 };
 setInterval(() => hint.check(), 400);
+// the hearts lesson ends as soon as the player starts interacting with the play field
+$('stage').addEventListener('pointerdown', () => tut.placed(), true);
 
 function startLevel(i) {
   pendingWin = null;
@@ -693,7 +787,8 @@ function startLevel(i) {
   praise.reset();
   const bare = level.id <= 2 && starsFor(progress, level.id) === 0; // levels 1-2 until first cleared: no top bar, no boosters
   stageEl.classList.toggle('bare-level', bare);
-  game.loadLevel(level, { randomOrder: level.id > 2, bare });
+  freeRun = bare; // first play of levels 1-2: hearts are free and the result is always 3 stars
+  game.loadLevel(level, { randomOrder: level.id > 2, bare, freeHearts: freeRun });
   syncModeUI();
   renderCoins();
   tut.start(level);
@@ -965,28 +1060,43 @@ const lockSvg = '<svg class="lock" viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 
 function isUnlocked(i) {
   return i === 0 || starsFor(progress, levels[i].id) > 0 || starsFor(progress, levels[i - 1].id) > 0;
 }
+// Level map: a winding trail, level 1 at the bottom. Coordinates live in a 100-wide viewBox so it scales uniformly.
+const MAP_STEP = 30; // vertical distance between nodes (viewBox units)
+const MAP_PAD = 16;
+const mapX = (i) => 50 + 24 * Math.sin((i * Math.PI) / 2);
 function renderLevels() {
   const cur = continueIndex();
   $('levels-stars').textContent = `★ ${totalStars(progress)}/${levels.length * 3}`;
   const grid = $('levels-grid');
+  grid.classList.add('lv-map');
   grid.innerHTML = '';
+  const H = MAP_PAD * 2 + MAP_STEP * (levels.length - 1);
+  const pos = (i) => ({ x: mapX(i), y: H - MAP_PAD - i * MAP_STEP });
+  let trail = '';
+  for (let i = 0; i < levels.length - 1; i++) {
+    const p = pos(i), q = pos(i + 1);
+    const done = starsFor(progress, levels[i].id) > 0;
+    trail += `<path class="${done ? 'done' : ''}" d="M${p.x} ${p.y} L${q.x} ${q.y}"/>`;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'lv-map-in';
+  wrap.style.aspectRatio = `100 / ${H}`;
+  wrap.innerHTML = `<svg class="lv-trail" viewBox="0 0 100 ${H}" preserveAspectRatio="none" aria-hidden="true">${trail}</svg>`;
   levels.forEach((l, i) => {
     const locked = !isUnlocked(i);
     const stars = starsFor(progress, l.id);
     const b = document.createElement('button');
     const state = locked ? '' : stars >= 3 ? ' perfect' : stars > 0 ? ' partial' : '';
-    b.className = `lv-card${locked ? ' locked' : ''}${state}${i === cur && !locked ? ' current' : ''}`;
-    b.setAttribute('aria-label', `Level ${l.id}${locked ? ', locked' : stars >= 3 ? ', completed with 3 stars' : `, ${stars} of 3 stars, replay for the missing ${3 - stars}`}`);
-    const badge = locked ? '' : stars >= 3
-      ? '<span class="badge ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>'
-      : stars > 0 ? `<span class="badge miss" aria-hidden="true">+${3 - stars}★</span>` : '';
+    b.className = `lv-node${locked ? ' locked' : ''}${state}${i === cur && !locked ? ' current' : ''}`;
+    const p = pos(i);
+    b.style.left = `${p.x}%`;
+    b.style.top = `${(p.y / H) * 100}%`;
+    b.setAttribute('aria-label', `Level ${l.id}${locked ? ', locked' : stars >= 3 ? ', completed with 3 stars' : stars > 0 ? `, ${stars} of 3 stars, replay for the missing ${3 - stars}` : ', not played yet'}`);
     b.innerHTML =
-      badge +
       `<span class="num">${l.id}</span>` +
       (locked
         ? lockSvg
-        : `<span class="st">${[0, 1, 2].map((k) => STAR_SVG.replace('<svg', `<svg class="${k < stars ? 'on' : ''}"`)).join('')}</span>`) +
-      `<span class="cells">${l.cells.length} cells</span>`;
+        : `<span class="st">${[0, 1, 2].map((k) => STAR_SVG.replace('<svg', `<svg class="${k < stars ? 'on' : ''}"`)).join('')}</span>`);
     b.onclick = () => {
       if (locked) {
         b.classList.remove('shake');
@@ -997,12 +1107,18 @@ function renderLevels() {
       audio.tap();
       enterLevel(i);
     };
-    grid.appendChild(b);
+    wrap.appendChild(b);
   });
+  grid.appendChild(wrap);
 }
 function showLevels() {
   renderLevels();
   levelsEl.classList.remove('hidden');
+  // open the map on the current level
+  requestAnimationFrame(() => {
+    const g = $('levels-grid');
+    (g.querySelector('.lv-node.current') ?? g.querySelector('.lv-node'))?.scrollIntoView({ block: 'center' });
+  });
 }
 function hideLevels() {
   levelsEl.classList.add('hidden');
