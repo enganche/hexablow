@@ -884,7 +884,7 @@ function startLevel(i) {
   levelIndex = i;
   saveLevelIndex(i);
   const level = levels[i];
-  $('level-name').textContent = level.name;
+  $('level-name').innerHTML = level.name + (level.difficulty === 'hard' ? ' <span class="hard-tag">HARD</span>' : '');
   // levels 1-2 keep an ascending tray order (gentle start); from level 3 the tray is shuffled each play
   praise.reset();
   const bare = level.id <= 2 && starsFor(progress, level.id) === 0; // levels 1-2 until first cleared: no top bar, no boosters
@@ -1674,6 +1674,7 @@ function renderLevels() {
     b.innerHTML =
       (i === cur && !locked ? '<span class="lv-play-label">PLAY</span>' : '') +
       `<span class="lv-face"><span class="num">${l.id}</span></span>` +
+      (l.difficulty === 'hard' ? '<span class="hard-tag lv-hard">HARD</span>' : '') +
       (locked
         ? lockSvg
         : `<span class="st">${[0, 1, 2].map((k) => STAR_SVG.replace('<svg', `<svg class="${k < stars ? 'on' : ''}"`)).join('')}</span>`);
