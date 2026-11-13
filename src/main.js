@@ -415,6 +415,8 @@ const game = new Game($('game'), {
   getFound: () => progress.found,
   onModeChange: () => syncModeUI(),
   onCellJump: (n, to) => { tut.cellJumped(n); hint.cellJumped(n, to); },
+  gate: (type, data) => tut.allows(type, data),
+  onBlocked: () => tut.nudge(),
   onBoosterUsed: (id) => {
     useBooster(progress, id);
     renderBoosters();
@@ -484,6 +486,7 @@ const game = new Game($('game'), {
         const toMap = startedFromMap;
         startedFromMap = false;
         showHome();
+        if (!toMap) playHomeIntro();
         if (toMap) showLevels();
       },
       onHome: showHome,
@@ -543,9 +546,6 @@ const tut = {
       this.steps = [0];
     } else if (jump) {
       this.steps = [0];
-      this.jumpSteps = [[1, 2], [3, 4], [6, 5]]; // [number to tap, neighbour the list jumps to]
-      this.jumpIdx = 0;
-      this.jumpPhase = 'tap';
       this.jumpSteps = [[1, 2], [3, 4], [6, 5]]; // [number to tap, neighbour the list jumps to]
       this.jumpIdx = 0;
       this.jumpPhase = 'tap';
@@ -703,6 +703,52 @@ const tut = {
   placed() {
     if (this.active && this.kind === 'hearts') this.stop();
   },
+
+  // ---- Locked flow: while a lesson runs the player can only do the step being asked for ----
+  /** The one tile / cell the current step wants, or null when the step is not about placing. */
+  target() {
+    if (!this.active) return null;
+    let n = null;
+    if (this.kind === 'place') n = this.steps.find((s) => !game.placed.has(s));
+    else if (this.kind === 'jump' && this.jumpPhase === 'focus') n = this.jumpSteps[this.jumpIdx]?.[1];
+    return n == null ? null : { n, cell: game.level.solution[n] };
+  },
+  /** Booster lesson phase: 'tap' (press the booster) | 'cell' (Find) | 'pick' (Picker). */
+  boosterPhase() {
+    return game.mode === 'find' ? 'cell' : game.mode === 'picker' ? 'pick' : 'tap';
+  },
+  /** Game input gate: true when the lesson's current step allows this action. */
+  allows(type, data) {
+    if (!this.active || this.kind !== 'booster') return true; // level lessons (1-3) are free-form again
+    const t = this.target();
+    switch (type) {
+      case 'grab': return !!t && data.piece.numbers[0] === t.n;
+      case 'drop': return !!t && data.piece.numbers[0] === t.n && data.cell[0] === t.cell[0] && data.cell[1] === t.cell[1];
+      case 'scroll': return this.kind === 'place' || (this.kind === 'jump' && this.jumpPhase === 'focus');
+      case 'cell': return this.kind === 'jump' && this.jumpPhase === 'tap' && data.n === this.jumpSteps[this.jumpIdx]?.[0];
+      case 'find': {
+        const p = game.pieces[0];
+        const c = p && game.level.solution[p.numbers[0]];
+        return this.kind === 'booster' && this.booster === 'find' && !!c && data.cell[0] === c[0] && data.cell[1] === c[1];
+      }
+      case 'pick': return this.kind === 'booster' && this.booster === 'picker';
+      default: return false; // 'dismiss' and anything unknown: stay in the lesson
+    }
+  },
+  /** The player tried something off-script: shake the bubble so they look at it again. */
+  nudge() {
+    if (!this.active) return;
+    const b = $('tut-text');
+    b.classList.remove('nudge');
+    void b.offsetWidth;
+    b.classList.add('nudge');
+  },
+  /** Page-level UI (back, settings, boosters) during a lesson: only the booster being taught may be pressed. */
+  allowsButton(el) {
+    if (!this.active || this.kind !== 'booster') return true;
+    const b = el.closest('.boost');
+    return !!b && b.dataset.id === this.booster && this.boosterPhase() === 'tap';
+  },
   /** The player tapped a board number and the list scrolled: show the tile it landed on. */
   cellJumped(n) {
     if (this.active && this.kind === 'jump' && this.jumpPhase === 'tap' && n === this.jumpSteps[this.jumpIdx]?.[0]) {
@@ -807,6 +853,18 @@ const hint = {
   },
 };
 setInterval(() => hint.check(), 400);
+// lessons lock the page UI: back / settings / other boosters / re-tapping the booster mid-lesson do nothing but nudge
+$('stage').addEventListener('click', (e) => {
+  if (!tut.active) return;
+  const ui = e.target.closest('#back-btn, #settings-btn, #boosters, #coin-hud');
+  if (!ui || tut.allowsButton(e.target)) return;
+  e.stopPropagation();
+  e.preventDefault();
+  tut.nudge();
+}, true);
+window.addEventListener('keydown', (e) => {
+  if (tut.active && tut.kind === 'booster' && e.key === 'Escape') e.stopImmediatePropagation();
+}, true);
 // the hearts lesson ends as soon as the player starts interacting with the play field
 $('stage').addEventListener('pointerdown', () => tut.placed(), true);
 
@@ -862,6 +920,56 @@ const calmMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').match
 let introTimer = 0;
 let entering = false;
 let returningHome = false;
+/** "Wow" entrance for the main menu: logo drops in with a bounce, a shine ring bursts, hexes spin-pop one by one, buttons spring up. */
+function playHomeIntro() {
+  if (calmMotion) return [];
+  const list = [];
+  const spring = 'cubic-bezier(.34,1.56,.64,1)';
+  const go = (el, frames, duration, delay = 0, easing = spring) => {
+    if (el) list.push(el.animate(frames, { duration, delay, easing, fill: 'backwards' }));
+  };
+  go(home.querySelector('.h-brand'), [
+    { opacity: 0, transform: 'translateY(-90px) scale(1.25) rotate(-3deg)' },
+    { opacity: 1, transform: 'none' },
+  ], 450);
+  const hero = home.querySelector('.h-hero');
+  if (hero) {
+    const ring = document.createElement('div');
+    ring.style.cssText = 'position:absolute;left:50%;top:50%;width:70%;aspect-ratio:1;margin:-35% 0 0 -35%;border-radius:50%;pointer-events:none;' +
+      'background:radial-gradient(circle,rgba(255,255,255,.85) 0%,rgba(255,240,150,.45) 40%,transparent 70%);';
+    if (getComputedStyle(hero).position === 'static') hero.style.position = 'relative';
+    hero.prepend(ring);
+    const a = ring.animate([
+      { opacity: 0, transform: 'scale(.2)' },
+      { opacity: 1, transform: 'scale(1.1)', offset: 0.35 },
+      { opacity: 0, transform: 'scale(2.2)' },
+    ], { duration: 600, delay: 120, easing: 'ease-out', fill: 'both' });
+    a.finished.then(() => ring.remove(), () => ring.remove());
+    list.push(a);
+  }
+  // the seven hexes pop in a spiral
+  const hexes = [...home.querySelectorAll('.h-board > g > g')];
+  hexes.forEach((g, i) => {
+    g.style.transformBox = 'fill-box';
+    g.style.transformOrigin = 'center';
+    go(g, [
+      { opacity: 0, scale: '0', rotate: '-140deg', translate: '0 -60px' },
+      { opacity: 1, scale: '1', rotate: '0deg', translate: '0 0' },
+    ], 420, 60 + i * 40);
+  });
+  const tail = 60 + hexes.length * 40;
+  go($('play-btn'), [
+    { transform: 'translateY(50px) scale(.5)', opacity: 0 },
+    { transform: 'translateY(-6px) scale(1.12)', opacity: 1, offset: 0.6 },
+    { transform: 'none', opacity: 1 },
+  ], 420, tail - 120, 'ease-out');
+  go($('home-level'), [{ opacity: 0, transform: 'translateY(30px) scale(.7)' }, { opacity: 1, transform: 'none' }], 340, tail + 40);
+  go(stageEl.querySelector('.home-nav'), [{ opacity: 0, transform: 'translateY(100%)' }, { opacity: 1, transform: 'none' }], 380, tail - 60);
+  home.querySelectorAll('.h-gear').forEach((el, i) => {
+    go(el, [{ opacity: 0, scale: '0', rotate: '-90deg' }, { opacity: 1, scale: '1', rotate: '0deg' }], 320, tail - 60 + i * 40);
+  });
+  return list;
+}
 async function returnToHome() {
   if (returningHome || entering || !home.classList.contains('hidden')) return;
   if (calmMotion) { showHome(); $('play-btn').focus(); return; }
@@ -889,13 +997,7 @@ async function returnToHome() {
     await Promise.all(animations.map((a) => a.finished));
     showHome();
     animations.splice(0).forEach((a) => a.cancel());
-    animate(home.querySelector('.h-brand'), [{ opacity:0, translate:'0 -24px' }, { opacity:1, translate:'0 0' }], 380);
-    animate(home.querySelector('.h-hero'), [{ opacity:0, scale:'.92' }, { opacity:1, scale:'1' }], 420, 40);
-    animate(home.querySelector('.h-actions'), [{ opacity:0, translate:'0 24px' }, { opacity:1, translate:'0 0' }], 360, 90);
-    animate(stageEl.querySelector('.home-nav'), [{ opacity:0, translate:'0 60%' }, { opacity:1, translate:'0 0' }], 520, 120);
-    for (const el of home.querySelectorAll('.h-gear')) {
-      animate(el, [{ opacity:0, scale:'.8' }, { opacity:1, scale:'1' }], 300, 80);
-    }
+    animations.push(...playHomeIntro());
     await Promise.all(animations.map((a) => a.finished));
   } finally {
     animations.forEach((a) => a.cancel());

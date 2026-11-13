@@ -657,8 +657,27 @@ export class Game {
     this._buildContent(null);
     const mark = this.revealMarks.get(k);
     if (mark) {
-      mark.scale.setScalar(this.R * 0.3);
-      this._tween(380, (t) => mark.scale.setScalar(this.R * (0.3 + 0.7 * easeOutBack(t))));
+      // drop-in with a big overshoot, a bold flash that settles over ~1.6s, and expanding rings so the eye lands on it
+      mark.scale.setScalar(this.R * 0.2);
+      mark.userData.flash = 1;
+      this._tween(1700, (t) => { mark.userData.flash = (1 - t) * (1 - t); });
+      this._tween(520, (t) => mark.scale.setScalar(this.R * (0.2 + 0.8 * easeOutBack(t)) * (1 + 0.12 * Math.sin(Math.PI * t))));
+      const s = this._cellScreen(q, r);
+      const host = this.canvas.parentElement;
+      if (host) {
+        const rect = this.canvas.getBoundingClientRect(), hr = host.getBoundingClientRect();
+        const scale = hr.width / host.clientWidth || 1;
+        for (let i = 0; i < 3; i++) {
+          const ring = document.createElement('div');
+          ring.className = 'reveal-ping';
+          ring.style.left = `${(rect.left - hr.left) / scale + s.x}px`;
+          ring.style.top = `${(rect.top - hr.top) / scale + s.y}px`;
+          ring.style.width = ring.style.height = `${this.R * 2.2}px`;
+          ring.style.animationDelay = `${i * 0.28}s`;
+          host.appendChild(ring);
+          setTimeout(() => ring.remove(), 1700 + i * 280);
+        }
+      }
     }
     return true;
   }
@@ -968,12 +987,12 @@ export class Game {
       const mark = new THREE.Group();
       // ghost look (clearly not a placed tile): flat pale fill that breathes, dashed outline, faded number
       const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n, REVEAL.text).clone());
-      label.material.opacity = 0.42;
+      label.material.opacity = 0.62;
       label.scale.setScalar(0.6);
       label.position.set(0, 0, 0.5);
       const fill = hexLayer(HEX_GEO, new THREE.MeshBasicMaterial({ color: REVEAL.fill, transparent: true, opacity: 0.15 }), 0.88, 0, 0.1);
       mark.add(fill, label);
-      const dashMat = basicMat(REVEAL.dash, 0.4);
+      const dashMat = basicMat(REVEAL.dash, 0.7);
       for (let e = 0; e < 6; e++) {
         const a0 = ((30 + 60 * e) * Math.PI) / 180, a1 = a0 + Math.PI / 3;
         const ax = Math.cos(a0) * 0.9, ay = Math.sin(a0) * 0.9, bx = Math.cos(a1) * 0.9, by = Math.sin(a1) * 0.9;
@@ -986,7 +1005,8 @@ export class Game {
         }
       }
       mark.userData.fill = fill;
-      mark.position.copy(this._w(s.x, s.y, this._tileZ(s.y)));
+      mark.userData.label = label;
+      mark.position.copy(this._w(s.x, s.y - LIFT * this.R, this._tileZ(s.y)));
       mark.scale.setScalar(this.R);
       this.contentGroup.add(mark);
       this.revealMarks.set(k, mark);
@@ -1135,7 +1155,7 @@ export class Game {
     const head = document.createElement('div');
     head.id = 'picker-head';
     head.innerHTML = '<span>Pick a tile</span><button type="button" aria-label="Close">×</button>';
-    head.querySelector('button').addEventListener('click', () => this.cancelMode());
+    head.querySelector('button').addEventListener('click', () => { if (this._ok('dismiss')) this.cancelMode(); });
     (this.canvas.parentElement || document.body).appendChild(head);
     this.pickerHead = head;
   }
@@ -1242,6 +1262,16 @@ export class Game {
     c.addEventListener('pointercancel', (e) => this._up(e, true));
     window.addEventListener('resize', () => this.resize());
   }
+  /**
+   * Input gate: a lesson (tutorial) can veto any player action. `type` is one of
+   * grab | scroll | drop | cell | find | pick | dismiss. A veto reports through hooks.onBlocked.
+   */
+  _ok(type, data = {}) {
+    if (!this.hooks.gate || this.hooks.gate(type, data)) return true;
+    this.hooks.onBlocked?.(type);
+    return false;
+  }
+
   _pt(e) {
     const r = this.canvas.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -1293,10 +1323,14 @@ export class Game {
       // Started on a tile: any upward pull (toward the grid) grabs it, whatever the angle.
       // Only a (nearly) flat sideways move scrolls the list.
       if (s.piece && (dy < -4 || pt.y < this.trayTop - 10 || (this.maxScroll === 0 && Math.hypot(dx, dy) > 7))) {
-        s.mode = 'drag';
-        this._startDrag(s.piece);
+        if (this._ok('grab', { piece: s.piece })) {
+          s.mode = 'drag';
+          this._startDrag(s.piece);
+        } else {
+          s.mode = 'none'; // lesson says: not this tile
+        }
       } else if (Math.hypot(dx, dy) > 7) {
-        if (pt.y >= this.trayTop - 10 || s.start.y >= this.trayTop - 10) s.mode = 'scroll';
+        if (pt.y >= this.trayTop - 10 || s.start.y >= this.trayTop - 10) s.mode = this._ok('scroll') ? 'scroll' : 'none';
         else s.mode = 'none';
       }
     }
@@ -1315,8 +1349,11 @@ export class Game {
     const pt = this._pt(e);
     if (s.picker) {
       if (cancelled || !this.pickerMode) return;
-      if (s.piece && this._pickerPieceAt(pt) === s.piece) this._pickPiece(s.piece);
-      else if (pt.y < this.panelTop) this.cancelMode();
+      if (s.piece && this._pickerPieceAt(pt) === s.piece) {
+        if (this._ok('pick', { piece: s.piece })) this._pickPiece(s.piece);
+      } else if (pt.y < this.panelTop) {
+        if (this._ok('dismiss')) this.cancelMode();
+      }
       return;
     }
     if (s.mode === 'drag') {
@@ -1328,17 +1365,18 @@ export class Game {
     if (this.findMode) {
       const cell = this._screenToCell(pt.x, pt.y);
       const k = key(cell[0], cell[1]);
-      if (this.cellKeys.has(k) && !this._occupied(k)) this._findCell(cell);
-      else this.cancelMode();
+      if (this.cellKeys.has(k) && !this._occupied(k)) {
+        if (this._ok('find', { cell })) this._findCell(cell);
+      } else if (this._ok('dismiss')) this.cancelMode();
       return;
     }
     // ---- tap ----
     if (s.piece) {
-      this._select(this.selected === s.piece ? null : s.piece);
+      if (this.selected === s.piece || this._ok('grab', { piece: s.piece })) this._select(this.selected === s.piece ? null : s.piece);
     } else if (this.selected) {
       const cell = this._screenToCell(pt.x, pt.y);
       if (this.cellKeys.has(key(cell[0], cell[1])) || this.blockedKeys.has(key(cell[0], cell[1]))) {
-        this._attempt(this.selected, cell, null);
+        if (this._ok('drop', { piece: this.selected, cell })) this._attempt(this.selected, cell, null);
       } else {
         this._select(null);
       }
@@ -1346,7 +1384,7 @@ export class Game {
       // tapping a numbered cell scrolls the list to the tile with the number right after/before it
       const cell = this._screenToCell(pt.x, pt.y);
       const k = key(cell[0], cell[1]);
-      if (this.cellKeys.has(k) && this._occupied(k)) this._scrollToNeighbor(k);
+      if (this.cellKeys.has(k) && this._occupied(k) && this._ok('cell', { n: this._numberAt(k) })) this._scrollToNeighbor(k);
     }
   }
 
@@ -1435,6 +1473,10 @@ export class Game {
     const inBoard = this.cellKeys.has(key(cell[0], cell[1])) || this.blockedKeys.has(key(cell[0], cell[1]));
     if (!inBoard) {
       this._returnPiece(p);
+      return;
+    }
+    if (!this._ok('drop', { piece: p, cell })) {
+      this._returnPiece(p); // lesson says: not there
       return;
     }
     this._attempt(p, cell, p);
@@ -1621,13 +1663,15 @@ export class Game {
       const s = this._cellScreen(q, r);
       const m = new THREE.Mesh(outline ? OUTLINE_GEO : HEX_GEO, basicMat(color, opacity));
       m.scale.setScalar(this.R * (outline ? 1 : 0.88));
-      m.position.copy(this._w(s.x, s.y, z));
+      // sit where a tile's rim will sit (tiles are lifted by LIFT over the socket), so the cells line up with the tiles
+      m.position.copy(this._w(s.x, s.y - LIFT * this.R, z));
       this.hlGroup.add(m);
     };
     if (this.findMode) {
       for (const [q, r] of this._emptyCells()) {
-        add(q, r, COLORS.hint, 0.32, this.R * 0.15);
-        add(q, r, 0xe0932a, 0.95, this.R * 0.2, true);
+        // theme-driven (same hues as the Reveal ghost) so the empty cells never look like golden tiles
+        add(q, r, REVEAL.fill, 0.5, this.R * 0.15);
+        add(q, r, REVEAL.text, 0.7, this.R * 0.2, true);
       }
     }
     if (drag) {
@@ -2282,7 +2326,11 @@ export class Game {
         tw.done?.();
       }
     }
-    for (const m of this.revealMarks.values()) m.userData.fill.material.opacity = 0.15 + 0.08 * Math.sin(now / 420);
+    for (const m of this.revealMarks.values()) {
+      const f = m.userData.flash || 0; // 1 right after Reveal, fades to 0: the new mark starts bold, then settles to a clear ghost
+      m.userData.fill.material.opacity = 0.26 + 0.1 * Math.sin(now / 420) + f * 0.5;
+      m.userData.label.material.opacity = 0.62 + f * 0.38;
+    }
     for (const w of this.waves || []) {
       const t = now / 1600 + w.ph;
       w.mesh.position.x = w.bx + Math.sin(t) * 0.12;
