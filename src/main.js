@@ -12,6 +12,9 @@ import { winArt, loseArt, confetti } from './resultArt.js';
 import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
 import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecies, foundCount, discoverForLevel } from './progress.js';
 import { boosterIds, boosterCount, buyBooster, useBooster, packPrice, grantBooster } from './progress.js';
+import { grantPack, wasBought, dailyWait, markDaily } from './progress.js';
+import shopCfg from './shop.json';
+import { shopArt } from './shopArt.js';
 import { hasSeen, markSeen, scoreRun, loadProgress, recordWin, starsFor, totalStars, completedCount, resetProgress, coinsOf, canAfford, spend, earn, winReward } from './progress.js';
 
 const $ = (id) => document.getElementById(id);
@@ -66,7 +69,7 @@ function renderHearts(left, animate) {
 // ---- Cosmetics: apply equipped tile skin + background theme ----
 function applyCosmetics() {
   const tile = equippedItem(progress, 'tile');
-  const theme = equippedItem(progress, 'theme');
+  const theme = tile; // each tile set carries its own garden background
   game.setTileSkin(tile);
   const root = document.documentElement;
   for (const [k, v] of Object.entries(theme.vars)) root.style.setProperty(`--${k}`, v);
@@ -901,20 +904,149 @@ function enterLevel(i) {
 // ---- Shop ----
 const shopEl = $('shop');
 function swatch(item) {
-  if (item.type === 'tile') {
-    const id = `sw-${item.id}`;
-    return `<svg class="sw" viewBox="-40 -40 80 80"><defs><linearGradient id="${id}-f" x2="0" y2="1"><stop stop-color="${item.face[0]}"/><stop offset="1" stop-color="${item.face[1]}"/></linearGradient></defs><polygon points="0,-34 29,-17 29,17 0,34 -29,17 -29,-17" fill="${item.base}" transform="translate(0 4)"/><polygon points="0,-34 29,-17 29,17 0,34 -29,17 -29,-17" fill="url(#${id}-f)" stroke="${item.rim[0]}" stroke-width="3"/><text y="9" text-anchor="middle" font-size="26" font-weight="800" fill="#7a3d12" font-family="Nunito,sans-serif">7</text></svg>`;
-  }
+  const id = `sw-${item.id}`;
   const v = item.vars;
-  return `<div class="sw sw-theme" style="background:linear-gradient(${v['sky-a']},${v['sky-b']} 55%,${v['sky-c']})"><i style="background:${v['hill-2a']}"></i><b style="background:${v['hill-3']}"></b></div>`;
+  return `<div class="sw sw-set" style="background:linear-gradient(${v['sky-a']},${v['sky-b']} 55%,${v['sky-c']})"><i style="background:${v['hill-2a']}"></i><b style="background:${v['hill-3']}"></b><svg viewBox="-40 -40 80 80"><defs><linearGradient id="${id}-f" x2="0" y2="1"><stop stop-color="${item.face[0]}"/><stop offset="1" stop-color="${item.face[1]}"/></linearGradient></defs><polygon points="0,-34 29,-17 29,17 0,34 -29,17 -29,-17" fill="${item.base}" transform="translate(0 4)"/><polygon points="0,-34 29,-17 29,17 0,34 -29,17 -29,-17" fill="url(#${id}-f)" stroke="${item.rim[0]}" stroke-width="3"/><text y="9" text-anchor="middle" font-size="26" font-weight="800" fill="#7a3d12" font-family="Nunito,sans-serif">7</text></svg></div>`;
+}
+// ---- Store sections (real-money packs + coin-bought boosters) ----
+const money = (n) => `${n.toFixed(2)}$`;
+const BOOST_ICON = (id, qty) => `<span class="rw"><span class="rw-ic">${boosterArt[id]}</span><b>x${qty}</b></span>`;
+const rewardChips = (r) =>
+  `${r.coins ? `<span class="rw"><span class="rw-ic rw-coin"><i class="coin"></i></span><b>${r.coins.toLocaleString('en-US')}</b></span>` : ''}${Object.entries(r.boosters ?? {}).map(([id, q]) => BOOST_ICON(id, q)).join('')}`;
+const offBadge = (off) => (off ? `<span class="shop-off" aria-label="${off}% off"><b>${off}%</b><i>OFF</i></span>` : '');
+const priceBtn = (p, cls = '') =>
+  `<button class="shop-buy ${cls}" type="button">${p.was ? `<s>${money(p.was)}</s>` : ''}<b>${money(p.price)}</b></button>`;
+const sign = (title, note = '') => `<h3 class="shop-sign"><span>${title}</span>${note ? `<small>${note}</small>` : ''}</h3>`;
+
+function showReward(title, rewards, art) {
+  const pop = document.createElement('div');
+  pop.className = 'shop-pop';
+  pop.setAttribute('role', 'dialog');
+  pop.setAttribute('aria-modal', 'true');
+  pop.innerHTML = `<div class="shop-pop-card"><span class="shop-pop-rays" aria-hidden="true"></span><div class="shop-pop-art">${art}</div><h4>${title}</h4><div class="shop-pop-rw">${rewardChips(rewards)}</div><button class="shop-buy" type="button">Collect</button></div>`;
+  const close = () => { audio.tap(); pop.remove(); };
+  pop.querySelector('button').onclick = close;
+  pop.addEventListener('click', (e) => { if (e.target === pop) close(); });
+  stageEl.append(pop);
+  pop.querySelector('button').focus();
+}
+
+/** Fake OS purchase sheet so a stray tap never buys anything. Replace with the store SDK's own sheet later. */
+function confirmPurchase(title, price, art, onConfirm) {
+  const pop = document.createElement('div');
+  pop.className = 'os-pop';
+  pop.setAttribute('role', 'alertdialog');
+  pop.setAttribute('aria-modal', 'true');
+  pop.setAttribute('aria-label', 'Confirm purchase');
+  pop.innerHTML = `<div class="os-sheet"><div class="os-head"><span class="os-icon">${art}</span><div><b>${title}</b><small>Gardendoku</small></div></div><div class="os-line"><span>Price</span><b>${money(price)}</b></div><p class="os-note">TEST MODE: this is a simulated purchase. You will not be charged.</p><div class="os-actions"><button type="button" class="os-cancel">Cancel</button><button type="button" class="os-ok">Buy ${money(price)}</button></div></div>`;
+  const close = () => pop.remove();
+  pop.querySelector('.os-cancel').onclick = () => { audio.tap(); close(); };
+  pop.querySelector('.os-ok').onclick = () => { close(); onConfirm(); };
+  pop.addEventListener('click', (e) => { if (e.target === pop) close(); });
+  pop.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  stageEl.append(pop);
+  pop.querySelector('.os-cancel').focus();
+}
+
+function buyPack(p, art, once = false) {
+  confirmPurchase(p.name ?? (p.coins ? `${p.coins.toLocaleString('en-US')} coins` : 'Purchase'), p.price, art, () => grantAndShow(p, art, once));
+}
+
+function grantAndShow(p, art, once) {
+  if (!grantPack(progress, p.id, { coins: p.coins, boosters: p.boosters, noAds: p.id === shopCfg.removeAds.id }, once)) return;
+  audio.tap();
+  renderCoins();
+  renderShop();
+  showReward(p.name ?? (p.coins ? `${p.coins.toLocaleString('en-US')} coins` : 'Ads removed'), { coins: p.coins, boosters: p.boosters }, art);
+}
+
+function fmtWait(ms) {
+  const m = Math.ceil(ms / 60000);
+  return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`;
+}
+
+function renderStore(body) {
+  const add = (html) => body.insertAdjacentHTML('beforeend', html);
+
+  // Boosters bought with in-game coins
+  add(sign('Boosters'));
+  add(`<div class="boost-shelf">${boosterIds.map((id) => {
+    const cfg = BOOSTERS[id];
+    return `<div class="boost-card" data-id="${id}"><span class="boost-own">${boosterCount(progress, id)}</span><div class="boost-art b-${id}">${boosterArt[id]}</div><span class="nm">${cfg.name}</span><button class="shop-btn best" data-qty="${BOOSTERS.packSize}" type="button">x${BOOSTERS.packSize} ${COIN} ${packPrice(id)}</button></div>`;
+  }).join('')}</div>`);
+  body.querySelectorAll('.boost-card').forEach((card) => {
+    const id = card.dataset.id;
+    card.querySelectorAll('.shop-btn').forEach((btn) => {
+      const qty = Number(btn.dataset.qty);
+      const cost = qty === BOOSTERS.packSize ? packPrice(id) : BOOSTERS[id].price * qty;
+      btn.classList.toggle('poor', !canAfford(progress, cost));
+      btn.onclick = () => {
+        if (!buyBooster(progress, id, qty)) return shakeEl(btn);
+        audio.tap();
+        renderCoins();
+        renderShop();
+      };
+    });
+  });
+
+  // Remove ads
+  const ra = shopCfg.removeAds;
+  if (ra.enabled) {
+  add(sign('Remove Ads'));
+  add(`<div class="shop-row tone-sky${progress.noAds ? ' done' : ''}"><div class="shop-panel noads-panel"><div class="row-art">${shopArt.noads}</div><span>Play ad-free forever</span></div>${progress.noAds ? '<span class="shop-owned">Active</span>' : priceBtn(ra)}${progress.noAds ? '' : offBadge(ra.off)}</div>`);
+  if (!progress.noAds) body.querySelector('.noads-panel').parentElement.querySelector('.shop-buy').onclick = () => buyPack({ ...ra, name: 'Ads removed' }, shopArt.noads);
+  }
+
+  // Special (one-time offers)
+  const specials = shopCfg.special.filter((s) => !s.once || !wasBought(progress, s.id));
+  if (specials.length) {
+    add(sign('Special'));
+    for (const s of specials) {
+      add(`<div class="shop-deal tone-${s.tone}" data-id="${s.id}"><div class="deal-art">${shopArt[s.art]}</div><div class="deal-name">${s.name}</div><div class="deal-rw">${rewardChips(s)}</div>${priceBtn(s)}${offBadge(s.off)}</div>`);
+      body.querySelector(`.shop-deal[data-id="${s.id}"] .shop-buy`).onclick = () => buyPack(s, shopArt[s.art], true);
+    }
+  }
+
+  // Bundles
+  add(sign('Bundle'));
+  for (const b of shopCfg.bundles) {
+    add(`<div class="shop-deal tone-${b.tone}" data-id="${b.id}"><div class="deal-art">${shopArt[b.art]}</div><div class="deal-name">${b.name}</div><div class="deal-rw">${rewardChips(b)}</div>${priceBtn(b)}${offBadge(b.off)}</div>`);
+    body.querySelector(`.shop-deal[data-id="${b.id}"] .shop-buy`).onclick = () => buyPack(b, shopArt[b.art]);
+  }
+
+  // Gold (coin packs)
+  const jp = shopCfg.coinJackpot;
+  const df = shopCfg.dailyFree;
+  add(sign('Gold'));
+  add(`<div class="shop-row tone-coral"><div class="shop-panel"><div class="row-art">${shopArt.jackpot}</div><span class="row-coins"><i class="coin"></i> ${jp.coins.toLocaleString('en-US')}</span></div>${priceBtn(jp)}${offBadge(jp.off)}</div>`);
+  body.querySelector('.tone-coral .shop-buy').onclick = () => buyPack({ ...jp, name: `${jp.coins.toLocaleString('en-US')} coins` }, shopArt.jackpot);
+  const wait = dailyWait(progress, df.cooldownHours);
+  add(`<div class="coin-grid"><div class="coin-card free" data-id="daily"><div class="cc-top">${df.coins}</div><div class="cc-art">${shopArt.claim}</div><button class="shop-buy ${wait ? 'wait' : ''}" type="button" ${wait ? 'disabled' : ''}>${wait ? fmtWait(wait) : 'FREE'}</button></div>${shopCfg.coinPacks.map((c) => `<div class="coin-card" data-id="${c.id}"><div class="cc-top">${c.coins.toLocaleString('en-US')}</div><div class="cc-art">${shopArt[`coin${c.art}`]}</div>${priceBtn(c)}${offBadge(c.off)}</div>`).join('')}</div>`);
+  const daily = body.querySelector('.coin-card.free .shop-buy');
+  if (!wait) {
+    daily.onclick = () => {
+      grantPack(progress, 'daily', { coins: df.coins });
+      markDaily(progress);
+      audio.tap();
+      renderCoins();
+      renderShop();
+      showReward('Daily gift', { coins: df.coins }, shopArt.claim);
+    };
+  }
+  for (const c of shopCfg.coinPacks) {
+    body.querySelector(`.coin-card[data-id="${c.id}"] .shop-buy`).onclick = () => buyPack({ ...c, name: `${c.coins.toLocaleString('en-US')} coins` }, shopArt[`coin${c.art}`]);
+  }
 }
 function renderShop() {
   $('shop-coins').textContent = coinsOf(progress);
   const body = $('shop-body');
+  const keepScroll = body.scrollTop;
   body.innerHTML = '';
-  for (const [type, title] of [['tile', 'Tile colours'], ['theme', 'Backgrounds']]) {
+  renderStore(body);
+  for (const [type, title] of [['tile', 'Garden Sets']]) {
     const h = document.createElement('h3');
-    h.textContent = title;
+    h.className = 'shop-sign';
+    h.innerHTML = `<span>${title}</span>`;
     body.appendChild(h);
     const grid = document.createElement('div');
     grid.className = 'shop-grid';
@@ -953,6 +1085,7 @@ function renderShop() {
     }
     body.appendChild(grid);
   }
+  body.scrollTop = keepScroll;
 }
 $('home-shop').addEventListener('click', () => {
   audio.unlock();

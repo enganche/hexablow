@@ -1,12 +1,10 @@
 {
   "defaults": {
     "owned": [
-      "tile-honey",
-      "theme-meadow"
+      "tile-honey"
     ],
     "equipped": {
-      "tile": "tile-honey",
-      "theme": "theme-meadow"
+      "tile": "tile-honey"
     }
   },
   "items": [
@@ -23,58 +21,7 @@
         "#ffe3a0",
         "#ffd477"
       ],
-      "base": "#d99a36"
-    },
-    {
-      "id": "tile-ocean",
-      "type": "tile",
-      "name": "Ocean",
-      "price": 100,
-      "face": [
-        "#a9e4ff",
-        "#4aaee8"
-      ],
-      "rim": [
-        "#d2f0ff",
-        "#9ad4f5"
-      ],
-      "base": "#2f86b8"
-    },
-    {
-      "id": "tile-lilac",
-      "type": "tile",
-      "name": "Lilac",
-      "price": 100,
-      "face": [
-        "#dcc9ff",
-        "#9d80e6"
-      ],
-      "rim": [
-        "#ece2ff",
-        "#c9b3f5"
-      ],
-      "base": "#7458b8"
-    },
-    {
-      "id": "tile-snow",
-      "type": "tile",
-      "name": "Snow",
-      "price": 150,
-      "face": [
-        "#ffffff",
-        "#d3e3ee"
-      ],
-      "rim": [
-        "#ffffff",
-        "#e8f1f7"
-      ],
-      "base": "#9db4c4"
-    },
-    {
-      "id": "theme-meadow",
-      "type": "theme",
-      "name": "Meadow",
-      "price": 0,
+      "base": "#d99a36",
       "game": "#e8f2d8",
       "socket": {
         "rim": [
@@ -113,52 +60,19 @@
       }
     },
     {
-      "id": "theme-dusk",
-      "type": "theme",
-      "name": "Dusk",
-      "price": 120,
-      "game": "#ffe9d6",
-      "socket": {
-        "rim": [
-          "#fbe3ad",
-          "#f5d596"
-        ],
-        "wall": [
-          "#dfb479",
-          "#fce4b3"
-        ],
-        "floor": [
-          "#e9be7f",
-          "#fce1aa"
-        ]
-      },
-      "vars": {
-        "sky-a": "#ff9f7a",
-        "sky-b": "#ffc08f",
-        "sky-c": "#ffe3b3",
-        "hill-1": "#c9c77a",
-        "hill-2a": "#a8b84f",
-        "hill-2b": "#6f9a3f",
-        "hill-3": "#5d8a3c",
-        "sun": "#ffd27a",
-        "cloud": "#fff0e0b8",
-        "sub-ink": "#7a4a2c",
-        "ui-bg": "#ffe9d6",
-        "ui-bottom": "#f4cba7",
-        "ui-ink": "#875337",
-        "ui-muted": "#9a7054",
-        "ui-card": "#fff0dc",
-        "ui-edge": "#c99b73",
-        "ui-selected": "#f8d49a",
-        "ui-accent": "#d7a15e",
-        "ui-locked": "#ead0af"
-      }
-    },
-    {
-      "id": "theme-frost",
-      "type": "theme",
-      "name": "Frost",
-      "price": 120,
+      "id": "tile-ocean",
+      "type": "tile",
+      "name": "Ocean",
+      "price": 220,
+      "face": [
+        "#a9e4ff",
+        "#4aaee8"
+      ],
+      "rim": [
+        "#d2f0ff",
+        "#9ad4f5"
+      ],
+      "base": "#2f86b8",
       "game": "#edf5fa",
       "socket": {
         "rim": [
@@ -197,10 +111,70 @@
       }
     },
     {
-      "id": "theme-night",
-      "type": "theme",
-      "name": "Night",
-      "price": 200,
+      "id": "tile-lilac",
+      "type": "tile",
+      "name": "Lilac",
+      "price": 220,
+      "face": [
+        "#dcc9ff",
+        "#9d80e6"
+      ],
+      "rim": [
+        "#ece2ff",
+        "#c9b3f5"
+      ],
+      "base": "#7458b8",
+      "game": "#ffe9d6",
+      "socket": {
+        "rim": [
+          "#fbe3ad",
+          "#f5d596"
+        ],
+        "wall": [
+          "#dfb479",
+          "#fce4b3"
+        ],
+        "floor": [
+          "#e9be7f",
+          "#fce1aa"
+        ]
+      },
+      "vars": {
+        "sky-a": "#ff9f7a",
+        "sky-b": "#ffc08f",
+        "sky-c": "#ffe3b3",
+        "hill-1": "#c9c77a",
+        "hill-2a": "#a8b84f",
+        "hill-2b": "#6f9a3f",
+        "hill-3": "#5d8a3c",
+        "sun": "#ffd27a",
+        "cloud": "#fff0e0b8",
+        "sub-ink": "#7a4a2c",
+        "ui-bg": "#ffe9d6",
+        "ui-bottom": "#f4cba7",
+        "ui-ink": "#875337",
+        "ui-muted": "#9a7054",
+        "ui-card": "#fff0dc",
+        "ui-edge": "#c99b73",
+        "ui-selected": "#f8d49a",
+        "ui-accent": "#d7a15e",
+        "ui-locked": "#ead0af"
+      }
+    },
+    {
+      "id": "tile-snow",
+      "type": "tile",
+      "name": "Snow",
+      "price": 350,
+      "face": [
+        "#ffffff",
+        "#d3e3ee"
+      ],
+      "rim": [
+        "#ffffff",
+        "#e8f1f7"
+      ],
+      "base": "#9db4c4",
       "game": "#e9ecfa",
       "socket": {
         "rim": [

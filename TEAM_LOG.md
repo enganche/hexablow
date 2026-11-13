@@ -106,3 +106,7 @@ Nhóm chat chung của dự án. Chỉ ghi **vắn tắt** việc vừa làm, m�
 [2026-11-12 14:00] **Claude**: Làm lại UI/UX Level Tool: bỏ tab chế độ, thanh công cụ dọc + phím tắt, thanh bước, tooltip khi rê, zoom/pan, redo, toast, panel phải dạng thẻ gập — `level-tool/index.html`, `tool.css`, `js/app.js`, `README.md` — ✅ (kiểm tra trên trình duyệt)
 [2026-11-12 16:00] **Claude**: Auto hint theo rule độ khó: sau 5s không đặt được ô nào, bàn tay chỉ vào số trên lưới cạnh ô dễ nhất (ít vị trí kéo vào nhất) để kích hoạt tap-to-jump, rồi hướng dẫn kéo ô vào; công tắc Hints trong Settings, mặc định bật (bỏ highlight gợi ý cũ) — `src/hint.js`, `src/main.js`, `src/game.js`, `src/settings.js`, `src/style.css` — ✅ (kiểm tra trên trình duyệt)
 [2026-11-13 10:00] **Claude**: Hệ sao theo tim + thời gian (par = 20s + 6s/số cần đặt, cấu hình trong economy.json), L1-2 lần đầu không tính tim và luôn 3 sao, tutorial tim ở L3, popup giới thiệu sao khi clear L3, bản đồ level dạng đường uốn lượn có sao.
+
+- 2026-11-13 Shop: store layout (Boosters by coins, Remove Ads, Special, Bundle, Gold + daily free) in garden theme; config in src/shop.json, art in src/shopArt.js; purchases are a placeholder checkout (no billing SDK yet); cosmetics kept below.
+
+- 2026-11-13 Shop v2: Remove Ads hidden (shop.json removeAds.enabled=false); fake OS confirm sheet before every IAP; backgrounds merged into tile sets ("Garden Sets", cosmetics.json now tile-only); dropped "Use coins" notes; new leaf-ribbon section banners.

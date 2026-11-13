@@ -19,6 +19,9 @@ const empty = () => ({
   boosters: emptyBoosters(),
   owned: [...cosmetics.defaults.owned],
   equipped: { ...cosmetics.defaults.equipped },
+  noAds: false,
+  bought: [],
+  daily: 0,
 });
 
 export function loadProgress() {
@@ -47,7 +50,9 @@ export function loadProgress() {
         if (Number.isFinite(n) && n > 0) boosters[id] = n;
       }
       const seen = [...new Set(Array.isArray(raw.seen) ? raw.seen.filter((x) => typeof x === 'string') : [])];
-      return { v: 2, stars, found, setsClaimed, seen, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, boosters, owned, equipped };
+      const bought = [...new Set(Array.isArray(raw.bought) ? raw.bought.filter((x) => typeof x === 'string') : [])];
+      const daily = Number.isFinite(Number(raw.daily)) ? Number(raw.daily) : 0;
+      return { v: 2, stars, found, setsClaimed, seen, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, boosters, owned, equipped, noAds: raw.noAds === true, bought, daily };
     }
   } catch {
     /* corrupt or unavailable storage: start fresh */
@@ -111,6 +116,9 @@ export function resetProgress(p) {
   p.boosters = emptyBoosters();
   p.owned = [...cosmetics.defaults.owned];
   p.equipped = { ...cosmetics.defaults.equipped };
+  p.noAds = false;
+  p.bought = [];
+  p.daily = 0;
   save(p);
 }
 
@@ -246,5 +254,33 @@ export function useBooster(p, id) {
 
 export function grantBooster(p, id, qty) {
   p.boosters[id] = boosterCount(p, id) + qty;
+  save(p);
+}
+
+// ---- store purchases (real-money packs; payment is a placeholder until a billing SDK is wired) ----
+export function wasBought(p, id) {
+  return p.bought.includes(id);
+}
+
+/** Grant a pack's contents: { coins, boosters: {id: qty}, noAds }. One-time packs are remembered. */
+export function grantPack(p, id, rewards, once = false) {
+  if (once && wasBought(p, id)) return false;
+  if (rewards.coins) p.coins += Math.floor(rewards.coins);
+  for (const [bid, qty] of Object.entries(rewards.boosters ?? {})) {
+    if (bid in p.boosters) p.boosters[bid] += qty;
+  }
+  if (rewards.noAds) p.noAds = true;
+  if (once && !p.bought.includes(id)) p.bought.push(id);
+  save(p);
+  return true;
+}
+
+/** Milliseconds until the free daily gift is ready (0 = ready now). */
+export function dailyWait(p, cooldownHours) {
+  return Math.max(0, p.daily + cooldownHours * 3600000 - Date.now());
+}
+
+export function markDaily(p) {
+  p.daily = Date.now();
   save(p);
 }

@@ -1,0 +1,119 @@
+{
+  "removeAds": {
+    "id": "noads",
+    "price": 2.99,
+    "was": 5.99,
+    "off": 50,
+    "enabled": false
+  },
+  "special": [
+    {
+      "id": "starter",
+      "name": "Seedling Starter",
+      "once": true,
+      "art": "crate",
+      "tone": "gold",
+      "price": 0.99,
+      "was": 1.99,
+      "off": 50,
+      "coins": 1500,
+      "boosters": {
+        "reveal": 2,
+        "find": 2,
+        "picker": 2
+      }
+    }
+  ],
+  "bundles": [
+    {
+      "id": "sprout",
+      "name": "Sprout Bundle",
+      "art": "pouch",
+      "tone": "leaf",
+      "price": 4.99,
+      "coins": 3000,
+      "boosters": {
+        "reveal": 3,
+        "find": 3,
+        "picker": 3
+      }
+    },
+    {
+      "id": "bloom",
+      "name": "Bloom Bundle",
+      "art": "basket",
+      "tone": "rose",
+      "price": 9.99,
+      "coins": 7500,
+      "boosters": {
+        "reveal": 6,
+        "find": 6,
+        "picker": 6
+      }
+    },
+    {
+      "id": "harvest",
+      "name": "Harvest Bundle",
+      "art": "barrow",
+      "tone": "sun",
+      "price": 19.99,
+      "coins": 18000,
+      "boosters": {
+        "reveal": 15,
+        "find": 15,
+        "picker": 15
+      }
+    }
+  ],
+  "dailyFree": {
+    "coins": 100,
+    "cooldownHours": 24
+  },
+  "coinPacks": [
+    {
+      "id": "c500",
+      "coins": 500,
+      "price": 0.99,
+      "art": 1
+    },
+    {
+      "id": "c1500",
+      "coins": 1500,
+      "price": 1.99,
+      "was": 2.99,
+      "off": 33,
+      "art": 2
+    },
+    {
+      "id": "c4000",
+      "coins": 4000,
+      "price": 4.99,
+      "was": 7.99,
+      "off": 38,
+      "art": 3
+    },
+    {
+      "id": "c9000",
+      "coins": 9000,
+      "price": 9.99,
+      "was": 17.99,
+      "off": 44,
+      "art": 4
+    },
+    {
+      "id": "c20000",
+      "coins": 20000,
+      "price": 19.99,
+      "was": 39.99,
+      "off": 50,
+      "art": 5
+    }
+  ],
+  "coinJackpot": {
+    "id": "c50000",
+    "coins": 50000,
+    "price": 49.99,
+    "was": 99.99,
+    "off": 50
+  }
+}
