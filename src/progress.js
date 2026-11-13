@@ -246,9 +246,10 @@ export function boosterCount(p, id) {
   return p.boosters[id] ?? 0;
 }
 
-/** Price of a pack of `packSize` boosters, with the bulk discount. */
+/** Price of a pack of `packSize` boosters: the per-booster round `pack` price, else list price with the bulk discount. */
 export function packPrice(id) {
-  return Math.round(economy.boosters[id].price * economy.boosters.packSize * economy.boosters.packDiscount);
+  const cfg = economy.boosters[id];
+  return cfg.pack ?? Math.round(cfg.price * economy.boosters.packSize * economy.boosters.packDiscount);
 }
 
 /** Buy `qty` boosters (1 = single at list price, packSize = discounted pack). False if too expensive. */

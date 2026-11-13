@@ -10,15 +10,15 @@
     "replayMultiplier": 0.3
   },
   "costs": {
-    "revive": 20
+    "revive": [20, 40, 60]
   },
   "boosters": {
     "order": ["reveal", "find", "picker"],
     "packSize": 3,
     "packDiscount": 0.85,
-    "reveal": { "name": "Reveal", "price": 10, "unlockLevel": 4, "desc": "Shows the exact number of a random empty cell." },
-    "find": { "name": "Find", "price": 20, "unlockLevel": 6, "desc": "Tap an empty cell and its tile flies in." },
-    "picker": { "name": "Picker", "price": 25, "unlockLevel": 8, "desc": "Open the whole list and send any tile to its cell." }
+    "reveal": { "name": "Reveal", "price": 20, "pack": 50, "unlockLevel": 4, "desc": "Shows the exact number of a random empty cell." },
+    "find": { "name": "Find", "price": 35, "pack": 85, "unlockLevel": 6, "desc": "Tap an empty cell and its tile flies in." },
+    "picker": { "name": "Picker", "price": 45, "pack": 110, "unlockLevel": 8, "desc": "Open the whole list and send any tile to its cell." }
   },
   "daily": {
     "days": [

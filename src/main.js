@@ -187,7 +187,6 @@ function openBuyPop(id) {
   const cfg = BOOSTERS[id];
   const pack = BOOSTERS.packSize;
   const packCost = packPrice(id);
-  const saving = Math.round((1 - BOOSTERS.packDiscount) * 100);
   buyCard.innerHTML =
     `<h3 id="buy-title">${cfg.name}</h3>
      <button class="buy-x" type="button" aria-label="Close">×</button>
@@ -195,7 +194,7 @@ function openBuyPop(id) {
      <p class="buy-desc">${cfg.desc}</p>
      <div class="buy-actions">
        <button class="buy-opt ad" type="button"><span>×1</span><em>${AD_ICON}<b>Free</b></em></button>
-       <button class="buy-opt best" type="button" data-qty="${pack}"><span>×${pack}</span><em>${COIN} ${packCost}</em><small>Save ${saving}%</small></button>
+       <button class="buy-opt best" type="button" data-qty="${pack}"><span>×${pack}</span><em>${COIN} ${packCost}</em></button>
      </div>`;
   const coinBtn = buyCard.querySelector('.buy-opt.best');
   coinBtn.classList.toggle('poor', !canAfford(progress, packCost));
@@ -305,6 +304,9 @@ function coinBurst(btn) {
   }
 }
 
+let revivesUsed = 0; // revives spent in the current level attempt
+const nextReviveCost = () => economy.costs.revive[revivesUsed] ?? null;
+
 /**
  * win: { win:true, title, stars, sub, reward, next, onClaim }
  * fail: { win:false, title, sub, onRevive, onRetry, onHome }
@@ -340,10 +342,14 @@ function showResult(o) {
     btn.textContent = '↻  Try again';
     btn.classList.add('alt');
     btn.onclick = () => { audio.tap(); o.onRetry(); };
-    rev.classList.remove('hidden');
-    rev.innerHTML = `<span>Keep growing</span><em>${economy.costs.revive} ${COIN}</em>`;
-    rev.disabled = !canAfford(progress, economy.costs.revive);
-    rev.title = rev.disabled ? `Revive needs ${economy.costs.revive} coins` : '';
+    // escalating price per revive within this level; no tiers left = no more revives
+    const cost = nextReviveCost();
+    rev.classList.toggle('hidden', cost == null);
+    if (cost != null) {
+      rev.innerHTML = `<span>Keep growing</span><em>${cost} ${COIN}</em>`;
+      rev.disabled = !canAfford(progress, cost);
+      rev.title = rev.disabled ? `Revive needs ${cost} coins` : '';
+    }
     rev.onclick = () => { audio.tap(); o.onRevive(); };
     home.classList.remove('hidden');
     home.onclick = () => { audio.tap(); o.onHome(); };
@@ -502,7 +508,9 @@ const game = new Game($('game'), {
       title: 'Out of hearts',
       sub: 'So close! Give it another try.',
       onRevive: () => {
-        if (spend(progress, economy.costs.revive)) {
+        const cost = nextReviveCost();
+        if (cost != null && spend(progress, cost)) {
+          revivesUsed++;
           leaveResult();
           game.revive();
           renderCoins();
@@ -870,6 +878,7 @@ $('stage').addEventListener('pointerdown', () => tut.placed(), true);
 
 function startLevel(i) {
   pendingWin = null;
+  revivesUsed = 0;
   leaveResult();
   boostBar.classList.remove('hidden');
   levelIndex = i;
