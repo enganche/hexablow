@@ -13,6 +13,7 @@ import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './prog
 import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecies, foundCount, discoverForLevel, claimableSets, claimSet } from './progress.js';
 import { boosterIds, boosterCount, buyBooster, useBooster, packPrice, grantBooster } from './progress.js';
 import { grantPack, wasBought, dailyWait, markDaily } from './progress.js';
+import { dailyDays, dailyMilestones, dailyStatus, dailyClaim, dailyChestClaim, todayStr, debugShiftDaily, debugResetDaily } from './progress.js';
 import shopCfg from './shop.json';
 import { plantMaterial, critterMaterial, fishMaterial, butterflyMaterial, dogMaterial, CRITTERS } from './garden.js';
 import { shopArt } from './shopArt.js';
@@ -363,7 +364,6 @@ function showResult(o) {
 
 /** Reward-style reveal for a newly discovered species: dim backdrop, glowing rays, big bounce-in icon. */
 function showFind({ species, set }) {
-  const complete = claimableSets(progress).some((s) => s.id === set.id);
   const { have, total } = setProgress(progress, set.id);
   const pips = Array.from({ length: total }, (_, i) => `<i class="${i < have ? 'on' : ''}"></i>`).join('');
   const el = $('res-newfind');
@@ -374,7 +374,6 @@ function showFind({ species, set }) {
     `<b>${species.name}</b>` +
     `<small>${set.name} collection</small>` +
     `<div class="fp-pips" aria-label="${have} of ${total}">${pips}</div>` +
-    (complete ? `<div class="fp-bonus">Set complete! Claim ${COIN} in Album</div>` : '') +
     '</div>';
   el.classList.remove('hidden');
   renderAlbumBadge();
@@ -845,6 +844,7 @@ function showHome() {
   $('play-btn').querySelector('span').textContent = completedCount(progress) === 0 && cur === 0 ? 'Play' : 'Continue';
   home.classList.remove('leaving');
   home.classList.remove('hidden');
+  offerDaily();
 }
 function hideHome() {
   home.classList.add('hidden');
@@ -941,7 +941,7 @@ function swatch(item) {
 const money = (n) => `${n.toFixed(2)}$`;
 const BOOST_ICON = (id, qty) => `<span class="rw"><span class="rw-ic">${boosterArt[id]}</span><b>x${qty}</b></span>`;
 const rewardChips = (r) =>
-  `${r.coins ? `<span class="rw"><span class="rw-ic rw-coin"><i class="coin"></i></span><b>${r.coins.toLocaleString('en-US')}</b></span>` : ''}${Object.entries(r.boosters ?? {}).map(([id, q]) => BOOST_ICON(id, q)).join('')}`;
+  `${r.coins ? `<span class="rw"><span class="rw-ic rw-coin"><i class="coin"></i></span><b>${r.coins.toLocaleString('en-US')}</b></span>` : ''}${Object.entries(r.boosters ?? {}).map(([id, q]) => BOOST_ICON(id, q)).join('')}${r.skin ? `<span class="rw"><span class="rw-ic"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 34 12v16L20 36 6 28V12Z" fill="#fffdf7" stroke="#7a9bb0" stroke-width="2.4" stroke-linejoin="round"/><path d="M20 11 28 16v8l-8 5-8-5v-8Z" fill="#bfe3f5"/></svg></span><b>${r.skin}</b></span>` : ''}`;
 const offBadge = (off) => (off ? `<span class="shop-off" aria-label="${off}% off"><b>${off}%</b><i>OFF</i></span>` : '');
 const priceBtn = (p, cls = '') =>
   `<button class="shop-buy ${cls}" type="button">${p.was ? `<s>${money(p.was)}</s>` : ''}<b>${money(p.price)}</b></button>`;
@@ -1198,6 +1198,159 @@ function showClaim(set) {
 function offerClaims() {
   const next = claimableSets(progress)[0];
   if (next) showClaim(next);
+}
+
+// ---- Daily gifts: looping 7-day table + streak chests at 7/14/21/28 days ----
+const dailyBtn = $('home-daily');
+let dailyPop = null;
+let dailyOfferedOn = '';
+
+const giftArt = (r) => (r.coins && !r.boosters ? shopArt.coin1 : boosterArt[Object.keys(r.boosters)[0]]);
+const giftIcon = (r) => (r.coins && !r.boosters ? '<i class="coin"></i>' : giftArt(r));
+const giftLabel = (r) => (r.coins ? `+${r.coins}` : `x${Object.values(r.boosters)[0]}`);
+const CHEST_ART = { 7: 'pouch', 14: 'crate', 21: 'coin4', 28: 'coin5' };
+
+function renderDailyBadge() {
+  let dot = dailyBtn.querySelector('.nav-badge');
+  if (!dot) {
+    dot = document.createElement('i');
+    dot.className = 'nav-badge';
+    dot.textContent = '!';
+    dot.setAttribute('role', 'img');
+    dailyBtn.appendChild(dot);
+  }
+  const st = dailyStatus(progress, todayStr());
+  const n = (st.canClaim ? 1 : 0) + st.readyCount;
+  dot.hidden = n === 0;
+  dot.setAttribute('aria-label', st.canClaim ? 'Daily gift ready' : 'Streak chest ready');
+}
+
+function closeDaily() {
+  if (!dailyPop) return;
+  audio.tap();
+  dailyPop.remove();
+  dailyPop = null;
+  home.inert = false;
+  stageEl.querySelector('.home-nav').inert = false;
+  renderDailyBadge();
+  dailyBtn.focus({ preventScroll: true });
+}
+
+function renderDaily() {
+  const st = dailyStatus(progress, todayStr());
+  const days = dailyDays.map((r, i) => {
+    const state = i < st.done ? 'done' : i === st.todayIdx ? 'today' : 'locked';
+    return `<div class="dl-day ${state}${i === 6 ? ' wide' : ''}" aria-label="Day ${i + 1}${state === 'done' ? ', collected' : state === 'today' ? ', ready today' : ''}"><span class="dl-n">Day ${i + 1}</span><span class="dl-ic">${giftIcon(r)}</span><b class="dl-amt">${giftLabel(r)}</b>${state === 'done' ? '<i class="dl-check" aria-hidden="true">✓</i>' : ''}</div>`;
+  }).join('');
+  const chests = dailyMilestones.map((m, i) => {
+    const state = st.chests[m.at];
+    const fill = Math.max(0, Math.min(1, (st.streak - i * 7) / 7));
+    return `<div class="dl-ms"><span class="dl-seg"><i style="width:${fill * 100}%"></i></span><button type="button" class="dl-chest ${state}" data-at="${m.at}" ${state === 'ready' ? '' : 'disabled'} aria-label="${m.at}-day chest, ${state === 'ready' ? 'tap to open' : state === 'done' ? 'opened' : 'locked'}"><span class="dl-chest-art">${shopArt[CHEST_ART[m.at]]}</span>${state === 'done' ? '<i class="dl-check" aria-hidden="true">✓</i>' : ''}</button><button type="button" class="dl-info" data-at="${m.at}" aria-label="What is in the ${m.at}-day chest?">!</button><b>${m.at} days</b></div>`;
+  }).join('');
+  const btn = st.canClaim
+    ? `<button type="button" class="shop-buy dl-claim">Claim</button>`
+    : `<button type="button" class="shop-buy dl-claim wait" disabled>Come back tomorrow</button>`;
+  const note = st.canClaim && st.alive ? 'Claim today to keep your streak!' : 'Miss a day and your streak starts over.';
+  dailyPop.querySelector('.dl-card').innerHTML =
+    '<button type="button" class="dl-x" aria-label="Close">×</button>' +
+    '<h4 id="dl-title">Daily gifts</h4>' +
+    `<p class="dl-streak"><b>${st.streak}</b> day streak</p>` +
+    `<div class="dl-grid">${days}</div>${btn}<p class="dl-note">${note}</p>` +
+    `<div class="dl-track" aria-label="Streak chests">${chests}</div>`;
+  const q = (sel) => dailyPop.querySelector(sel);
+  q('.dl-x').onclick = closeDaily;
+  const claim = q('.dl-claim:not(:disabled)');
+  if (claim) {
+    claim.onclick = () => {
+      const res = dailyClaim(progress, todayStr());
+      if (!res) return;
+      audio.win();
+      renderCoins();
+      renderDaily();
+      const art = giftArt(res.reward);
+      showReward(`Day ${res.day} gift`, res.reward, art);
+      dailyPop.querySelector('.dl-day.done:nth-child(' + res.day + ')')?.classList.add('pop');
+    };
+  }
+  for (const c of dailyPop.querySelectorAll('.dl-chest.ready')) {
+    c.onclick = () => {
+      const res = dailyChestClaim(progress, Number(c.dataset.at));
+      if (!res) return;
+      audio.win();
+      renderCoins();
+      renderDaily();
+      showReward(`${res.at}-day chest`, res, shopArt[CHEST_ART[res.at]]);
+    };
+  }
+  const card = q('.dl-card');
+  const tip = document.createElement('div');
+  tip.className = 'dl-tip hidden';
+  tip.setAttribute('role', 'status');
+  card.append(tip);
+  let tipAt = 0;
+  for (const b of dailyPop.querySelectorAll('.dl-info')) {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      audio.tap();
+      const at = Number(b.dataset.at);
+      if (tipAt === at && !tip.classList.contains('hidden')) { tip.classList.add('hidden'); return; }
+      tipAt = at;
+      const m = dailyMilestones.find((x) => x.at === at);
+      const skin = m.cosmetic ? cosmeticItems.find((i) => i.id === m.cosmetic) : null;
+      const owned = skin ? isOwned(progress, skin.id) : false;
+      const rewards = { coins: (m.coins ?? 0) + (owned ? m.ownedCoins ?? 0 : 0), boosters: m.boosters, skin: skin && !owned ? `${skin.name} tiles` : null };
+      tip.innerHTML = `<b>${at}-day chest</b><div class="dl-tip-rw">${rewardChips(rewards)}</div><i class="dl-tip-arrow"></i>`;
+      tip.classList.remove('hidden');
+      const cr = card.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      const w = tip.offsetWidth;
+      const cx = br.left + br.width / 2 - cr.left;
+      const left = Math.max(8, Math.min(cr.width - w - 8, cx - w / 2));
+      tip.style.left = `${left}px`;
+      tip.style.bottom = `${cr.bottom - br.top + 10}px`;
+      tip.style.setProperty('--ax', `${cx - left}px`);
+    };
+  }
+  (claim ?? dailyPop.querySelector('.dl-chest.ready') ?? q('.dl-x')).focus({ preventScroll: true });
+}
+
+function openDaily() {
+  if (dailyPop) return;
+  audio.unlock?.();
+  audio.tap();
+  dailyPop = document.createElement('div');
+  dailyPop.className = 'dl-pop';
+  dailyPop.setAttribute('role', 'dialog');
+  dailyPop.setAttribute('aria-modal', 'true');
+  dailyPop.setAttribute('aria-labelledby', 'dl-title');
+  dailyPop.innerHTML = '<div class="dl-card"></div>';
+  dailyPop.addEventListener('click', (e) => {
+    if (e.target === dailyPop) closeDaily();
+    else if (!e.target.closest('.dl-tip')) dailyPop.querySelector('.dl-tip')?.classList.add('hidden');
+  });
+  dailyPop.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); closeDaily(); }
+    if (e.key === 'Tab') {
+      const items = [...dailyPop.querySelectorAll('button:not(:disabled)')];
+      const first = items[0], last = items.at(-1);
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  home.inert = true;
+  stageEl.querySelector('.home-nav').inert = true;
+  stageEl.append(dailyPop);
+  renderDaily();
+}
+dailyBtn.addEventListener('click', openDaily);
+
+/** Once per day (per session) pop the gifts open when the player lands on Home with something to claim. */
+function offerDaily() {
+  renderDailyBadge();
+  const today = todayStr();
+  if (dailyOfferedOn === today || completedCount(progress) === 0 || !dailyStatus(progress, today).canClaim) return;
+  dailyOfferedOn = today;
+  setTimeout(() => { if (!home.classList.contains('hidden') && !dailyPop) openDaily(); }, 450);
 }
 
 /** Canvas holding the idle sprite of a species (same art the lawn uses). */
@@ -1588,6 +1741,12 @@ function renderDebug() {
     game.locked = true;
     game.hooks.onFail();
   };
+  const afterDaily = () => { renderDailyBadge(); if (dailyPop) renderDaily(); };
+  row(`Daily gifts · ${todayStr()} · streak ${dailyStatus(progress).streak}`, [
+    ['Next day', () => { debugShiftDaily(progress, 1); afterDaily(); }, '#3f7d3a'],
+    ['Miss a day', () => { debugShiftDaily(progress, 2); afterDaily(); }, '#a8483a'],
+    ['Reset', () => { debugResetDaily(progress); afterDaily(); }],
+  ]);
   row('Coins', [
     ['+100', () => { earn(progress, 100); renderCoins(); }],
     ['+1000', () => { earn(progress, 1000); renderCoins(); }],

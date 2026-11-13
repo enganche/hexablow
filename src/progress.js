@@ -22,6 +22,7 @@ const empty = () => ({
   noAds: false,
   bought: [],
   daily: 0,
+  dailyReward: { streak: 0, last: '', ready: [] },
 });
 
 export function loadProgress() {
@@ -52,7 +53,13 @@ export function loadProgress() {
       const seen = [...new Set(Array.isArray(raw.seen) ? raw.seen.filter((x) => typeof x === 'string') : [])];
       const bought = [...new Set(Array.isArray(raw.bought) ? raw.bought.filter((x) => typeof x === 'string') : [])];
       const daily = Number.isFinite(Number(raw.daily)) ? Number(raw.daily) : 0;
-      return { v: 2, stars, found, setsClaimed, seen, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, boosters, owned, equipped, noAds: raw.noAds === true, bought, daily };
+      const dr = raw.dailyReward ?? {};
+      const dailyReward = {
+        streak: Math.max(0, Math.min(28, Math.floor(Number(dr.streak)) || 0)),
+        last: typeof dr.last === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dr.last) ? dr.last : '',
+        ready: [...new Set(Array.isArray(dr.ready) ? dr.ready.filter((n) => economy.daily.milestones.some((m) => m.at === n)) : [])],
+      };
+      return { v: 2, stars, found, setsClaimed, seen, coins: Number.isFinite(c) && c >= 0 ? c : economy.startCoins, boosters, owned, equipped, noAds: raw.noAds === true, bought, daily, dailyReward };
     }
   } catch {
     /* corrupt or unavailable storage: start fresh */
@@ -119,6 +126,7 @@ export function resetProgress(p) {
   p.noAds = false;
   p.bought = [];
   p.daily = 0;
+  p.dailyReward = { streak: 0, last: '', ready: [] };
   save(p);
 }
 
@@ -292,5 +300,90 @@ export function dailyWait(p, cooldownHours) {
 
 export function markDaily(p) {
   p.daily = Date.now();
+  save(p);
+}
+
+// ---- daily rewards: a 7-day gift table that loops + chests at 7/14/21/28 days of streak ----
+export const dailyDays = economy.daily.days;
+export const dailyMilestones = economy.daily.milestones;
+const CYCLE = dailyMilestones.at(-1).at;
+
+/** Local calendar date as YYYY-MM-DD. In dev, `?today=YYYY-MM-DD` fakes the date to test streaks. */
+export function todayStr() {
+  if (import.meta.env?.DEV) {
+    const fake = new URLSearchParams(location.search).get('today');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fake ?? '')) return fake;
+  }
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const dayNum = (s) => {
+  const [y, m, d] = s.split('-').map(Number);
+  return Date.UTC(y, m - 1, d) / 86400000;
+};
+
+/**
+ * Where the player stands today.
+ * streak: current streak (0 once broken), canClaim, done: gift-table cards already taken this week,
+ * todayIdx: table index of today's gift (null when already claimed), chests: { [at]: 'locked'|'ready'|'done' }.
+ */
+export function dailyStatus(p, today = todayStr()) {
+  const d = p.dailyReward;
+  const gap = d.last ? dayNum(today) - dayNum(d.last) : Infinity;
+  const claimedToday = gap <= 0; // a clock set back counts as "already claimed" so it can't be farmed
+  const alive = gap === 1;
+  const streak = claimedToday || alive ? d.streak : 0;
+  const nextStreak = claimedToday ? null : alive && d.streak < CYCLE ? d.streak + 1 : 1;
+  const done = claimedToday ? (d.streak ? ((d.streak - 1) % 7) + 1 : 0) : alive && d.streak < CYCLE ? d.streak % 7 : 0;
+  const chests = {};
+  for (const m of dailyMilestones) chests[m.at] = d.ready.includes(m.at) ? 'ready' : streak >= m.at ? 'done' : 'locked';
+  return { streak, canClaim: !claimedToday, claimedToday, alive, nextStreak, done, todayIdx: claimedToday ? null : done, chests, readyCount: d.ready.length };
+}
+
+/** Take today's gift. Returns { day, reward, streak, chest } or null when nothing is claimable. */
+export function dailyClaim(p, today = todayStr()) {
+  const s = dailyStatus(p, today);
+  if (!s.canClaim) return null;
+  const idx = (s.nextStreak - 1) % 7;
+  const reward = dailyDays[idx];
+  grantPack(p, 'daily-reward', reward);
+  p.dailyReward.streak = s.nextStreak;
+  p.dailyReward.last = today;
+  const chest = dailyMilestones.find((m) => m.at === s.nextStreak)?.at ?? null;
+  if (chest && !p.dailyReward.ready.includes(chest)) p.dailyReward.ready.push(chest);
+  save(p);
+  return { day: idx + 1, reward, streak: s.nextStreak, chest };
+}
+
+/** Open a streak chest that was earned. Returns { at, coins, boosters, skin } or null. */
+export function dailyChestClaim(p, at) {
+  const m = dailyMilestones.find((x) => x.at === at);
+  if (!m || !p.dailyReward.ready.includes(at)) return null;
+  let coins = m.coins ?? 0;
+  let skin = null;
+  if (m.cosmetic) {
+    const item = cosmetics.items.find((i) => i.id === m.cosmetic);
+    if (item && !isOwned(p, item.id)) { p.owned.push(item.id); skin = item.name; }
+    else coins += m.ownedCoins ?? 0;
+  }
+  grantPack(p, 'daily-chest', { coins, boosters: m.boosters });
+  p.dailyReward.ready = p.dailyReward.ready.filter((n) => n !== at);
+  save(p);
+  return { at, coins, boosters: m.boosters ?? {}, skin };
+}
+
+/** Debug: make the last claim look `days` days older (1 = a new day began, 2 = a day was missed). */
+export function debugShiftDaily(p, days) {
+  const d = p.dailyReward;
+  if (!d.last) return;
+  const [y, m, day] = d.last.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, day - days));
+  d.last = t.toISOString().slice(0, 10);
+  save(p);
+}
+
+export function debugResetDaily(p) {
+  p.dailyReward = { streak: 0, last: '', ready: [] };
   save(p);
 }

@@ -19,5 +19,22 @@
     "reveal": { "name": "Reveal", "price": 10, "unlockLevel": 4, "desc": "Shows the exact number of a random empty cell." },
     "find": { "name": "Find", "price": 20, "unlockLevel": 6, "desc": "Tap an empty cell and its tile flies in." },
     "picker": { "name": "Picker", "price": 25, "unlockLevel": 8, "desc": "Open the whole list and send any tile to its cell." }
+  },
+  "daily": {
+    "days": [
+      { "coins": 20 },
+      { "coins": 25 },
+      { "boosters": { "reveal": 1 } },
+      { "coins": 30 },
+      { "coins": 40 },
+      { "boosters": { "find": 1 } },
+      { "boosters": { "picker": 1 } }
+    ],
+    "milestones": [
+      { "at": 7, "coins": 100, "boosters": { "reveal": 1, "find": 1 } },
+      { "at": 14, "coins": 200, "boosters": { "reveal": 2, "find": 2, "picker": 2 } },
+      { "at": 21, "coins": 300, "boosters": { "reveal": 3, "find": 3, "picker": 3 } },
+      { "at": 28, "coins": 500, "boosters": { "reveal": 5, "find": 5, "picker": 5 }, "cosmetic": "tile-snow", "ownedCoins": 300 }
+    ]
   }
 }
