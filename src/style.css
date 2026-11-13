@@ -1694,3 +1694,9 @@ button.album-card:active { transform:translateY(.8cqw); }
 /* "Unlocks at level 5" hint shown under the locked gift button */
 #home .dl-tip { position:absolute; top:31cqw; left:4cqw; right:auto; width:max-content; max-width:70cqw; z-index:6; padding:1.6cqw 3.2cqw; border-radius:3cqw; border:.7cqw solid var(--btn-rim,#f9f8e6); background:linear-gradient(var(--ui-card,#fffef0),var(--ui-selected,#fff3c6)); box-shadow:0 1cqw 0 var(--ui-edge,#d9a63a); color:var(--ui-ink,#7a4a10); font:900 3.6cqw/1.1 Nunito,sans-serif; white-space:nowrap; pointer-events:none; animation:dl-tip 2s ease both; }
 @keyframes dl-tip { 0% { opacity:0; transform:translateY(-1.5cqw); } 12%,80% { opacity:1; transform:none; } 100% { opacity:0; } }
+
+/* Slightly larger avatar / settings / back buttons (home + play screen) */
+#home .profile-trigger, #home #home-settings { width:14cqw; height:14cqw; border-radius:4.6cqw; }
+#home #home-settings svg { width:100%; height:100%; }
+#home .h-daily { top:21.5cqw; }
+:is(#hud .icon-btn, #levels-back) { width:12cqw; height:12cqw; padding:1.7cqw; border-radius:4cqw; }
