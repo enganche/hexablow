@@ -820,7 +820,26 @@ body {
 .res-home svg { width:7.6cqw; height:7.6cqw; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
 .res-home.hidden { display:none; }
 
-#result[data-outcome=win] .res-actions { grid-template-columns:auto 1fr; grid-template-areas:"reward reward" "home btn"; }
+#result[data-outcome=win] .res-actions { grid-template-columns:auto 1fr; grid-template-areas:"find" "btn"; grid-template-columns:1fr; }
+.res-map { border:0; background:none; }
+/* grid items whose area isn't in the template create implicit columns and push the buttons off-centre */
+.res-reward:empty, #result[data-outcome=lose] .res-newfind { display:none; }
+#result[data-outcome=lose] .res-actions { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+#result[data-outcome=lose] #result-home, #result[data-outcome=lose] #result-btn { justify-self:stretch; width:100%; min-width:0; justify-content:center; }
+#result[data-outcome=win] #result-btn { justify-content:space-between; }
+#result[data-outcome=win] #result-btn em { font-size:5.6cqw; }
+/* New-species strip: inline in the win screen, never blocks Continue. */
+.res-newfind { grid-area:find; justify-self:center; position:relative; display:flex; align-items:center; gap:3cqw; max-width:100%; padding:1.6cqw 5cqw 1.6cqw 3cqw; border-radius:7cqw; border:.8cqw solid var(--btn-rim,#fff); background:linear-gradient(var(--ui-card,#fffef0),var(--ui-selected,#fff3c6)); box-shadow:0 1.2cqw 0 var(--ui-edge,#d9a63a),0 0 5cqw #ffe27a88; color:var(--ui-ink,#7a4a10); animation:rn-in .6s cubic-bezier(.2,1.5,.4,1) both; }
+.res-newfind.hidden { display:none; }
+@keyframes rn-in { from { transform:scale(.5) translateY(6cqw); opacity:0; } to { transform:none; opacity:1; } }
+.res-newfind .rn-ic { font-size:12cqw; line-height:1; animation:fp-ic .8s cubic-bezier(.2,1.8,.4,1) both; }
+.res-newfind .rn-tx { display:flex; flex-direction:column; align-items:flex-start; gap:.6cqw; min-width:0; }
+.res-newfind .rn-new { font-size:3.2cqw; font-weight:900; letter-spacing:.3cqw; color:#fff; background:#ff6b3c; border-radius:4cqw; padding:.3cqw 2.6cqw; }
+.res-newfind b { font-size:5.4cqw; font-weight:900; line-height:1.1; }
+.res-newfind small { font-size:3cqw; font-weight:800; opacity:.75; }
+.res-newfind .fp-pips { margin:.4cqw 0 0; gap:1.4cqw; }
+.res-newfind .fp-pips i { width:3cqw; height:3cqw; }
+.res-newfind .fp-bonus { font-size:3.2cqw; padding:.4cqw 2.4cqw; }
 #result[data-outcome=win] #result-btn { padding:3.4cqw 6cqw; font-size:7cqw; }
 #result[data-outcome=win] .res-home { padding:3cqw 3.4cqw; }
 
@@ -1236,9 +1255,12 @@ body {
 .res-stats { font-size:.85em; opacity:.8; }
 .si-card .si-stars { display:flex; justify-content:center; gap:2cqw; margin:1cqw 0 2cqw; }
 .si-card .si-stars svg { width:13cqw; height:13cqw; fill:#ffd84a; stroke:var(--btn-edge,#c98a1a); stroke-width:1.2; stroke-linejoin:round; filter:drop-shadow(0 .6cqw 0 var(--btn-edge,#c98a1a)); }
-.si-card h4 { margin:0 0 2cqw; }
-.si-list { list-style:none; margin:0 0 2cqw; padding:0; text-align:left; font-size:3.6cqw; font-weight:700; color:#5b4a2a; display:grid; gap:1.4cqw; }
+.si-card { text-align:center; }
+.si-card h4 { margin:0 0 2cqw; font-size:7.4cqw; text-align:center; text-wrap:balance; }
+.si-card .fp-set { text-align:center; text-wrap:balance; }
+.si-list { list-style:none; margin:0 0 2cqw; padding:0; text-align:center; font-size:3.6cqw; font-weight:700; color:#5b4a2a; display:grid; gap:1.4cqw; }
 .si-list b { display:inline-block; width:6cqw; text-align:center; color:#e04a5a; }
+.si-list li { display:flex; justify-content:center; align-items:center; gap:1cqw; }
 
 /* hearts lesson: slim pill, no gardener, so it never covers the board */
 #tutorial.compact #tut-gardener { display:none; }

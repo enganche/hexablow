@@ -272,6 +272,7 @@ function leaveResult() {
   resultTimers = [];
   result.classList.add('hidden');
   $('res-find').classList.add('hidden');
+  $('res-newfind').classList.add('hidden');
   result.classList.remove('show-art', 'show-map', 'show-actions');
   stage.classList.remove('result-mode', 'lose');
   result.querySelectorAll('.fly-coin').forEach((n) => n.remove());
@@ -315,13 +316,13 @@ function showResult(o) {
   $('res-art').innerHTML = o.win ? winArt(o) : loseArt(o);
   result.dataset.outcome = o.win ? 'win' : 'lose';
   result.setAttribute('aria-label', o.title);
-  $('res-reward').innerHTML = o.win ? `<strong>${COIN} +${o.reward}</strong>` : '';
+  $('res-reward').innerHTML = '';
   home.innerHTML = `${HOME_SVG}${o.win ? '' : '<span>Home</span>'}`;
   if (o.win) confetti($('res-confetti'));
   else $('res-confetti').innerHTML = '';
   btn.disabled = false;
   if (o.win) {
-    btn.innerHTML = '<span>Continue</span><span aria-hidden="true">›</span>';
+    btn.innerHTML = `<span>Continue</span><em>${COIN} +${o.reward}</em>`;
     btn.classList.remove('alt');
     btn.onclick = () => {
       btn.disabled = true;
@@ -333,8 +334,7 @@ function showResult(o) {
       }, 520);
     };
     rev.classList.add('hidden');
-    home.classList.remove('hidden');
-    home.onclick = () => { audio.tap(); o.onHome(); };
+    home.classList.add('hidden');
   } else {
     btn.textContent = '↻  Try again';
     btn.classList.add('alt');
@@ -358,33 +358,25 @@ function showResult(o) {
   later(() => result.classList.add('show-actions'), o.win ? 1200 : 800);
   const afterIntro = () => { if (o.win && o.find?.species) showFind(o.find); };
   if (o.win && o.starsIntro) later(() => showStarsIntro(afterIntro), 1500);
-  else later(afterIntro, 1500);
+  else later(afterIntro, 1200); // together with the action row, so the layout settles once
 }
 
 /** Reward-style reveal for a newly discovered species: dim backdrop, glowing rays, big bounce-in icon. */
 function showFind({ species, set, bonus }) {
   const { have, total } = setProgress(progress, set.id);
   const pips = Array.from({ length: total }, (_, i) => `<i class="${i < have ? 'on' : ''}"></i>`).join('');
-  const el = $('res-find');
+  const el = $('res-newfind');
   el.innerHTML =
-    '<div class="fp-card">' +
-    '<div class="fp-rays"></div>' +
-    '<span class="fp-new">NEW!</span>' +
-    `<div class="fp-ic">${species.icon}</div>` +
-    `<h4>${species.name}</h4>` +
-    `<p class="fp-set">${set.name} collection</p>` +
+    `<div class="rn-ic">${species.icon}</div>` +
+    '<div class="rn-tx">' +
+    '<span class="rn-new">NEW!</span>' +
+    `<b>${species.name}</b>` +
+    `<small>${set.name} collection</small>` +
     `<div class="fp-pips" aria-label="${have} of ${total}">${pips}</div>` +
     (bonus ? `<div class="fp-bonus">Set complete! ${COIN} +${bonus}</div>` : '') +
-    '<button class="claim-btn fp-btn">Collect</button>' +
     '</div>';
-  el.classList.remove('hidden', 'out');
-  confetti($('res-confetti'));
+  el.classList.remove('hidden');
   audio.win();
-  el.querySelector('.fp-btn').onclick = () => {
-    audio.tap();
-    el.classList.add('out');
-    later(() => el.classList.add('hidden'), 260);
-  };
 }
 
 /** Level 3 first clear: explain how stars are earned. */
@@ -479,7 +471,11 @@ const game = new Game($('game'), {
       sub: `<b>${levels[levelIdx].name}</b> · ${praise} · ${note}`,
       starsIntro: rec.firstClear && levels[levelIdx].id === 3,
       next: last ? 'You grew every garden!' : `Next: ${levels[levelIdx + 1].name}`,
-      onClaim: () => { startLevel(last ? 0 : levelIdx + 1); playLevelIntro(); },
+      onClaim: () => {
+        // first clear of level 3 (end of the tutorial run) -> back to the home screen
+        if (rec.firstClear && levels[levelIdx].id === 3) { showHome(); return; }
+        startLevel(last ? 0 : levelIdx + 1); playLevelIntro();
+      },
       onHome: showHome,
     });
   },
