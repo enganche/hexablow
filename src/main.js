@@ -14,6 +14,7 @@ import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecie
 import { boosterIds, boosterCount, buyBooster, useBooster, packPrice, grantBooster } from './progress.js';
 import { grantPack, wasBought, dailyWait, markDaily } from './progress.js';
 import shopCfg from './shop.json';
+import { plantMaterial, critterMaterial, fishMaterial, butterflyMaterial, dogMaterial, CRITTERS } from './garden.js';
 import { shopArt } from './shopArt.js';
 import { hasSeen, markSeen, scoreRun, loadProgress, recordWin, starsFor, totalStars, completedCount, resetProgress, coinsOf, canAfford, spend, earn, winReward } from './progress.js';
 
@@ -1135,14 +1136,59 @@ function renderAlbum() {
     grid.className = 'album-grid';
     for (const sp of speciesOfSet(set.id)) {
       const got = hasSpecies(progress, sp.id);
-      const card = document.createElement('div');
+      const card = document.createElement(got ? 'button' : 'div');
       card.className = `album-card${got ? '' : ' unknown'}`;
+      if (got) { card.type = 'button'; card.onclick = () => { audio.tap(); showGlossary(sp, set); }; }
       card.setAttribute('aria-label', got ? sp.name : `Undiscovered, clear level ${sp.level}`);
       card.innerHTML = `<span class="ic" aria-hidden="true">${sp.icon}</span><span class="nm">${got ? sp.name : `Level ${sp.level}`}</span>`;
       grid.appendChild(card);
     }
     body.appendChild(grid);
   }
+}
+/** Canvas holding the idle sprite of a species (same art the lawn uses). */
+function speciesSprite(id) {
+  let mat;
+  if (id === 'koi') mat = fishMaterial();
+  else if (id === 'butterfly') mat = butterflyMaterial(0);
+  else if (id === 'fox') mat = dogMaterial(0, 'fox');
+  else if (CRITTERS[id]) mat = critterMaterial(id);
+  else mat = plantMaterial(id);
+  const src = mat.map.image;
+  const c = document.createElement('canvas');
+  c.width = src.width; c.height = src.height;
+  c.getContext('2d').drawImage(src, 0, 0);
+  c.className = `gl-sprite gl-${id}`;
+  return c;
+}
+
+/** Glossary card: the animal idling on a hex of lawn, plus what we know about it. */
+function showGlossary(sp, set) {
+  const el = $('album-pop');
+  el.innerHTML =
+    '<div class="gl-card">' +
+    '<button class="buy-x gl-x" type="button" aria-label="Close">×</button>' +
+    `<h4>${sp.name}</h4>` +
+    `<p class="gl-tag">${sp.kind} · ${set.name}</p>` +
+    '<div class="gl-row"><div class="gl-stage"><svg class="gl-hex" viewBox="0 0 200 190" aria-hidden="true">' +
+    '<path d="M39.4 115 100 150v11l-60.6-35Z" fill="#9c6836"/><path d="M100 150l60.6-35v11L100 161Z" fill="#7d4e28"/>' +
+    '<path d="M39.4 115 100 150v5l-60.6-35Z" fill="#b57b43"/><path d="M100 150l60.6-35v5L100 155Z" fill="#a06a38"/>' +
+    '<path d="M100 10l60.6 35v70L100 150 39.4 115V45Z" fill="#70c63f"/>' +
+    '<g fill="#66bc38"><ellipse cx="76" cy="58" rx="14" ry="8"/><ellipse cx="132" cy="96" rx="16" ry="9"/><ellipse cx="116" cy="40" rx="9" ry="5"/></g>' +
+    '<g fill="#7acd46"><ellipse cx="82" cy="104" rx="14" ry="7"/><ellipse cx="142" cy="60" rx="10" ry="6"/></g>' +
+    '<g fill="#66bc38"><rect x="60" y="84" width="3" height="3"/><rect x="120" y="116" width="3" height="3"/><rect x="96" y="22" width="3" height="3"/><rect x="146" y="80" width="3" height="3"/></g></svg></div>' +
+    '<ul class="gl-info">' +
+    `<li><b>Habitat</b><span>${sp.habitat}</span></li>` +
+    `<li><b>Found</b><span>Cleared Level ${sp.level}</span></li>` +
+    '</ul>' +
+    '</div>' +
+    `<p class="gl-fact">${sp.fact}</p>` +
+    '</div>';
+  el.querySelector('.gl-stage').appendChild(speciesSprite(sp.id));
+  el.classList.remove('hidden', 'out');
+  const close = () => { el.classList.add('out'); setTimeout(() => el.classList.add('hidden'), 260); };
+  el.querySelector('.gl-x').onclick = () => { audio.tap(); close(); };
+  el.onclick = (e) => { if (e.target === el) close(); };
 }
 $('home-album').addEventListener('click', () => {
   audio.unlock();

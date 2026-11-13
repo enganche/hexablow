@@ -1,24 +1,171 @@
 {
   "sets": [
-    { "id": "meadow", "name": "Meadow", "bonus": 30 },
-    { "id": "pond", "name": "Pond", "bonus": 40 },
-    { "id": "orchard", "name": "Orchard", "bonus": 50 }
+    {
+      "id": "meadow",
+      "name": "Meadow",
+      "bonus": 30
+    },
+    {
+      "id": "pond",
+      "name": "Pond",
+      "bonus": 40
+    },
+    {
+      "id": "orchard",
+      "name": "Orchard",
+      "bonus": 50
+    }
   ],
   "species": [
-    { "id": "daisy", "set": "meadow", "name": "Daisy", "icon": "🌼", "level": 1 },
-    { "id": "tulip", "set": "meadow", "name": "Tulip", "icon": "🌷", "level": 2 },
-    { "id": "bee", "set": "meadow", "name": "Bee", "icon": "🐝", "level": 3 },
-    { "id": "butterfly", "set": "meadow", "name": "Butterfly", "icon": "🦋", "level": 4 },
-    { "id": "ladybug", "set": "meadow", "name": "Ladybug", "icon": "🐞", "level": 5 },
-    { "id": "turtle", "set": "pond", "name": "Turtle", "icon": "🐢", "level": 6 },
-    { "id": "frog", "set": "pond", "name": "Frog", "icon": "🐸", "level": 7 },
-    { "id": "duck", "set": "pond", "name": "Duck", "icon": "🦆", "level": 8 },
-    { "id": "koi", "set": "pond", "name": "Koi", "icon": "🐟", "level": 9 },
-    { "id": "snail", "set": "pond", "name": "Snail", "icon": "🐌", "level": 10 },
-    { "id": "apple", "set": "orchard", "name": "Apple", "icon": "🍎", "level": 11 },
-    { "id": "owl", "set": "orchard", "name": "Owl", "icon": "🦉", "level": 12 },
-    { "id": "hedgehog", "set": "orchard", "name": "Hedgehog", "icon": "🦔", "level": 13 },
-    { "id": "mushroom", "set": "orchard", "name": "Mushroom", "icon": "🍄", "level": 14 },
-    { "id": "fox", "set": "orchard", "name": "Fox", "icon": "🦊", "level": 15 }
+    {
+      "id": "daisy",
+      "set": "meadow",
+      "name": "Daisy",
+      "icon": "🌼",
+      "level": 1,
+      "kind": "Flower",
+      "habitat": "Sunny meadows",
+      "fact": "Daisies close their petals at night and open again with the morning sun."
+    },
+    {
+      "id": "tulip",
+      "set": "meadow",
+      "name": "Tulip",
+      "icon": "🌷",
+      "level": 2,
+      "kind": "Flower",
+      "habitat": "Spring meadows",
+      "fact": "A tulip bulb sleeps underground all winter, then blooms as soon as it warms up."
+    },
+    {
+      "id": "bee",
+      "set": "meadow",
+      "name": "Bee",
+      "icon": "🐝",
+      "level": 3,
+      "kind": "Insect",
+      "habitat": "Flowery meadows",
+      "fact": "A bee visits thousands of flowers a day and dances to tell friends where the nectar is."
+    },
+    {
+      "id": "butterfly",
+      "set": "meadow",
+      "name": "Butterfly",
+      "icon": "🦋",
+      "level": 4,
+      "kind": "Insect",
+      "habitat": "Sunny gardens",
+      "fact": "Butterflies taste with their feet and start life as a hungry little caterpillar."
+    },
+    {
+      "id": "ladybug",
+      "set": "meadow",
+      "name": "Ladybug",
+      "icon": "🐞",
+      "level": 5,
+      "kind": "Insect",
+      "habitat": "Leaves and stems",
+      "fact": "Ladybugs eat aphids, so gardeners love them. Their spots warn birds: not tasty!"
+    },
+    {
+      "id": "turtle",
+      "set": "pond",
+      "name": "Turtle",
+      "icon": "🐢",
+      "level": 6,
+      "kind": "Reptile",
+      "habitat": "Pond banks",
+      "fact": "Turtles carry their shell like a house and love to bask in the sun on a log."
+    },
+    {
+      "id": "frog",
+      "set": "pond",
+      "name": "Frog",
+      "icon": "🐸",
+      "level": 7,
+      "kind": "Amphibian",
+      "habitat": "Ponds and reeds",
+      "fact": "Frogs breathe partly through their skin and can jump many times their body length."
+    },
+    {
+      "id": "duck",
+      "set": "pond",
+      "name": "Duck",
+      "icon": "🦆",
+      "level": 8,
+      "kind": "Bird",
+      "habitat": "Ponds and lakes",
+      "fact": "A duck's feathers are waterproof, so it stays dry even after a long swim."
+    },
+    {
+      "id": "koi",
+      "set": "pond",
+      "name": "Koi",
+      "icon": "🐟",
+      "level": 9,
+      "kind": "Fish",
+      "habitat": "Calm ponds",
+      "fact": "Koi can live for decades and learn to swim up for snack time."
+    },
+    {
+      "id": "snail",
+      "set": "pond",
+      "name": "Snail",
+      "icon": "🐌",
+      "level": 10,
+      "kind": "Mollusk",
+      "habitat": "Damp gardens",
+      "fact": "A snail glides on a trail of slime and tucks into its shell when it's scared."
+    },
+    {
+      "id": "apple",
+      "set": "orchard",
+      "name": "Apple",
+      "icon": "🍎",
+      "level": 11,
+      "kind": "Fruit tree",
+      "habitat": "Orchards",
+      "fact": "Apple blossoms turn into crunchy apples, a favourite snack of the whole orchard."
+    },
+    {
+      "id": "owl",
+      "set": "orchard",
+      "name": "Owl",
+      "icon": "🦉",
+      "level": 12,
+      "kind": "Bird",
+      "habitat": "Quiet tree branches",
+      "fact": "Owls can turn their heads almost all the way around and fly without a sound."
+    },
+    {
+      "id": "hedgehog",
+      "set": "orchard",
+      "name": "Hedgehog",
+      "icon": "🦔",
+      "level": 13,
+      "kind": "Mammal",
+      "habitat": "Hedges and leaf piles",
+      "fact": "A hedgehog curls into a prickly ball when it senses danger."
+    },
+    {
+      "id": "mushroom",
+      "set": "orchard",
+      "name": "Mushroom",
+      "icon": "🍄",
+      "level": 14,
+      "kind": "Fungus",
+      "habitat": "Shady forest floor",
+      "fact": "Mushrooms pop up overnight after rain, spreading tiny spores in the air."
+    },
+    {
+      "id": "fox",
+      "set": "orchard",
+      "name": "Fox",
+      "icon": "🦊",
+      "level": 15,
+      "kind": "Mammal",
+      "habitat": "Orchard edges",
+      "fact": "Foxes are clever and quick, with a big fluffy tail that keeps them warm when they sleep."
+    }
   ]
 }
