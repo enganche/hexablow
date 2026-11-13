@@ -1,5 +1,12 @@
 import './style.css';
 import { boosterArt } from './boosterArt.js';
+import menuBgHoney from './assets/menu-bg/honey.webp';
+import menuBgOcean from './assets/menu-bg/ocean.webp';
+import menuBgLilac from './assets/menu-bg/lilac.webp';
+import menuBgSnow from './assets/menu-bg/snow.webp';
+import menuBgSakura from './assets/menu-bg/sakura.webp';
+import menuBgAutumn from './assets/menu-bg/autumn.webp';
+const MENU_BG = { 'tile-honey': menuBgHoney, 'tile-ocean': menuBgOcean, 'tile-lilac': menuBgLilac, 'tile-snow': menuBgSnow, 'tile-sakura': menuBgSakura, 'tile-autumn': menuBgAutumn };
 import { initProfile } from './profile.js';
 import levels from './levels.json';
 import { Game } from './game.js';
@@ -84,6 +91,7 @@ function applyCosmetics() {
   root.style.setProperty('--tile-b', tile.face[1]);
   root.style.setProperty('--tile-rim', tile.rim[0]);
   root.style.setProperty('--tile-base', tile.base);
+  root.style.setProperty('--menu-bg', `url(${MENU_BG[tile.id] || menuBgHoney})`);
 }
 
 // ---- Coins ----

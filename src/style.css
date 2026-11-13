@@ -21,8 +21,8 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  /* fallback only: the #bg scene covers the window; match its colours so no beige edge can show */
-  background: linear-gradient(var(--sky-a, #89d9ed), var(--sky-b, #c9f0e8) 55%, var(--hill-2b, #54af45));
+  /* fullscreen backdrop behind everything, coloured per equipped theme */
+  background: linear-gradient(var(--sky-a, #89d9ed), var(--sky-b, #c9f0e8) 45%, var(--sky-c, #f3f7ce) 62%, var(--hill-2a, #a9df5c) 78%, var(--hill-3, #50aa47));
   color: var(--ink);
   overscroll-behavior: none;
   user-select: none;
@@ -533,8 +533,6 @@ body {
 
 /* ---- Home screen ---- */
 #home {position:absolute;inset:0;padding-bottom:calc(8cqw + env(safe-area-inset-bottom));box-sizing:border-box;z-index:20;overflow:hidden;display:flex;flex-direction:column;align-items:center;background:transparent;color:var(--ui-ink,#315b39);transition:opacity .25s ease;}
-/* square backdrop behind everything, always covering the full window */
-#bg {position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;display:block;z-index:0;}
 #stage {z-index:1;}
 /* on home the 9:16 frame is see-through and the game layer is hidden */
 #stage:has(#home:not(.hidden)) {background:transparent;}
@@ -555,11 +553,10 @@ body {
 .h-cloud::after {width:9cqw;height:9cqw;left:14cqw;}
 .cloud-left {left:-8cqw;top:34cqw;transform:rotate(-6deg);}
 .cloud-right {right:-10cqw;top:64cqw;transform:scale(.8);}
-.h-brand {text-align:center;margin-top:14cqw;z-index:2;transform:rotate(-4deg);}
-.h-title {margin:0;font-size:min(20cqw,10.8dvh);line-height:.89;font-weight:800;letter-spacing:-.65cqw;paint-order:stroke fill;-webkit-text-stroke:1.3cqw #fffde6;filter:drop-shadow(0 1.3cqw 0 var(--leaf-edge,#438243)) drop-shadow(0 1cqw 1cqw #568d5530);}
-.h-title span {display:block;color:var(--leaf-lo,#68bb3c);text-shadow:0 .6cqw 0 var(--leaf-edge,#398c34);}
-.h-title span+span {color:var(--btn-mid,#ffce47);text-shadow:0 .6cqw 0 var(--btn-edge,#dc8d24);font-size:min(22.5cqw,12.2dvh);letter-spacing:-.8cqw;}
-.h-brand p {font-size:2.8cqw;font-weight:800;letter-spacing:.65cqw;color:#447b62;margin:5cqw 0 0;transform:rotate(4deg);}
+.h-brand {text-align:center;margin-top:14cqw;z-index:2;}
+.h-title {margin:0;line-height:0;}
+.h-title img {display:block;width:min(56cqw,34dvh);height:auto;margin:0 auto;filter:drop-shadow(0 1cqw 1cqw #568d5530);}
+.h-brand p {font-size:2.8cqw;font-weight:800;letter-spacing:.65cqw;color:#447b62;margin:5cqw 0 0;}
 .h-hero {position:relative;width:83cqw;margin-top:0;text-align:center;z-index:2;}
 .h-board {display:block;width:100%;filter:drop-shadow(0 2cqw 1cqw #52782a22);animation:garden-breathe 5s ease-in-out infinite;}
 .h-instruction {font-size:3.4cqw;font-weight:800;color:#52865e;margin:-2cqw 0 0;}
@@ -573,7 +570,7 @@ body {
 @media(prefers-reduced-motion:reduce) {.h-board {animation:none;}}
 
 /* ---- Coins, toolbar, hint ---- */
-.coin { display:inline-block; width:1em; height:1em; vertical-align:-.15em; background:radial-gradient(circle at 35% 30%, #fff1a8, #f5c84b 55%, #d99a1c); border-radius:50%; border:2px solid #b87912; box-sizing:border-box; }
+.coin { display:inline-block; width:1em; height:1em; vertical-align:-.15em; background:url(./assets/coin.png) center/contain no-repeat; }
 #coin-hud { position:absolute; z-index:31; box-sizing:border-box; height:36px; pointer-events:none; }
 #coin-hud.hidden { display:none; }
 .coin-pill { display:flex; align-items:center; gap:5px; padding:4px 10px 4px 7px; border-radius:999px; background:var(--panel); border:1px solid var(--edge); font-weight:800; font-size:14px; box-shadow:0 2px 0 var(--edge); }
@@ -802,7 +799,7 @@ body {
 #res-confetti i { position:absolute; top:-4cqw; display:block; opacity:0; }
 #result.show-art #res-confetti i { animation-name:confetti-fall; animation-timing-function:linear; animation-iteration-count:2; animation-fill-mode:both; }
 @keyframes confetti-fall { 0% { opacity:1; transform:translate(0,0) rotate(0); } 100% { opacity:1; transform:translate(var(--sway), 118cqh) rotate(var(--spin)); } }
-.fly-coin { position:absolute; width:6cqw; height:6cqw; margin:-3cqw 0 0 -3cqw; border-radius:50%; background:radial-gradient(circle at 35% 30%, #fff1a8, #f5c84b 55%, #d99a1c); border:.7cqw solid #b87912; animation:coin-fly .7s cubic-bezier(.2,.7,.3,1) forwards; pointer-events:none; }
+.fly-coin { position:absolute; width:6cqw; height:6cqw; margin:-3cqw 0 0 -3cqw; border-radius:50%; background:url(./assets/coin.png) center/contain no-repeat; animation:coin-fly .7s cubic-bezier(.2,.7,.3,1) forwards; pointer-events:none; }
 @keyframes coin-fly { 0% { opacity:1; transform:translate(0,0) scale(.6); } 100% { opacity:0; transform:translate(var(--dx), var(--dy)) scale(1.1) rotate(300deg); } }
 @media (prefers-reduced-motion: reduce) { .ra-rays, #res-confetti i { animation:none !important; } }
 
@@ -1334,10 +1331,8 @@ body {
 .lv-play-label::after { content:''; position:absolute; left:calc(50% - 1.4cqw); bottom:-2cqw; border-left:1.4cqw solid transparent; border-right:1.4cqw solid transparent; border-top:1.7cqw solid var(--btn-rim,#fff9df); }
 .lv-node:focus-visible { outline:.8cqw solid var(--ui-ink,#416e3d); outline-offset:2cqw; border-radius:3cqw; }
 
-/* Shared portrait garden, framed independently of the desktop backdrop. */
-#bg { filter:saturate(1.18); opacity:1; }
 :is(#home,#shop,#album) { isolation:isolate; }
-.menu-garden { filter:saturate(1.18); position:absolute; inset:0; width:100%; height:100%; z-index:-2; pointer-events:none; }
+.menu-garden { position:absolute; inset:0; width:100%; height:100%; z-index:-2; pointer-events:none; background-image:var(--menu-bg, url(./assets/menu-bg/honey.webp)); background-size:cover; background-position:center; }
 #home .h-cloud { display:none; }
 :is(#shop,#album) { background:var(--ui-bg); }
 :is(#shop,#album)::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(180deg,color-mix(in srgb,var(--ui-bg) 52%,transparent),color-mix(in srgb,var(--ui-bg) 70%,transparent) 35%,color-mix(in srgb,var(--ui-bg) 58%,transparent) 78%,transparent); }

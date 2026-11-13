@@ -11,7 +11,7 @@
       "id": "starter",
       "name": "Seedling Starter",
       "once": true,
-      "art": "crate",
+      "art": "starter",
       "tone": "gold",
       "price": 0.99,
       "was": 1.99,
@@ -28,7 +28,7 @@
     {
       "id": "sprout",
       "name": "Sprout Bundle",
-      "art": "pouch",
+      "art": "bundleSprout",
       "tone": "leaf",
       "price": 4.99,
       "coins": 500,
@@ -41,7 +41,7 @@
     {
       "id": "bloom",
       "name": "Bloom Bundle",
-      "art": "basket",
+      "art": "bundleBasket",
       "tone": "rose",
       "price": 9.99,
       "coins": 1300,
@@ -54,7 +54,7 @@
     {
       "id": "harvest",
       "name": "Harvest Bundle",
-      "art": "barrow",
+      "art": "bundleBarrow",
       "tone": "sun",
       "price": 19.99,
       "coins": 3200,

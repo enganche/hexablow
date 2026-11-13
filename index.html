@@ -13,39 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <!-- Shared garden artwork; portrait composition keeps the menu center clear. -->
-    <svg id="bg" viewBox="0 0 600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <defs>
-        <linearGradient id="garden-sky" x2="0" y2="1"><stop style="stop-color:var(--sky-a)"/><stop offset=".56" style="stop-color:var(--sky-b)"/><stop offset="1" style="stop-color:var(--sky-c)"/></linearGradient>
-        <linearGradient id="garden-lawn" x2=".25" y2="1"><stop style="stop-color:var(--hill-2a)"/><stop offset="1" style="stop-color:var(--hill-2b)"/></linearGradient>
-        <linearGradient id="garden-path" x2="0" y2="1"><stop stop-color="#faf0c9"/><stop offset="1" stop-color="#dcc38d"/></linearGradient>
-        <radialGradient id="garden-light"><stop stop-color="#fffce1" stop-opacity=".85"/><stop offset="1" stop-color="#fffce1" stop-opacity="0"/></radialGradient>
-        <g id="garden-leaf"><path d="M0 0Q-29-34-8-66Q24-49 0 0" fill="currentColor"/><path d="M0-5-7-52" stroke="#ffffff" stroke-opacity=".2" stroke-width="2" fill="none"/></g>
-        <g id="garden-daisy"><path d="M0 0q-6 19-2 35" fill="none" stroke="#508649" stroke-width="3"/><path d="M-2 28q-18 0-16-13 14 0 16 13m-1-7q16-1 17-12-13 0-17 12" fill="#77a956"/><g fill="currentColor"><ellipse cy="-8" rx="5" ry="9"/><ellipse cy="-8" rx="5" ry="9" transform="rotate(72)"/><ellipse cy="-8" rx="5" ry="9" transform="rotate(144)"/><ellipse cy="-8" rx="5" ry="9" transform="rotate(216)"/><ellipse cy="-8" rx="5" ry="9" transform="rotate(288)"/></g><circle r="5" fill="#edbd53"/><circle cx="-1" cy="-1" r="2" fill="#ffe7a1"/></g>
-        <g id="garden-shrub"><path d="M-70 8Q-83-19-57-29Q-48-64-15-42Q9-69 33-40Q64-48 70-16Q91 8 64 20H-50Z" fill="currentColor"/><path d="M-56-26Q-40-46-19-29M3-39Q21-49 32-28M45-22q15-6 20 8" fill="none" stroke="#ffffff" stroke-opacity=".15" stroke-width="7" stroke-linecap="round"/></g>
-        <symbol id="garden-scene" viewBox="0 0 600 1000">
-          <path d="M0 0H600V1000H0Z" fill="url(#garden-sky)"/>
-          <ellipse cx="410" cy="220" rx="310" ry="340" fill="url(#garden-light)"/>
-          <g fill="#fffdf0" opacity=".5"><path d="M-35 260q18-20 38-12 8-35 43-26 19-24 42 4 31-5 39 20 22-1 26 14Z"/><path d="M438 345q15-18 33-11 8-29 34-22 19-21 39 5 28-5 35 22 22 0 30 16H438Z"/></g>
-          <path d="M0 530Q100 452 231 505T600 475V1000H0Z" style="fill:var(--hill-1)"/>
-          <path d="M0 606Q158 512 340 584T600 555V1000H0Z" fill="url(#garden-lawn)"/>
-          <path d="M342 565C234 632 499 680 363 779S201 900 253 1000H448C332 902 469 835 438 752S293 637 361 565" fill="url(#garden-path)" opacity=".83"/>
-          <path d="M0 730Q91 674 192 722L221 1000H0Z" style="fill:var(--hill-3)" opacity=".35"/>
-          <g fill="none" stroke="#fff8da" stroke-width="3" opacity=".35"><path d="m35 632 5-8m4 10 5-8m463 68 5-8m5 10 4-7M99 814l5-8m5 10 4-7"/></g>
-          <g stroke="#c2b48b" stroke-width="3" fill="#fff2ce" opacity=".85"><path d="M-10 686 135 708v10L-10 696ZM-10 716l145 22v9L-10 727Z"/><path d="m14 670 7-7 7 9v82H14Zm55 8 7-7 7 9v81H69Zm55 8 7-7 7 9v78h-14Z"/></g>
-          <g style="color:var(--hill-3)"><use href="#garden-shrub" transform="translate(9 790) scale(1.2)"/><use href="#garden-shrub" transform="translate(588 734) scale(1.1)"/></g>
-          <g color="#8db65a"><use href="#garden-shrub" transform="translate(38 876) scale(.9)"/><use href="#garden-shrub" transform="translate(568 895)"/></g>
-          <g color="#fff7d8"><use href="#garden-daisy" transform="translate(33 781) rotate(-12)"/><use href="#garden-daisy" transform="translate(82 832) scale(.7)"/><use href="#garden-daisy" transform="translate(559 814) rotate(15)"/></g>
-          <g color="#eaa2a5"><use href="#garden-daisy" transform="translate(15 854) scale(1.1)"/><use href="#garden-daisy" transform="translate(586 866) scale(.8)"/></g>
-          <path d="M0 946Q131 895 270 960T600 927V1000H0Z" style="fill:var(--hill-3)"/>
-          <g color="#bad27b"><use href="#garden-leaf" transform="translate(25 1000) rotate(-32) scale(1.7)"/><use href="#garden-leaf" transform="translate(52 1000) rotate(24) scale(1.5)"/><use href="#garden-leaf" transform="translate(571 1000) rotate(42) scale(1.8)"/><use href="#garden-leaf" transform="translate(547 1005) rotate(-24) scale(1.3)"/></g>
-          <g color="#659b57" opacity=".8"><use href="#garden-leaf" transform="translate(-8 155) rotate(154) scale(1.6)"/><use href="#garden-leaf" transform="translate(0 210) rotate(120) scale(1.2)"/><use href="#garden-leaf" transform="translate(606 91) rotate(-125) scale(1.6)"/><use href="#garden-leaf" transform="translate(609 155) rotate(-155) scale(1.1)"/></g>
-          <g fill="#fff9d7" opacity=".65"><circle cx="104" cy="665" r="2"/><circle cx="510" cy="614" r="2"/><circle cx="153" cy="887" r="2.5"/><circle cx="475" cy="927" r="2"/></g>
-        </symbol>
-      </defs>
-      <use href="#garden-scene" width="600" height="1000"/>
-    </svg>
-
     <div id="stage">
     <div id="play-bg" aria-hidden="true"></div>
     <div id="tray-panel" aria-hidden="true"></div>
@@ -124,19 +91,19 @@
 
     <!-- home screen -->
     <section id="home" aria-label="Gardendoku home">
-      <svg class="menu-garden" viewBox="0 0 600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#garden-scene" width="600" height="1000"/></svg>
+      <div class="menu-garden" aria-hidden="true"></div>
       <button id="home-shop" class="icon-btn h-gear h-shop" aria-label="Garden shop"><img src="/src/assets/nav-shop.png" alt="" aria-hidden="true"></button>
       <button id="home-album" class="icon-btn h-gear h-album" aria-label="Garden album"><img src="/src/assets/nav-album.png" alt="" aria-hidden="true"></button>
       <button id="home-daily" class="icon-btn h-gear h-daily" aria-label="Daily gifts"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M7 18h26v17q0 2-2 2H9q-2 0-2-2Z" fill="#fff4c4" stroke="#8a5a2a" stroke-width="2.2" stroke-linejoin="round"/><path d="M4 12h32v7H4Z" fill="#ff7a62" stroke="#8a3a2e" stroke-width="2.2" stroke-linejoin="round"/><path d="M17 12h6v25h-6Z" fill="#ffd34a" stroke="#8a5a2a" stroke-width="2"/><path d="M20 12C14 12 10 8 12 5s7 1 8 7Zm0 0c6 0 10-4 8-7s-7 1-8 7Z" fill="#ffd34a" stroke="#8a5a2a" stroke-width="2" stroke-linejoin="round"/></svg></button>
       <button id="home-settings" class="icon-btn h-gear" aria-label="Settings"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="m16 4 8 0 1 5 4 2 5-1 4 7-4 4v3l3 4-5 6-5-2-3 2-1 4h-8l-1-5-4-2-5 1-3-7 4-3v-4l-3-4 5-6 5 2 3-2Z" fill="#fff1b7" stroke="#547c3c" stroke-width="2.2" stroke-linejoin="round"/><circle cx="20" cy="21" r="7" fill="#91be59" stroke="#547c3c" stroke-width="2"/><path d="M16 20a4 4 0 0 1 6-3" fill="none" stroke="#d8ec9e" stroke-width="2" stroke-linecap="round"/></svg></button>
-      <div class="h-cloud cloud-left"></div><div class="h-cloud cloud-right"></div><header class="h-brand"><h1 class="h-title"><span>Garden</span><span>doku</span></h1></header>
+      <div class="h-cloud cloud-left"></div><div class="h-cloud cloud-right"></div><header class="h-brand"><h1 class="h-title"><img src="/src/assets/logo.webp" alt="Garden doku" draggable="false"></h1></header>
       <div class="h-hero"><svg class="h-board" viewBox="0 0 300 280" aria-hidden="true"><defs><polygon id="home-hex" points="0,-35 30,-17 30,17 0,35 -30,17 -30,-17" stroke-linejoin="round"/><linearGradient id="leaf" x2="0" y2="1"><stop stop-color="#bbef54"/><stop offset="1" stop-color="#78c528"/></linearGradient><linearGradient id="honey" x2="0" y2="1"><stop style="stop-color:var(--tile-a,#ffdb65)"/><stop offset="1" style="stop-color:var(--tile-b,#ffa936)"/></linearGradient><linearGradient id="petal" x2="0" y2="1"><stop stop-color="#ffb3d3"/><stop offset="1" stop-color="#ed77b2"/></linearGradient></defs><ellipse cx="150" cy="240" rx="87" ry="12" fill="#69824d" opacity=".09"/><g transform="translate(150 136)" font-family="Nunito, sans-serif" font-size="29" font-weight="800"><g transform="translate(-32 -55)"><use href="#home-hex" fill="#70a42a" transform="translate(0 7)"/><use href="#home-hex" fill="url(#leaf)" stroke="#d8ef9d" stroke-width="3"/><text y="10" text-anchor="middle" fill="#35581f">1</text></g><g transform="translate(32 -55)"><use href="#home-hex" fill="#70a42a" transform="translate(0 7)"/><use href="#home-hex" fill="url(#leaf)" stroke="#d8ef9d" stroke-width="3"/><text y="10" text-anchor="middle" fill="#35581f">2</text></g><g transform="translate(64 0)"><use href="#home-hex" fill="#70a42a" transform="translate(0 7)"/><use href="#home-hex" fill="url(#leaf)" stroke="#d8ef9d" stroke-width="3"/><text y="10" text-anchor="middle" fill="#35581f">3</text></g><g transform="translate(32 55)"><use href="#home-hex" style="fill:var(--tile-base,#d99a36)" transform="translate(0 7)"/><use href="#home-hex" fill="url(#honey)" style="stroke:var(--tile-rim,#ffe3a0)" stroke-width="3"/><text y="10" text-anchor="middle" fill="#78521d">4</text></g><g transform="translate(-32 55)"><use href="#home-hex" style="fill:var(--tile-base,#d99a36)" transform="translate(0 7)"/><use href="#home-hex" fill="url(#honey)" style="stroke:var(--tile-rim,#ffe3a0)" stroke-width="3"/><text y="10" text-anchor="middle" fill="#78521d">5</text></g><g transform="translate(-64 0)"><use href="#home-hex" style="fill:var(--tile-base,#d99a36)" transform="translate(0 7)"/><use href="#home-hex" fill="url(#honey)" style="stroke:var(--tile-rim,#ffe3a0)" stroke-width="3"/><text y="10" text-anchor="middle" fill="#78521d">6</text></g><g transform="translate(0 0)"><use href="#home-hex" fill="#a7769f" transform="translate(0 7)"/><use href="#home-hex" fill="url(#petal)" stroke="#eac9e2" stroke-width="3"/><text y="10" text-anchor="middle" fill="#63475f">7</text></g></g><g fill="#91ad69"><path d="M38 202q-24-7-19-31 24 7 19 31Z"/><path d="M40 209q-3-24 20-28 4 21-20 28Z"/><path d="M258 78q-2-22 18-25 1 20-18 25Z"/></g><g fill="#d5b66b"><circle cx="56" cy="79" r="3"/><circle cx="253" cy="201" r="3"/></g></svg></div>
       <div class="h-actions"><button id="play-btn" class="play-btn"><span>Play</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button id="home-level" class="h-level" aria-label="Choose level"></button></div>
     </section>
 
     <!-- shop -->
     <section id="shop" class="hidden" aria-label="Garden shop">
-      <svg class="menu-garden" viewBox="0 0 600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#garden-scene" width="600" height="1000"/></svg>
+      <div class="menu-garden" aria-hidden="true"></div>
       <header class="lv-head">
           <h2>Shop</h2>
         <div class="lv-total"><i class="coin"></i> <span id="shop-coins"></span></div>
@@ -146,7 +113,7 @@
 
     <!-- garden album -->
     <section id="album" class="hidden" aria-label="Garden album">
-      <svg class="menu-garden" viewBox="0 0 600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#garden-scene" width="600" height="1000"/></svg>
+      <div class="menu-garden" aria-hidden="true"></div>
       <header class="lv-head">
           <h2>Album</h2>
         <div id="album-total" class="lv-total"></div>
