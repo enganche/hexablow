@@ -1061,9 +1061,9 @@ function isUnlocked(i) {
   return i === 0 || starsFor(progress, levels[i].id) > 0 || starsFor(progress, levels[i - 1].id) > 0;
 }
 // Level map: a winding trail, level 1 at the bottom. Coordinates live in a 100-wide viewBox so it scales uniformly.
-const MAP_STEP = 30; // vertical distance between nodes (viewBox units)
-const MAP_PAD = 16;
-const mapX = (i) => 50 + 24 * Math.sin((i * Math.PI) / 2);
+const MAP_STEP = 34;
+const MAP_PAD = 24;
+const mapX = (i) => 50 + 22 * Math.sin((i * Math.PI) / 2);
 function renderLevels() {
   const cur = continueIndex();
   $('levels-stars').textContent = `★ ${totalStars(progress)}/${levels.length * 3}`;
@@ -1072,16 +1072,37 @@ function renderLevels() {
   grid.innerHTML = '';
   const H = MAP_PAD * 2 + MAP_STEP * (levels.length - 1);
   const pos = (i) => ({ x: mapX(i), y: H - MAP_PAD - i * MAP_STEP });
-  let trail = '';
+  let trail = '', scenery = '';
   for (let i = 0; i < levels.length - 1; i++) {
-    const p = pos(i), q = pos(i + 1);
+    const p = pos(i), q = pos(i + 1), mid = (p.y + q.y) / 2;
+    const d = `M${p.x} ${p.y} C${p.x} ${mid} ${q.x} ${mid} ${q.x} ${q.y}`;
     const done = starsFor(progress, levels[i].id) > 0;
-    trail += `<path class="${done ? 'done' : ''}" d="M${p.x} ${p.y} L${q.x} ${q.y}"/>`;
+    trail += `<path class="road-shadow" d="${d}"/><path class="road-rim" d="${d}"/><path class="road" d="${d}"/><path class="ribbon ${done ? 'done' : ''}" d="${d}"/><path class="stitches" d="${d}"/>`;
+  }
+  // Standalone flowers have a clear silhouette; ground details stay below the leaves.
+  for (let i = 0; i < levels.length; i += 2) {
+    const y = pos(i).y - 10;
+    const flip = i % 4 === 0;
+    scenery += `<g transform="translate(${flip ? 7 : 80} ${y})">
+      <ellipse cx="7" cy="15" rx="8" ry="2.2" fill="#589b31" opacity=".2"/>
+      <path d="M7 13V-5" fill="none" stroke="#378c35" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M6.6 7.5C2.5 7.5-.5 4.5 0 1C4 .8 6.5 4 6.6 7.5Z" fill="#80cf3c" stroke="#469b34" stroke-width=".55"/>
+      <path d="M7.4 3.5C11.5 3.5 14-0.5 13.5-3C9.5-2.8 7.5.1 7.4 3.5Z" fill="#9cde48" stroke="#469b34" stroke-width=".55"/>
+      <path d="m1.5 2.6 4.2 3.7m6.2-7.5L8.3 2" fill="none" stroke="#c6ef75" stroke-width=".45" stroke-linecap="round"/>
+      <g transform="translate(7 -8)" fill="${flip ? '#ff76a7' : '#fff092'}" stroke="${flip ? '#d64d82' : '#e5af36'}" stroke-width=".55">
+        <path d="M-2-2C-7-9 2-12 3-5C9-8 12 0 5 2C10 8 2 12 0 5C-6 10-11 3-5 0C-9-4-5-7-2-2Z"/>
+        <circle r="2.8" fill="#ffd53e" stroke="#df9d26"/>
+        <path d="M-1.5-1a1.7 1.7 0 0 1 2-.8" fill="none" stroke="#fff5ab" stroke-width=".7" stroke-linecap="round"/>
+      </g>
+      <path d="M2 14q-1-3-3-3m3 3q0-3 2-4m7 5q0-3 2-4" fill="none" stroke="#64b337" stroke-width=".65" stroke-linecap="round"/>
+      <ellipse cx="17" cy="15" rx="2.1" ry="1.2" fill="#c6b586"/>
+      <ellipse cx="16.7" cy="14.6" rx="1.6" ry=".7" fill="#f2e6bb"/>
+    </g>`;
   }
   const wrap = document.createElement('div');
   wrap.className = 'lv-map-in';
   wrap.style.aspectRatio = `100 / ${H}`;
-  wrap.innerHTML = `<svg class="lv-trail" viewBox="0 0 100 ${H}" preserveAspectRatio="none" aria-hidden="true">${trail}</svg>`;
+  wrap.innerHTML = `<svg class="lv-scenery" viewBox="0 0 100 ${H}" aria-hidden="true"><defs><pattern id="map-meadow" width="100" height="136" patternUnits="userSpaceOnUse"><path d="M0 0Q45 22 18 68T0 136Z" fill="#d5eaa2"/><path d="M100 0Q62 35 85 78T100 136Z" fill="#a3d66b"/><path d="M0 96Q22 82 30 103T0 125" fill="#e4efb4" opacity=".6"/><path d="m89 35 2-3m2 3 2-3M12 63l2-3m2 3 2-3" stroke="#fff9d1" stroke-width="1" stroke-linecap="round" opacity=".7"/></pattern></defs><path d="M0 0H100V${H}H0Z" fill="url(#map-meadow)"/></svg><svg class="lv-trail" viewBox="0 0 100 ${H}" aria-hidden="true">${trail}</svg><svg class="lv-scenery" viewBox="0 0 100 ${H}" aria-hidden="true">${scenery}</svg>`;
   levels.forEach((l, i) => {
     const locked = !isUnlocked(i);
     const stars = starsFor(progress, l.id);
@@ -1093,7 +1114,8 @@ function renderLevels() {
     b.style.top = `${(p.y / H) * 100}%`;
     b.setAttribute('aria-label', `Level ${l.id}${locked ? ', locked' : stars >= 3 ? ', completed with 3 stars' : stars > 0 ? `, ${stars} of 3 stars, replay for the missing ${3 - stars}` : ', not played yet'}`);
     b.innerHTML =
-      `<span class="num">${l.id}</span>` +
+      (i === cur && !locked ? '<span class="lv-play-label">PLAY</span>' : '') +
+      `<span class="lv-face"><span class="num">${l.id}</span></span>` +
       (locked
         ? lockSvg
         : `<span class="st">${[0, 1, 2].map((k) => STAR_SVG.replace('<svg', `<svg class="${k < stars ? 'on' : ''}"`)).join('')}</span>`);

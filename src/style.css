@@ -1260,3 +1260,95 @@ body {
 #hearts.hearts-go .heart-wrap:nth-child(3) { animation-delay:.7s; }
 @keyframes heart-pop { from { opacity:0; transform:scale(0); } 60% { opacity:1; transform:scale(1.35); } to { opacity:1; transform:scale(1); } }
 @media(prefers-reduced-motion:reduce) { #hearts.hearts-go .heart-wrap { animation:none; } }
+
+/* Gardendoku garden journey: scenery and route share the node coordinate system. */
+#levels { background:linear-gradient(180deg,#fff0c9 0%,#e0edb8 26%,#badf85 100%); }
+#levels .lv-head { position:relative; z-index:2; flex-shrink:0; padding:4cqw 4cqw 4cqw; background:linear-gradient(#fff8df,#ffedc9); border-bottom:1cqw solid #fff9e6; box-shadow:0 1.2cqw 3cqw #448b6330; }
+#levels .lv-head h2 { font-size:7.4cqw; color:#68ac56; }
+#levels .lv-total { padding:1.8cqw 2.5cqw; background:#fffdf1; border:.6cqw solid #fff; box-shadow:0 .7cqw 0 #dfc98a; color:#9a6a2e; }
+.lv-grid.lv-map { padding:0; overscroll-behavior:contain; background:#c3e393; }
+.lv-map-in { isolation:isolate; }
+.lv-scenery { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.lv-trail path { vector-effect:none; opacity:1; fill:none; stroke-linecap:round; }
+.lv-trail .road-shadow { stroke:#87af50; stroke-width:20; opacity:.25; transform:translateY(1.5px); }
+.lv-trail .road-rim { stroke:#fff2c4; stroke-width:19; }
+.lv-trail .road { stroke:#e8cd91; stroke-width:16; }
+.lv-trail .ribbon { stroke:#f5e4b8; stroke-width:1; }
+.lv-trail .ribbon.done { stroke:#c39b55; stroke-width:1.6; }
+.lv-trail .stitches { stroke:#fff6d4; stroke-width:1.4; stroke-dasharray:.1 4; }
+.lv-node { z-index:1; width:19cqw; height:21.9cqw; filter:drop-shadow(0 1.3cqw 0 var(--hx-edge)) drop-shadow(0 2cqw 1cqw #497a5833); }
+.lv-node::after { background:linear-gradient(155deg,#ffffff80 0%,transparent 42%),linear-gradient(var(--hx-a),var(--hx-b)); }
+.lv-node .num { font-size:7cqw; text-shadow:0 .4cqw 0 #ffffff60; }
+.lv-node.current { --hx-a:#e6f999; --hx-b:#92d34c; --hx-rim:#fffde3; --hx-edge:#579332; }
+.lv-node.locked { --hx-a:#e4dcc8; --hx-b:#d1c8b2; --hx-rim:#f4efe0; --hx-edge:#aaa089; --hx-ink:#8a7d6a; }
+.lv-node.locked .num { opacity:.85; }
+.lv-node.locked .lock { fill:#8a7d6a; width:4cqw; height:4cqw; }
+.lv-play-label { position:absolute; top:-8cqw; left:50%; transform:translateX(-50%); padding:1.4cqw 4cqw; border:.6cqw solid #fff9df; border-radius:4cqw; background:linear-gradient(#ffdc79,#ffb64b); color:#fff; font-size:3cqw; font-weight:900; letter-spacing:.4cqw; text-shadow:0 .4cqw #b9792c; box-shadow:0 .7cqw 0 #bf772b; }
+.lv-play-label::after { content:''; position:absolute; left:calc(50% - 1.4cqw); bottom:-2cqw; border-left:1.4cqw solid transparent; border-right:1.4cqw solid transparent; border-top:1.7cqw solid #fff9df; }
+.lv-node:focus-visible { outline:.8cqw solid #416e3d; outline-offset:2cqw; border-radius:3cqw; }
+
+/* Shared portrait garden, framed independently of the desktop backdrop. */
+#bg { filter:saturate(1.18); opacity:1; }
+:is(#home,#shop,#album) { isolation:isolate; }
+.menu-garden { filter:saturate(1.18); position:absolute; inset:0; width:100%; height:100%; z-index:-2; pointer-events:none; }
+#home .h-cloud { display:none; }
+:is(#shop,#album) { background:var(--ui-bg); }
+:is(#shop,#album)::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(180deg,color-mix(in srgb,var(--ui-bg) 52%,transparent),color-mix(in srgb,var(--ui-bg) 70%,transparent) 35%,color-mix(in srgb,var(--ui-bg) 58%,transparent) 78%,transparent); }
+:is(#shop,#album) .lv-head { background:linear-gradient(#fff9e2c9,#fff9e200); }
+#levels .lv-head { background:linear-gradient(#fff9e5,#f1edc7); }
+.lv-grid.lv-map { background:color-mix(in srgb,var(--hill-1) 65%,var(--ui-bottom)); }
+.lv-scenery #map-meadow > path:nth-child(1) { fill:var(--hill-1,#c5e98c); }
+.lv-scenery #map-meadow > path:nth-child(2) { fill:var(--hill-2a,#a9df5c); }
+.lv-scenery #map-meadow > path:nth-child(3) { fill:var(--ui-accent,#9bc85c); }
+
+.lv-scenery { filter:saturate(1.2); }
+
+/* Separate raised hex button and reward stars, like a saga map marker. */
+.lv-node { width:18cqw; height:20.8cqw; filter:none; gap:0; overflow:visible; }
+.lv-node::before,.lv-node::after { display:none; }
+.lv-face { position:absolute; inset:0; display:grid; place-items:center; isolation:isolate; filter:drop-shadow(0 1.2cqw 0 var(--hx-edge)) drop-shadow(0 2cqw .8cqw #54703440); }
+.lv-face::before,.lv-face::after { content:''; position:absolute; z-index:-1; clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); }
+.lv-face::before { inset:0; background:var(--hx-rim); }
+.lv-face::after { inset:1cqw; background:linear-gradient(155deg,#ffffff95,transparent 45%),linear-gradient(var(--hx-a),var(--hx-b)); }
+.lv-node .num { font-size:8cqw; color:#fffef2; text-shadow:0 .55cqw 0 var(--hx-edge),0 0 .5cqw var(--hx-edge); }
+.lv-node .st { position:absolute; top:calc(100% + 2.3cqw); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:.15cqw; pointer-events:none; }
+.lv-node .st svg { width:4.8cqw; height:4.8cqw; fill:#c1b58a; stroke:#fff7d8; stroke-width:1.2; filter:drop-shadow(0 .45cqw 0 #aa9059); }
+.lv-node .st svg:nth-child(2) { width:5.6cqw; height:5.6cqw; transform:translateY(.8cqw); }
+.lv-node .st svg.on,.lv-node.perfect .st svg.on { fill:#ffce36; stroke:#fff5aa; stroke-width:1.2; filter:drop-shadow(0 .55cqw 0 #cc8b20); }
+.lv-node.partial .st svg:not(.on) { fill:#c1b58a; stroke:#fff7d8; stroke-dasharray:none; stroke-width:1.2; filter:drop-shadow(0 .45cqw 0 #aa9059); }
+.lv-node.locked .num { color:#8a7d6a; opacity:1; text-shadow:0 .35cqw #fff9df; }
+.lv-node.locked .lock { position:absolute; top:calc(100% + 2.6cqw); left:50%; transform:translateX(-50%); width:4.5cqw; height:4.5cqw; fill:#94866b; }
+.lv-node:active { filter:none; }
+.lv-node:active .lv-face { filter:drop-shadow(0 .4cqw 0 var(--hx-edge)); }
+
+/* High-contrast map rewards against the warm garden path. */
+.lv-node { --hx-a:#ffbc38; --hx-b:#f18816; --hx-edge:#a85417; --hx-rim:#fff9df; }
+.lv-node.perfect { --hx-a:#ffb52c; --hx-b:#ed8110; --hx-edge:#a95113; --hx-ink:#713810; }
+.lv-node.partial { --hx-a:#ffc15a; --hx-b:#ee9424; --hx-rim:#fff5d7; --hx-edge:#a95b1d; }
+.lv-node.current { --hx-a:#a5e842; --hx-b:#53b327; --hx-edge:#31761e; }
+.lv-node .num { text-shadow:0 .55cqw 0 var(--hx-edge),0 0 .8cqw var(--hx-edge); }
+.lv-node .st svg.on,.lv-node.perfect .st svg.on { fill:#ffcf24; stroke:#b9680b; stroke-width:1.6; paint-order:stroke fill; filter:drop-shadow(0 .45cqw 0 #945211) drop-shadow(0 0 .3cqw #fff8d8); }
+.lv-node .st svg:not(.on),.lv-node.partial .st svg:not(.on) { fill:#9b8968; stroke:#fff3cf; stroke-width:1.2; filter:drop-shadow(0 .4cqw 0 #6e5b3d); }
+
+/* Stars hug the lower hex edges as a compact medal cluster. */
+.lv-node .st { top:calc(100% - 3cqw); min-width:0; height:auto; left:50%; transform:translateX(-50%); justify-content:center; align-items:center; gap:.1cqw; padding:0; border:0; border-radius:0; background:none; box-shadow:none; z-index:2; }
+.lv-node .st svg { flex-shrink:0; width:5.2cqw; height:5.2cqw; overflow:visible; }
+.lv-node .st svg:first-child { transform:translateY(-.7cqw) rotate(-16deg); }
+.lv-node .st svg:nth-child(2) { width:6.5cqw; height:6.5cqw; transform:translateY(.65cqw); }
+.lv-node .st svg:last-child { transform:translateY(-.7cqw) rotate(16deg); }
+.lv-node .st svg.on,.lv-node.perfect .st svg.on { fill:#ffcf35; stroke:#965016; stroke-width:1.7; paint-order:stroke fill; filter:drop-shadow(0 .45cqw 0 #874211) drop-shadow(0 -.15cqw 0 #fff3b1); }
+.lv-node .st svg:not(.on),.lv-node.partial .st svg:not(.on) { fill:#d9ceb0; stroke:#8c7954; stroke-width:1.5; stroke-dasharray:none; paint-order:stroke fill; filter:drop-shadow(0 .35cqw 0 #756344); }
+
+/* Stars detached below the badge, with a white outline like the saga-map reference. */
+.lv-node .st { top:calc(100% + 1.2cqw); gap:.5cqw; }
+.lv-node .st svg { width:5.6cqw; height:5.6cqw; stroke-linejoin:round; }
+.lv-node .st svg:nth-child(2) { width:6.6cqw; height:6.6cqw; transform:translateY(.9cqw); }
+.lv-node .st svg:first-child { transform:translateY(-.2cqw) rotate(-14deg); }
+.lv-node .st svg:last-child { transform:translateY(-.2cqw) rotate(14deg); }
+.lv-node .st svg.on,.lv-node.perfect .st svg.on { fill:#ffc92b; stroke:#fff; stroke-width:3.6; paint-order:stroke fill; filter:drop-shadow(0 .5cqw 0 #d9892b) drop-shadow(0 .5cqw .4cqw #0003); }
+.lv-node .st svg:not(.on),.lv-node.partial .st svg:not(.on) { fill:#b9ad8d; stroke:#fff; stroke-width:3.6; paint-order:stroke fill; filter:drop-shadow(0 .5cqw 0 #8f8062) drop-shadow(0 .5cqw .4cqw #0003); }
+.lv-node.locked .lock { top:calc(100% + 1.4cqw); }
+.lv-node .st svg.on,.lv-node.perfect .st svg.on { filter:drop-shadow(0 .5cqw 0 #d9892b) drop-shadow(0 1.4cqw 1cqw #0000003d); }
+.lv-node .st svg:not(.on),.lv-node.partial .st svg:not(.on) { filter:drop-shadow(0 .5cqw 0 #8f8062) drop-shadow(0 1.4cqw 1cqw #0000003d); }
+/* locked node: the lock takes the stars' place under the node, drawn like a star (white outline, dark fill, soft shadow) */
+.lv-node.locked .lock { position:absolute; top:calc(100% + 1.2cqw); left:50%; transform:translateX(-50%); width:7.6cqw; height:7.6cqw; overflow:visible; fill:#5a4a32; stroke:#fff; stroke-width:4; stroke-linejoin:round; paint-order:stroke fill; filter:drop-shadow(0 .5cqw 0 #8f8062) drop-shadow(0 1.4cqw 1cqw #0000003d); }
