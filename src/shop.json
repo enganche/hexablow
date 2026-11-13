@@ -16,11 +16,11 @@
       "price": 0.99,
       "was": 1.99,
       "off": 50,
-      "coins": 1500,
+      "coins": 250,
       "boosters": {
-        "reveal": 2,
-        "find": 2,
-        "picker": 2
+        "reveal": 1,
+        "find": 1,
+        "picker": 1
       }
     }
   ],
@@ -31,11 +31,11 @@
       "art": "pouch",
       "tone": "leaf",
       "price": 4.99,
-      "coins": 3000,
+      "coins": 500,
       "boosters": {
-        "reveal": 3,
-        "find": 3,
-        "picker": 3
+        "reveal": 2,
+        "find": 2,
+        "picker": 2
       }
     },
     {
@@ -44,11 +44,11 @@
       "art": "basket",
       "tone": "rose",
       "price": 9.99,
-      "coins": 7500,
+      "coins": 1300,
       "boosters": {
-        "reveal": 6,
-        "find": 6,
-        "picker": 6
+        "reveal": 4,
+        "find": 4,
+        "picker": 4
       }
     },
     {
@@ -57,28 +57,28 @@
       "art": "barrow",
       "tone": "sun",
       "price": 19.99,
-      "coins": 18000,
+      "coins": 3200,
       "boosters": {
-        "reveal": 15,
-        "find": 15,
-        "picker": 15
+        "reveal": 10,
+        "find": 10,
+        "picker": 10
       }
     }
   ],
   "dailyFree": {
-    "coins": 100,
+    "coins": 30,
     "cooldownHours": 24
   },
   "coinPacks": [
     {
       "id": "c500",
-      "coins": 500,
+      "coins": 100,
       "price": 0.99,
       "art": 1
     },
     {
       "id": "c1500",
-      "coins": 1500,
+      "coins": 280,
       "price": 1.99,
       "was": 2.99,
       "off": 33,
@@ -86,7 +86,7 @@
     },
     {
       "id": "c4000",
-      "coins": 4000,
+      "coins": 750,
       "price": 4.99,
       "was": 7.99,
       "off": 38,
@@ -94,7 +94,7 @@
     },
     {
       "id": "c9000",
-      "coins": 9000,
+      "coins": 1700,
       "price": 9.99,
       "was": 17.99,
       "off": 44,
@@ -102,7 +102,7 @@
     },
     {
       "id": "c20000",
-      "coins": 20000,
+      "coins": 3800,
       "price": 19.99,
       "was": 39.99,
       "off": 50,
@@ -111,7 +111,7 @@
   ],
   "coinJackpot": {
     "id": "c50000",
-    "coins": 50000,
+    "coins": 10000,
     "price": 49.99,
     "was": 99.99,
     "off": 50

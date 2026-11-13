@@ -110,3 +110,5 @@ Nhóm chat chung của dự án. Chỉ ghi **vắn tắt** việc vừa làm, m�
 - 2026-11-13 Shop: store layout (Boosters by coins, Remove Ads, Special, Bundle, Gold + daily free) in garden theme; config in src/shop.json, art in src/shopArt.js; purchases are a placeholder checkout (no billing SDK yet); cosmetics kept below.
 
 - 2026-11-13 Shop v2: Remove Ads hidden (shop.json removeAds.enabled=false); fake OS confirm sheet before every IAP; backgrounds merged into tile sets ("Garden Sets", cosmetics.json now tile-only); dropped "Use coins" notes; new leaf-ribbon section banners.
+
+- 2026-11-13 Shop economy: coin amounts in packs/bundles cut ~5x, daily gift 30, added Garden Sets Sakura (260) and Autumn (300).

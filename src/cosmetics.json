@@ -211,6 +211,108 @@
         "ui-accent": "#ac95d0",
         "ui-locked": "#d6d2e8"
       }
+    },
+    {
+      "id": "tile-sakura",
+      "type": "tile",
+      "name": "Sakura",
+      "price": 260,
+      "face": [
+        "#ffd3e3",
+        "#f27fae"
+      ],
+      "rim": [
+        "#ffe9f1",
+        "#f9b3cd"
+      ],
+      "base": "#c4527f",
+      "game": "#ffeaf1",
+      "socket": {
+        "rim": [
+          "#ffe3ec",
+          "#f9cfdd"
+        ],
+        "wall": [
+          "#e8a9bf",
+          "#fbd7e3"
+        ],
+        "floor": [
+          "#f5c4d5",
+          "#fde0ea"
+        ]
+      },
+      "vars": {
+        "sky-a": "#ffc2d6",
+        "sky-b": "#ffe0e8",
+        "sky-c": "#fff4e6",
+        "hill-1": "#d9e9a0",
+        "hill-2a": "#b6dc72",
+        "hill-2b": "#76bb5a",
+        "hill-3": "#62ae52",
+        "sun": "#fff2c4",
+        "cloud": "#ffffffc4",
+        "sub-ink": "#8a4a63",
+        "ui-bg": "#ffeaf1",
+        "ui-bottom": "#f8cadb",
+        "ui-ink": "#8a4562",
+        "ui-muted": "#a2667f",
+        "ui-card": "#fff2f6",
+        "ui-edge": "#d79ab3",
+        "ui-selected": "#fbc9db",
+        "ui-accent": "#e98bb0",
+        "ui-locked": "#efd3dd"
+      }
+    },
+    {
+      "id": "tile-autumn",
+      "type": "tile",
+      "name": "Autumn",
+      "price": 300,
+      "face": [
+        "#ffb28a",
+        "#e5573a"
+      ],
+      "rim": [
+        "#ffd9c2",
+        "#f3977a"
+      ],
+      "base": "#a8341f",
+      "game": "#f6e3c4",
+      "socket": {
+        "rim": [
+          "#f1d9ab",
+          "#e8c98f"
+        ],
+        "wall": [
+          "#c99a5c",
+          "#ecd1a0"
+        ],
+        "floor": [
+          "#dcb673",
+          "#efd6a2"
+        ]
+      },
+      "vars": {
+        "sky-a": "#8fc7d9",
+        "sky-b": "#d6e6d0",
+        "sky-c": "#fbe9b8",
+        "hill-1": "#e4c870",
+        "hill-2a": "#d9a548",
+        "hill-2b": "#b9772f",
+        "hill-3": "#a9692a",
+        "sun": "#fff0b0",
+        "cloud": "#fff8e6b8",
+        "sub-ink": "#7a4a2a",
+        "ui-bg": "#f6e3c4",
+        "ui-bottom": "#e8c898",
+        "ui-ink": "#7d4a2a",
+        "ui-muted": "#94704a",
+        "ui-card": "#fcf0d8",
+        "ui-edge": "#c39a68",
+        "ui-selected": "#f0cf94",
+        "ui-accent": "#d9894a",
+        "ui-locked": "#e3cda6"
+      }
     }
   ]
 }
