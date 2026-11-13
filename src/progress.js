@@ -202,23 +202,33 @@ export function setProgress(p, setId) {
 
 /**
  * Unlock the species tied to a level (first clear only; safe to call again).
- * Returns { species, set, bonus }: species is null when nothing new was found;
- * bonus is the coin reward (already paid) when this find completed its set.
+ * Returns { species, set }: species is null when nothing new was found.
+ * Set bonuses are NOT paid here: the player claims them in the Album.
  */
 export function discoverForLevel(p, levelId) {
   const species = collection.species.find((s) => s.level === levelId);
-  if (!species || hasSpecies(p, species.id)) return { species: null, set: null, bonus: 0 };
+  if (!species || hasSpecies(p, species.id)) return { species: null, set: null };
   p.found.push(species.id);
-  const set = collection.sets.find((x) => x.id === species.set);
-  let bonus = 0;
-  const { have, total } = setProgress(p, set.id);
-  if (have === total && !p.setsClaimed.includes(set.id)) {
-    p.setsClaimed.push(set.id);
-    p.coins += set.bonus;
-    bonus = set.bonus;
-  }
   save(p);
-  return { species, set, bonus };
+  return { species, set: collection.sets.find((x) => x.id === species.set) };
+}
+
+/** Sets that are fully collected but whose bonus has not been claimed yet. */
+export function claimableSets(p) {
+  return collection.sets.filter((s) => {
+    const { have, total } = setProgress(p, s.id);
+    return have === total && !p.setsClaimed.includes(s.id);
+  });
+}
+
+/** Pay out a completed set's bonus once. Returns the coins paid (0 if not claimable). */
+export function claimSet(p, setId) {
+  const set = claimableSets(p).find((s) => s.id === setId);
+  if (!set) return 0;
+  p.setsClaimed.push(set.id);
+  p.coins += set.bonus;
+  save(p);
+  return set.bonus;
 }
 
 // ---- boosters (consumable inventory) ----

@@ -1555,6 +1555,12 @@ body {
 button.album-card { appearance:none; font:inherit; cursor:pointer; }
 button.album-card:active { transform:translateY(.8cqw); }
 #album-pop { z-index:20; }
+.home-nav-item { position:relative; }
+.nav-badge { position:absolute; top:1cqw; right:calc(50% - 10cqw); min-width:5cqw; height:5cqw; display:grid; place-items:center; border-radius:50%; background:#ff5a45; color:#fff; border:.6cqw solid #fff; font:900 3.6cqw/1 Nunito,sans-serif; font-style:normal; box-shadow:0 .6cqw 0 #b23422; animation:badge-pulse 1.2s ease-in-out infinite alternate; pointer-events:none; }
+.nav-badge[hidden] { display:none; }
+@keyframes badge-pulse { to { transform:scale(1.15); } }
+.shop-body h3.claimable { cursor:pointer; }
+.shop-body h3.claimable small { color:#d9531e; animation:badge-pulse .9s ease-in-out infinite alternate; }
 .gl-card { position:relative; width:72%; display:flex; flex-direction:column; align-items:center; gap:1.2cqw; padding:7cqw 5cqw 5cqw; border-radius:7cqw; background:#fff; border:1.2cqw solid #fff; box-shadow:0 2cqw 0 #b7c99a; animation:fp-card .5s cubic-bezier(.2,1.5,.4,1) both; color:var(--ui-ink,#416e3d); }
 .gl-card .buy-x { z-index:2; top:-15px; right:-12px; width:40px; height:40px; border-radius:13px; border:3px solid var(--btn-rim,#fff9dc); background:linear-gradient(#ff9c7e,#f06d59); box-shadow:inset 0 2px #ffc5a4,0 4px #b74e39; color:#fff9e9; font-size:30px; text-shadow:0 2px #b74e39; }
 .gl-row { display:flex; flex-direction:column; align-items:center; gap:1.6cqw; width:100%; margin-top:0; }

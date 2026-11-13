@@ -10,7 +10,7 @@ import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex, hasOpenedLe
 import economy from './economy.json';
 import { winArt, loseArt, confetti } from './resultArt.js';
 import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
-import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecies, foundCount, discoverForLevel } from './progress.js';
+import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecies, foundCount, discoverForLevel, claimableSets, claimSet } from './progress.js';
 import { boosterIds, boosterCount, buyBooster, useBooster, packPrice, grantBooster } from './progress.js';
 import { grantPack, wasBought, dailyWait, markDaily } from './progress.js';
 import shopCfg from './shop.json';
@@ -322,7 +322,7 @@ function showResult(o) {
   else $('res-confetti').innerHTML = '';
   btn.disabled = false;
   if (o.win) {
-    btn.innerHTML = `<span>Continue</span><em>${COIN} +${o.reward}</em>`;
+    btn.innerHTML = `<span>${o.replay ? 'Claim' : 'Continue'}</span><em>${COIN} +${o.reward}</em>`;
     btn.classList.remove('alt');
     btn.onclick = () => {
       btn.disabled = true;
@@ -362,7 +362,8 @@ function showResult(o) {
 }
 
 /** Reward-style reveal for a newly discovered species: dim backdrop, glowing rays, big bounce-in icon. */
-function showFind({ species, set, bonus }) {
+function showFind({ species, set }) {
+  const complete = claimableSets(progress).some((s) => s.id === set.id);
   const { have, total } = setProgress(progress, set.id);
   const pips = Array.from({ length: total }, (_, i) => `<i class="${i < have ? 'on' : ''}"></i>`).join('');
   const el = $('res-newfind');
@@ -373,9 +374,10 @@ function showFind({ species, set, bonus }) {
     `<b>${species.name}</b>` +
     `<small>${set.name} collection</small>` +
     `<div class="fp-pips" aria-label="${have} of ${total}">${pips}</div>` +
-    (bonus ? `<div class="fp-bonus">Set complete! ${COIN} +${bonus}</div>` : '') +
+    (complete ? `<div class="fp-bonus">Set complete! Claim ${COIN} in Album</div>` : '') +
     '</div>';
   el.classList.remove('hidden');
+  renderAlbumBadge();
   audio.win();
 }
 
@@ -467,14 +469,17 @@ const game = new Game($('game'), {
       title: last ? 'Garden Complete!' : 'Level Complete!',
       stars,
       reward,
+      replay: !rec.firstClear,
       find,
       sub: `<b>${levels[levelIdx].name}</b> · ${praise} · ${note}`,
       starsIntro: rec.firstClear && levels[levelIdx].id === 3,
       next: last ? 'You grew every garden!' : `Next: ${levels[levelIdx + 1].name}`,
       onClaim: () => {
-        // first clear of level 3 (end of the tutorial run) -> back to the home screen
-        if (rec.firstClear && levels[levelIdx].id === 3) { showHome(); return; }
-        startLevel(last ? 0 : levelIdx + 1); playLevelIntro();
+        // Continue always leaves the level: back to the road map if it was opened from there, else home
+        const toMap = startedFromMap;
+        startedFromMap = false;
+        showHome();
+        if (toMap) showLevels();
       },
       onHome: showHome,
     });
@@ -903,8 +908,10 @@ function playLevelIntro() {
   introTimer = setTimeout(() => stageEl.classList.remove('intro'), 1600);
 }
 /** Start level i from the home / level-picker screens with the entrance animation. */
+let startedFromMap = false; // true when the current level was opened from the road map
 function enterLevel(i) {
   if (entering || returningHome) return;
+  startedFromMap = !levelsEl.classList.contains('hidden');
   if (calmMotion || home.classList.contains('hidden')) {
     hideLevels();
     hideHome();
@@ -1125,8 +1132,10 @@ function renderAlbum() {
   for (const set of collectionSets) {
     const { have, total } = setProgress(progress, set.id);
     const h = document.createElement('h3');
-    h.innerHTML = `${set.name} <small>${have}/${total}${have === total ? ' ✓' : ` · bonus ${set.bonus}`}</small>`;
-    if (have < total) h.querySelector('small').insertAdjacentHTML('beforeend', ` ${COIN}`);
+    const ready = have === total && !progress.setsClaimed.includes(set.id);
+    h.innerHTML = `${set.name} <small>${have}/${total}${have < total ? ` · bonus ${set.bonus}` : ready ? ' · claim bonus!' : ' ✓'}</small>`;
+    if (have < total || ready) h.querySelector('small').insertAdjacentHTML('beforeend', ` ${COIN}`);
+    if (ready) { h.classList.add('claimable'); h.onclick = () => { audio.tap(); showClaim(set); }; }
     body.appendChild(h);
     const grid = document.createElement('div');
     grid.className = 'album-grid';
@@ -1142,6 +1151,55 @@ function renderAlbum() {
     body.appendChild(grid);
   }
 }
+/** "!" on the Album tab while a completed set's bonus is waiting to be claimed. */
+function renderAlbumBadge() {
+  const btn = $('home-album');
+  let dot = btn.querySelector('.nav-badge');
+  if (!dot) {
+    dot = document.createElement('i');
+    dot.className = 'nav-badge';
+    dot.textContent = '!';
+    dot.setAttribute('role', 'img');
+    btn.appendChild(dot);
+  }
+  const n = claimableSets(progress).length;
+  dot.hidden = n === 0;
+  dot.setAttribute('aria-label', `${n} bonus reward${n === 1 ? '' : 's'} to claim`);
+}
+
+/** Claim popup for a completed set; chains to the next unclaimed set when closed. */
+function showClaim(set) {
+  const el = $('album-pop');
+  el.innerHTML =
+    '<div class="fp-card si-card">' +
+    '<div class="fp-rays"></div>' +
+    '<span class="fp-new">COMPLETE!</span>' +
+    `<h4>${set.name} set</h4>` +
+    '<p class="fp-set">You found every species in this collection.</p>' +
+    `<button class="claim-btn alt fp-btn" type="button"><span>Claim</span><em>${COIN} +${set.bonus}</em></button>` +
+    '</div>';
+  el.classList.remove('hidden', 'out');
+  audio.win();
+  const btn = el.querySelector('.fp-btn');
+  btn.onclick = () => {
+    btn.disabled = true;
+    audio.tap();
+    if (claimSet(progress, set.id)) renderCoins();
+    renderAlbumBadge();
+    renderAlbum();
+    el.classList.add('out');
+    setTimeout(() => {
+      el.classList.add('hidden');
+      const next = claimableSets(progress)[0];
+      if (next && activeMenuTab === 'album') showClaim(next);
+    }, 260);
+  };
+}
+function offerClaims() {
+  const next = claimableSets(progress)[0];
+  if (next) showClaim(next);
+}
+
 /** Canvas holding the idle sprite of a species (same art the lawn uses). */
 function speciesSprite(id) {
   let mat;
@@ -1234,7 +1292,9 @@ async function switchMenuTab(next) {
     slidingMenu = false;
     menuButtons[next].focus({ preventScroll:true });
   }
+  if (next === 'album') offerClaims();
 }
+renderAlbumBadge();
 $('home-tab').addEventListener('click', () => { audio.tap(); void switchMenuTab('home'); });
 let menuSwipe = null;
 for (const page of Object.values(menuPages)) {

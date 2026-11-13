@@ -1759,6 +1759,11 @@ export class Game {
     objs.house = house;
     // fish jumping out of the pond(s)
     objs.fish = [];
+    // every animal (the dog aside) joins the garden in unlock order: rank = position in the discovery list
+    const foundIds = this.hooks.getFound?.() ?? [];
+    const animalIds = foundIds.filter((id) => CRITTERS[id] || id === 'butterfly' || id === 'koi');
+    const rankOf = (id) => Math.max(0, animalIds.indexOf(id));
+    objs.rankOf = rankOf;
     const water = this.level.blocked || [];
     if (water.length && (this.hooks.getFound?.() ?? []).includes('koi')) {
       const rf = mulberry(this.level.id * 131 + 5);
@@ -1770,7 +1775,7 @@ export class Game {
         const ring = new THREE.Mesh(spriteGeo(1, 1, 0.5, 0.5), rippleMaterial().clone());
         fish.visible = ring.visible = false;
         this.gardenGroup.add(ring, fish);
-        objs.fish.push({ fish, ring, s, z, per: 3600 + rf() * 1600, off: i * 1700 + rf() * 1500, dir: rf() < 0.5 ? 1 : -1 });
+        objs.fish.push({ rank: rankOf('koi'), fish, ring, s, z, per: 3600 + rf() * 1600, off: i * 1700 + rf() * 1500, dir: rf() < 0.5 ? 1 : -1 });
       });
     }
     // butterflies fluttering around the map
@@ -1781,11 +1786,13 @@ export class Game {
       x0 = Math.min(x0, s.x); x1 = Math.max(x1, s.x); y0 = Math.min(y0, s.y); y1 = Math.max(y1, s.y);
     }
     const rb = mulberry(this.level.id * 17 + 3);
-    const foundIds = this.hooks.getFound?.() ?? [];
-    const flyerDefs = [0, 1, 2, 3].map((i) => ({ mat: butterflyMaterial(i), size: 0.55, fm: 1, flap: 0.016, flapMin: 0.25, flip: false }));
+    // the butterfly flock only flutters once the Butterfly has been discovered
+    const flyerDefs = foundIds.includes('butterfly')
+      ? [0, 1, 2, 3].map((i) => ({ id: 'butterfly', mat: butterflyMaterial(i), size: 0.55, fm: 1, flap: 0.016, flapMin: 0.25, flip: false }))
+      : [];
     for (const id of foundIds) {
       const sp = CRITTERS[id];
-      if (sp?.type === 'fly') flyerDefs.push({ mat: critterMaterial(id), size: sp.size, fm: sp.fm, flap: sp.flap, flapMin: sp.flapMin, flip: sp.flip });
+      if (sp?.type === 'fly') flyerDefs.push({ id, mat: critterMaterial(id), size: sp.size, fm: sp.fm, flap: sp.flap, flapMin: sp.flapMin, flip: sp.flip });
     }
     // fliers stay over the map: lawn cells plus the ponds
     objs.mapKeys = new Set([...this.cellKeys, ...(this.level.blocked || []).map(([q, r]) => key(q, r))]);
@@ -1794,7 +1801,7 @@ export class Game {
       m.visible = false;
       this.gardenGroup.add(m);
       objs.butterflies.push({
-        m, d, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, ax: ((x1 - x0) / 2) * 0.72, ay: ((y1 - y0) / 2) * 0.72,
+        rank: rankOf(d.id), m, d, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, ax: ((x1 - x0) / 2) * 0.72, ay: ((y1 - y0) / 2) * 0.72,
         fx: (0.00018 + rb() * 0.00014) * d.fm, fy: (0.00024 + rb() * 0.00016) * d.fm, px: rb() * 6.28, py: rb() * 6.28, fl: rb() * 6.28,
         z: this._tileZ(y1) + R * (2.2 + i * 0.05), rad: d.size * R * 0.5, dir: 1, x: 0, y: 0,
       });
@@ -1906,7 +1913,7 @@ export class Game {
         mesh.visible = false;
         this.gardenGroup.add(mesh);
         objs.walkers.push({
-          id, sp, mesh, m, wk, rad, spots, fox, x: start.x, y: start.y, tx: start.x, ty: start.y,
+          id, rank: rankOf(id), sp, mesh, m, wk, rad, spots, fox, x: start.x, y: start.y, tx: start.x, ty: start.y,
           wait: 400 + rw() * 1500, burst: 0, dir: rw() < 0.5 ? 1 : -1, born: null, moving: false, hopK: 0, f: -1,
         });
       }
@@ -1964,7 +1971,13 @@ export class Game {
     const dog = objs.dog;
     const dt = Math.max(0, Math.min(50, objs.lastT == null ? 16 : now - objs.lastT));
     objs.lastT = now;
-    const walkers = objs.walkers || [];
+    // animals pop in one after another, in the order they were unlocked (the dog is always there)
+    if (objs.t0 == null) objs.t0 = now;
+    const age = now - objs.t0;
+    const appearAt = (rank) => 500 + rank * 700;
+    const allWalkers = objs.walkers || [];
+    const walkers = allWalkers.filter((w) => age >= appearAt(w.rank));
+    for (const w of allWalkers) if (age < appearAt(w.rank)) w.mesh.visible = false;
     if (dog) {
       // speed up and slow down along the route (sprint / trot)
       const step = (R * 1.9 / 1000) * (1 + 0.37 * Math.sin(now / 1700)) * dt;
@@ -2008,6 +2021,7 @@ export class Game {
     }
     for (const w of walkers) this._stepWalker(w, now, dt, walkers, dog);
     for (const f of this.gardenObjs.fish || []) {
+      if (age < appearAt(f.rank)) { f.fish.visible = f.ring.visible = false; continue; }
       const ph = ((now + f.off) % f.per) / f.per;
       const jump = 0.26; // fraction of the cycle spent airborne
       if (ph > jump) { f.fish.visible = f.ring.visible = false; continue; }
@@ -2029,7 +2043,9 @@ export class Game {
       f.ring.material.opacity = 1 - rk;
     }
     // fliers (butterflies, bees, owls) drift on smooth loops; afterwards overlapping pairs are nudged apart
-    const fliers = this.gardenObjs.butterflies || [];
+    const allFliers = this.gardenObjs.butterflies || [];
+    const fliers = allFliers.filter((b) => age >= appearAt(b.rank));
+    for (const b of allFliers) if (age < appearAt(b.rank)) b.m.visible = false;
     for (const b of fliers) {
       b.x = b.cx + Math.sin(now * b.fx + b.px) * b.ax + Math.sin(now * b.fx * 3.1) * R * 0.15;
       b.y = b.cy + Math.sin(now * b.fy + b.py) * b.ay + Math.sin(now * 0.006 + b.fl) * R * 0.05;
@@ -2078,7 +2094,8 @@ export class Game {
       b.m.position.copy(this._w(b.x, b.y, b.z));
       const flap = b.d.flapMin + (1 - b.d.flapMin) * Math.abs(Math.sin(now * b.d.flap + b.fl));
       if (b.d.flip && Math.abs(vx) > 1e-5) b.dir = vx >= 0 ? 1 : -1;
-      b.m.scale.set(R * b.d.size * flap * b.dir, R * b.d.size, 1);
+      const pop = easeOutBack(Math.min(1, (age - appearAt(b.rank)) / 450));
+      b.m.scale.set(R * b.d.size * flap * b.dir * pop, R * b.d.size * Math.max(0.001, pop), 1);
       b.m.rotation.z = -Math.max(-1, Math.min(1, vx * 6 * (b.d.fm > 1 ? 0.5 : 1))) * 0.35 * b.dir;
     }
   }
