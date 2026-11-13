@@ -1714,6 +1714,12 @@ button.album-card:active { transform:translateY(.8cqw); }
 #home .h-actions { top:-5cqw; }
 
 /* HARD milestone tag (levels 5/10/15) */
+
+/* Theme-independent button art (images keep their own colours on every garden set) */
+:is(#home .h-gear, #hud .icon-btn, #levels-back) img { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; filter:drop-shadow(0 .4cqw 0 #2b1b4a30); }
+.h-daily:has(.nav-badge:not([hidden])) img { animation:gift-wiggle 2.4s ease-in-out infinite; transform-origin:50% 80%; }
+.h-daily.locked img { opacity:.6; animation:none; }
+@media(prefers-reduced-motion:reduce) { .h-daily:has(.nav-badge:not([hidden])) img { animation:none; } }
 .hard-tag { display:inline-block; vertical-align:middle; padding:.25em .55em; border:.12em solid #ffd2cc; border-radius:.5em; color:#fff; font-size:.55em; font-weight:800; letter-spacing:.06em; line-height:1; background:linear-gradient(#ff7c71,#ee3549); box-shadow:0 .14em 0 #9f3038; text-shadow:0 .08em 0 #9f3038; }
 .lv-node .lv-hard { position:absolute; z-index:3; top:-2.4cqw; right:-3.6cqw; font-size:3cqw; transform:rotate(8deg); pointer-events:none; }
 /* keep the level title centred: the HARD tag hangs off its right side */

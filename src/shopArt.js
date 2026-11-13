@@ -10,6 +10,10 @@ import gold280 from './assets/gold-280.png';
 import gold750 from './assets/gold-750.png';
 import gold1700 from './assets/gold-1700.png';
 import gold3800 from './assets/gold-3800.png';
+import chest7 from './assets/chest-7.png';
+import chest14 from './assets/chest-14.png';
+import chest21 from './assets/chest-21.png';
+import chest28 from './assets/chest-28.png';
 const pic = (href) => `<svg viewBox="0 0 96 80" aria-hidden="true"><image href="${href}" x="8" y="0" width="80" height="80"/></svg>`;
 // Garden-themed illustrations for the shop (outlined SVG, same visual language as boosterArt).
 const svg = (body) => `<svg viewBox="0 0 96 80" aria-hidden="true" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">${body}</svg>`;
@@ -37,4 +41,8 @@ export const shopArt = {
   coin5: pic(gold3800),
   jackpot: svg(`<image href="${goldJackpot}" x="8" y="0" width="80" height="80"/>`),
   claim: pic(gold30),
+  chest7: pic(chest7),
+  chest14: pic(chest14),
+  chest21: pic(chest21),
+  chest28: pic(chest28),
 };

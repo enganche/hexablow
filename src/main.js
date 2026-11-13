@@ -1334,7 +1334,7 @@ let dailyOfferedOn = '';
 const giftArt = (r) => (r.coins && !r.boosters ? shopArt.coin1 : boosterArt[Object.keys(r.boosters)[0]]);
 const giftIcon = (r) => (r.coins && !r.boosters ? '<i class="coin"></i>' : giftArt(r));
 const giftLabel = (r) => (r.coins ? `+${r.coins}` : `x${Object.values(r.boosters)[0]}`);
-const CHEST_ART = { 7: 'pouch', 14: 'crate', 21: 'coin4', 28: 'coin5' };
+const CHEST_ART = { 7: 'chest7', 14: 'chest14', 21: 'chest21', 28: 'chest28' };
 
 const DAILY_UNLOCK_LEVEL = 5;
 /** Daily gifts open once the player has reached level 5 (i.e. cleared level 4). */
