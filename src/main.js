@@ -474,6 +474,12 @@ const game = new Game($('game'), {
       starsIntro: rec.firstClear && levels[levelIdx].id === 3,
       next: last ? 'You grew every garden!' : `Next: ${levels[levelIdx + 1].name}`,
       onClaim: () => {
+        // Opening flow: first clear of level 1 and 2 rolls straight into the next level (no menu until level 3 is cleared)
+        if (rec.firstClear && levels[levelIdx].id <= 2 && !last) {
+          startLevel(levelIdx + 1);
+          playLevelIntro();
+          return;
+        }
         // Continue always leaves the level: back to the road map if it was opened from there, else home
         const toMap = startedFromMap;
         startedFromMap = false;
@@ -1210,7 +1216,24 @@ const giftIcon = (r) => (r.coins && !r.boosters ? '<i class="coin"></i>' : giftA
 const giftLabel = (r) => (r.coins ? `+${r.coins}` : `x${Object.values(r.boosters)[0]}`);
 const CHEST_ART = { 7: 'pouch', 14: 'crate', 21: 'coin4', 28: 'coin5' };
 
+const DAILY_UNLOCK_LEVEL = 5;
+/** Daily gifts open once the player has reached level 5 (i.e. cleared level 4). */
+function dailyUnlocked() {
+  return levels.some((l) => l.id >= DAILY_UNLOCK_LEVEL - 1 && starsFor(progress, l.id) > 0);
+}
+
 function renderDailyBadge() {
+  const open = dailyUnlocked();
+  dailyBtn.classList.toggle('locked', !open);
+  dailyBtn.setAttribute('aria-label', open ? 'Daily gifts' : `Daily gifts (unlocks at level ${DAILY_UNLOCK_LEVEL})`);
+  let lock = dailyBtn.querySelector('.dl-lock');
+  if (!lock) {
+    lock = document.createElement('span');
+    lock.className = 'dl-lock';
+    lock.setAttribute('aria-hidden', 'true');
+    lock.innerHTML = `${lockSvg}<b>Lv ${DAILY_UNLOCK_LEVEL}</b>`;
+    dailyBtn.appendChild(lock);
+  }
   let dot = dailyBtn.querySelector('.nav-badge');
   if (!dot) {
     dot = document.createElement('i');
@@ -1221,7 +1244,7 @@ function renderDailyBadge() {
   }
   const st = dailyStatus(progress, todayStr());
   const n = (st.canClaim ? 1 : 0) + st.readyCount;
-  dot.hidden = n === 0;
+  dot.hidden = n === 0 || !open;
   dot.setAttribute('aria-label', st.canClaim ? 'Daily gift ready' : 'Streak chest ready');
 }
 
@@ -1316,6 +1339,17 @@ function renderDaily() {
 
 function openDaily() {
   if (dailyPop) return;
+  if (!dailyUnlocked()) {
+    shakeEl(dailyBtn);
+    home.querySelector('.dl-tip')?.remove();
+    const tip = document.createElement('div');
+    tip.className = 'dl-tip';
+    tip.setAttribute('role', 'status');
+    tip.textContent = `Unlocks at level ${DAILY_UNLOCK_LEVEL}`;
+    home.append(tip);
+    setTimeout(() => tip.remove(), 2000);
+    return;
+  }
   audio.unlock?.();
   audio.tap();
   dailyPop = document.createElement('div');
@@ -1348,7 +1382,7 @@ dailyBtn.addEventListener('click', openDaily);
 function offerDaily() {
   renderDailyBadge();
   const today = todayStr();
-  if (dailyOfferedOn === today || completedCount(progress) === 0 || !dailyStatus(progress, today).canClaim) return;
+  if (dailyOfferedOn === today || !dailyUnlocked() || !dailyStatus(progress, today).canClaim) return;
   dailyOfferedOn = today;
   setTimeout(() => { if (!home.classList.contains('hidden') && !dailyPop) openDaily(); }, 450);
 }
