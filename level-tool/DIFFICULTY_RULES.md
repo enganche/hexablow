@@ -140,3 +140,12 @@ Chưa ràng buộc trong tier; xem mục 6.
 2. Khởi tạo given (cách đều, luôn có 1 và N) và cách cắt ô; thêm given cho tới khi giải được bằng suy luận.
 3. Mô phỏng ủ nhiệt: thêm / bớt / dời given, ghép / tách ô khay; **chỉ nhận trạng thái vẫn giải được**; điểm = tổng lệch của 3 tỉ lệ + phạt vi phạm ràng buộc.
 4. Trả tối đa 5 kết quả "trúng mục tiêu" (mỗi tỉ lệ trong sai số); nếu không có thì trả kết quả gần nhất. GD bấm **Áp dụng** rồi chỉnh tay tiếp.
+
+---
+
+## 7. Luật đường đi & given (bắt buộc từ level 5)
+
+1. **Không xoắn ốc.** Đường giải không được đi dần từ vòng ngoài vào tâm (hay ngược lại) — quá dễ đoán, level nào cũng giống nhau.
+   Tool đo bằng `HB.spiralScore` / `HB.isSpiral` (`js/model.js`): |tương quan(bước, vòng)| > 0.45 hoặc số lần đổi hướng vòng < N/6 ⇒ xoắn ốc.
+   `compile` cảnh báo, `autoPath`/`generate` tự loại đường xoắn ốc. Kiểm tra / sinh lại: `node level-tool/regen-paths.mjs [fromId=5] [--check]`.
+2. **Chỉ số cuối N bắt buộc là given.** Số 1 *không* bắt buộc — có thể nằm trong khay; generator (`freeStart`, mặc định bật) tự quyết ngẫu nhiên, miễn đạt độ khó của bậc.

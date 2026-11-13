@@ -78,6 +78,8 @@
       if (opts.prefix && out.length >= 4) break;
     }
     if (!out.length) return null;
+    // rule: no spiral paths (too guessable). Keep spirals only when the map allows nothing else.
+    if (opts.avoidSpiral !== false) { const ok = out.filter((x) => !HB.isSpiral(x.path)); if (ok.length) out.splice(0, out.length, ...ok); }
     if (style === 'straight') out.sort((a, b) => a.turns - b.turns);
     else if (style === 'wiggly') out.sort((a, b) => b.turns - a.turns);
     return out;
@@ -178,6 +180,7 @@
     let best = null;
     for (let t = 0; t < 12; t++) {
       const nums = HB.spreadGivens(N, avgMissing, rand, opts.maxGap || 5);
+      if (opts.freeStart !== false && rand() < 0.5) nums.delete(1); // 1 may live in the tray; only N is forced
       const groups = dropGivenFromGroups(draft.groups, draft.path, nums);
       if (opts.requireLogic === false) return { givenCells: draft.path.filter((k, i) => nums.has(i + 1)), solvable: null };
       const fixed = topUp(draft, draft.path, nums, groups);
@@ -272,7 +275,8 @@
       const path = paths[pi];
       const nm = numMap(path);
       const sliceEnd = Date.now() + Math.max(250, (deadline - Date.now()) / (paths.length - pi));
-      const isEnd = (k) => k === path[0] || k === path[N - 1];
+      const freeStart = opts.freeStart !== false; // rule: only the LAST number must be a given
+      const isEnd = (k) => (freeStart ? false : k === path[0]) || k === path[N - 1];
 
       // initial state
       const density = opts.givenRange ? midOf(opts.givenRange) : 0.3;
@@ -281,6 +285,8 @@
         const givens = opts.keepGivens
           ? new Set(path.map((k, i) => (opts.givenCells.includes(k) ? i + 1 : 0)).filter(Boolean))
           : HB.spreadGivens(N, Math.max(1, 1 / density - 1), rand, 5);
+        // freeStart: only the LAST number must be a given; 1 may sit in the tray (decided at random)
+        if (freeStart && !opts.keepGivens && rand() < 0.6) givens.delete(1);
         let groups;
         if (opts.keepGroups) groups = opts.groups.map((x) => x.slice());
         else {

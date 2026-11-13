@@ -76,7 +76,7 @@
     const givenSet = new Set(d.givenCells);
     const givens = {}, solution = {};
     d.path.forEach((k, i) => { solution[i + 1] = parse(k); if (givenSet.has(k)) givens[i + 1] = parse(k); });
-    if (!givens[1]) warnings.push('Số 1 chưa là given.');
+    // luật: chỉ số cuối N bắt buộc là given; số 1 có thể nằm trong khay
     if (!givens[N]) warnings.push(`Số ${N} (cuối) chưa là given (GDD: N luôn là given).`);
 
     const inGroup = new Set();
@@ -96,7 +96,27 @@
       cells: d.cells.map((c) => c.slice()), blocked: d.blocked.map((c) => c.slice()),
       givens, pieces, solution,
     };
+    if (d.id >= 5 && HB.isSpiral(d.path)) warnings.push('Đường đi dạng xoắn ốc (dễ đoán) — nên đổi đường khác (luật: level ≥ 5 không xoắn ốc).');
     return { ok: errors.length === 0, level, errors, warnings };
+  };
+
+  /**
+   * Spiral detector. Ring = hex distance from the map centre (0,0). A spiral drifts steadily in or out
+   * (|corr(step, ring)| high) and almost never turns back (few ring reversals). Rule: levels >= 5 must NOT be spirals.
+   */
+  HB.spiralScore = function (pathKeys) {
+    const r = pathKeys.map((k) => { const [q, s] = parse(k); return Math.max(Math.abs(q), Math.abs(s), Math.abs(q + s)); });
+    const n = r.length, mi = (n - 1) / 2, mr = r.reduce((a, b) => a + b, 0) / n;
+    let sxy = 0, sxx = 0, syy = 0;
+    r.forEach((v, i) => { sxy += (i - mi) * (v - mr); sxx += (i - mi) ** 2; syy += (v - mr) ** 2; });
+    let rev = 0, last = 0;
+    for (let i = 1; i < n; i++) { const d = Math.sign(r[i] - r[i - 1]); if (d && last && d !== last) rev++; if (d) last = d; }
+    return { corr: syy ? sxy / Math.sqrt(sxx * syy) : 0, rev };
+  };
+  HB.isSpiral = function (pathKeys) {
+    if (pathKeys.length < 12) return false;
+    const s = HB.spiralScore(pathKeys);
+    return Math.abs(s.corr) > 0.45 || s.rev < pathKeys.length / 6;
   };
 
   HB.turns = function (pathKeys) {
