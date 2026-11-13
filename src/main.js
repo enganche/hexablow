@@ -6,7 +6,14 @@ import menuBgLilac from './assets/menu-bg/lilac.webp';
 import menuBgSnow from './assets/menu-bg/snow.webp';
 import menuBgSakura from './assets/menu-bg/sakura.webp';
 import menuBgAutumn from './assets/menu-bg/autumn.webp';
+import levelBgHoney from './assets/levelmap-bg/honey.webp';
+import levelBgOcean from './assets/levelmap-bg/ocean.webp';
+import levelBgLilac from './assets/levelmap-bg/lilac.webp';
+import levelBgSnow from './assets/levelmap-bg/snow.webp';
+import levelBgSakura from './assets/levelmap-bg/sakura.webp';
+import levelBgAutumn from './assets/levelmap-bg/autumn.webp';
 const MENU_BG = { 'tile-honey': menuBgHoney, 'tile-ocean': menuBgOcean, 'tile-lilac': menuBgLilac, 'tile-snow': menuBgSnow, 'tile-sakura': menuBgSakura, 'tile-autumn': menuBgAutumn };
+const LEVEL_BG = { 'tile-honey': levelBgHoney, 'tile-ocean': levelBgOcean, 'tile-lilac': levelBgLilac, 'tile-snow': levelBgSnow, 'tile-sakura': levelBgSakura, 'tile-autumn': levelBgAutumn };
 import { initProfile } from './profile.js';
 import levels from './levels.json';
 import { Game } from './game.js';
@@ -92,6 +99,7 @@ function applyCosmetics() {
   root.style.setProperty('--tile-rim', tile.rim[0]);
   root.style.setProperty('--tile-base', tile.base);
   root.style.setProperty('--menu-bg', `url(${MENU_BG[tile.id] || menuBgHoney})`);
+  root.style.setProperty('--levelmap-bg', `url(${LEVEL_BG[tile.id] || levelBgHoney})`);
 }
 
 // ---- Coins ----
@@ -1639,37 +1647,17 @@ function renderLevels() {
   grid.innerHTML = '';
   const H = MAP_PAD * 2 + MAP_STEP * (levels.length - 1);
   const pos = (i) => ({ x: mapX(i), y: H - MAP_PAD - i * MAP_STEP });
-  let trail = '', scenery = '';
+  let trail = '';
   for (let i = 0; i < levels.length - 1; i++) {
     const p = pos(i), q = pos(i + 1), mid = (p.y + q.y) / 2;
     const d = `M${p.x} ${p.y} C${p.x} ${mid} ${q.x} ${mid} ${q.x} ${q.y}`;
     const done = starsFor(progress, levels[i].id) > 0;
     trail += `<path class="road-shadow" d="${d}"/><path class="road-rim" d="${d}"/><path class="road" d="${d}"/><path class="ribbon ${done ? 'done' : ''}" d="${d}"/><path class="stitches" d="${d}"/>`;
   }
-  // Standalone flowers have a clear silhouette; ground details stay below the leaves.
-  for (let i = 0; i < levels.length; i += 2) {
-    const y = pos(i).y - 10;
-    const flip = i % 4 === 0;
-    scenery += `<g transform="translate(${flip ? 7 : 80} ${y})">
-      <ellipse cx="7" cy="15" rx="8" ry="2.2" fill="#589b31" opacity=".2"/>
-      <path d="M7 13V-5" fill="none" stroke="#378c35" stroke-width="1.3" stroke-linecap="round"/>
-      <path d="M6.6 7.5C2.5 7.5-.5 4.5 0 1C4 .8 6.5 4 6.6 7.5Z" fill="#80cf3c" stroke="#469b34" stroke-width=".55"/>
-      <path d="M7.4 3.5C11.5 3.5 14-0.5 13.5-3C9.5-2.8 7.5.1 7.4 3.5Z" fill="#9cde48" stroke="#469b34" stroke-width=".55"/>
-      <path d="m1.5 2.6 4.2 3.7m6.2-7.5L8.3 2" fill="none" stroke="#c6ef75" stroke-width=".45" stroke-linecap="round"/>
-      <g transform="translate(7 -8)" fill="${flip ? '#ff76a7' : '#fff092'}" stroke="${flip ? '#d64d82' : '#e5af36'}" stroke-width=".55">
-        <path d="M-2-2C-7-9 2-12 3-5C9-8 12 0 5 2C10 8 2 12 0 5C-6 10-11 3-5 0C-9-4-5-7-2-2Z"/>
-        <circle r="2.8" fill="#ffd53e" stroke="#df9d26"/>
-        <path d="M-1.5-1a1.7 1.7 0 0 1 2-.8" fill="none" stroke="#fff5ab" stroke-width=".7" stroke-linecap="round"/>
-      </g>
-      <path d="M2 14q-1-3-3-3m3 3q0-3 2-4m7 5q0-3 2-4" fill="none" stroke="#64b337" stroke-width=".65" stroke-linecap="round"/>
-      <ellipse cx="17" cy="15" rx="2.1" ry="1.2" fill="#c6b586"/>
-      <ellipse cx="16.7" cy="14.6" rx="1.6" ry=".7" fill="#f2e6bb"/>
-    </g>`;
-  }
   const wrap = document.createElement('div');
   wrap.className = 'lv-map-in';
   wrap.style.aspectRatio = `100 / ${H}`;
-  wrap.innerHTML = `<svg class="lv-scenery" viewBox="0 0 100 ${H}" aria-hidden="true"><defs><pattern id="map-meadow" width="100" height="136" patternUnits="userSpaceOnUse"><path d="M0 0Q45 22 18 68T0 136Z" fill="#d5eaa2"/><path d="M100 0Q62 35 85 78T100 136Z" fill="#a3d66b"/><path d="M0 96Q22 82 30 103T0 125" fill="#e4efb4" opacity=".6"/><path d="m89 35 2-3m2 3 2-3M12 63l2-3m2 3 2-3" stroke="#fff9d1" stroke-width="1" stroke-linecap="round" opacity=".7"/></pattern></defs><path d="M0 0H100V${H}H0Z" fill="url(#map-meadow)"/></svg><svg class="lv-trail" viewBox="0 0 100 ${H}" aria-hidden="true">${trail}</svg><svg class="lv-scenery" viewBox="0 0 100 ${H}" aria-hidden="true">${scenery}</svg>`;
+  wrap.innerHTML = `<div class="lv-meadow-bg" aria-hidden="true"></div><svg class="lv-trail" viewBox="0 0 100 ${H}" aria-hidden="true">${trail}</svg>`;
   levels.forEach((l, i) => {
     const locked = !isUnlocked(i);
     const stars = starsFor(progress, l.id);
