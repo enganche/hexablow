@@ -189,7 +189,7 @@ function openBuyPop(id) {
   const packCost = packPrice(id);
   const saving = Math.round((1 - BOOSTERS.packDiscount) * 100);
   buyCard.innerHTML =
-    `<h3 id="buy-title">Add ${cfg.name}</h3>
+    `<h3 id="buy-title">${cfg.name}</h3>
      <button class="buy-x" type="button" aria-label="Close">×</button>
      <div class="buy-showcase"><div class="buy-ic b-${id}">${boosterArt[id]}</div><span class="buy-spark" aria-hidden="true">✦</span></div>
      <p class="buy-desc">${cfg.desc}</p>
