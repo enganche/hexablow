@@ -1,15 +1,15 @@
 // Local player identity, independent of gameplay saves.
 const KEY = 'gardendoku.profile.v1';
 import { coinsOf, spend } from './progress.js';
-import avatar_cat from './assets/avatars/cat.png';
-import avatar_cow from './assets/avatars/cow.png';
-import avatar_fox from './assets/avatars/fox.png';
-import avatar_chick from './assets/avatars/chick.png';
-import avatar_pig from './assets/avatars/pig.png';
-import avatar_sheep from './assets/avatars/sheep.png';
-import avatar_rabbit from './assets/avatars/rabbit.png';
-import avatar_bee from './assets/avatars/bee.png';
-import avatar_duck from './assets/avatars/duck.png';
+import avatar_cat from './assets/avatars/cat.webp';
+import avatar_cow from './assets/avatars/cow.webp';
+import avatar_fox from './assets/avatars/fox.webp';
+import avatar_chick from './assets/avatars/chick.webp';
+import avatar_pig from './assets/avatars/pig.webp';
+import avatar_sheep from './assets/avatars/sheep.webp';
+import avatar_rabbit from './assets/avatars/rabbit.webp';
+import avatar_bee from './assets/avatars/bee.webp';
+import avatar_duck from './assets/avatars/duck.webp';
 const avatarImages = [avatar_cat, avatar_cow, avatar_fox, avatar_chick, avatar_pig, avatar_sheep, avatar_rabbit, avatar_bee, avatar_duck];
 const prices = [0, 0, 0, 50, 50, 50, 100, 100, 100];
 const avatars = [ ['🐱', 'Cat'], ['🐮', 'Cow'], ['🦊', 'Fox'], ['🐥', 'Chick'], ['🐷', 'Pig'], ['🐑', 'Sheep'], ['🐰', 'Rabbit'], ['🐝', 'Bee'], ['🦆', 'Duck'] ];
@@ -40,7 +40,7 @@ export function initProfile(progress, audio, onCoinsChange = () => {}) {
   current.type = 'button';
   current.className = 'home-nav-item current';
   current.setAttribute('aria-current', 'page');
-  current.innerHTML = '<img src="/src/assets/nav-home.png" alt="" aria-hidden="true"><span>Home</span>';
+  current.innerHTML = '<img src="/src/assets/nav-home.webp" alt="" aria-hidden="true"><span>Home</span>';
   nav.append(shop, current, album);
   document.getElementById('stage').append(nav);
   let saved;

@@ -570,7 +570,7 @@ body {
 @media(prefers-reduced-motion:reduce) {.h-board {animation:none;}}
 
 /* ---- Coins, toolbar, hint ---- */
-.coin { display:inline-block; width:1em; height:1em; vertical-align:-.15em; background:url(./assets/coin.png) center/contain no-repeat; }
+.coin { display:inline-block; width:1em; height:1em; vertical-align:-.15em; background:url(./assets/coin.webp) center/contain no-repeat; }
 #coin-hud { position:absolute; z-index:31; box-sizing:border-box; height:36px; pointer-events:none; }
 #coin-hud.hidden { display:none; }
 .coin-pill { display:flex; align-items:center; gap:5px; padding:4px 10px 4px 7px; border-radius:999px; background:var(--panel); border:1px solid var(--edge); font-weight:800; font-size:14px; box-shadow:0 2px 0 var(--edge); }
@@ -799,7 +799,7 @@ body {
 #res-confetti i { position:absolute; top:-4cqw; display:block; opacity:0; }
 #result.show-art #res-confetti i { animation-name:confetti-fall; animation-timing-function:linear; animation-iteration-count:2; animation-fill-mode:both; }
 @keyframes confetti-fall { 0% { opacity:1; transform:translate(0,0) rotate(0); } 100% { opacity:1; transform:translate(var(--sway), 118cqh) rotate(var(--spin)); } }
-.fly-coin { position:absolute; width:6cqw; height:6cqw; margin:-3cqw 0 0 -3cqw; border-radius:50%; background:url(./assets/coin.png) center/contain no-repeat; animation:coin-fly .7s cubic-bezier(.2,.7,.3,1) forwards; pointer-events:none; }
+.fly-coin { position:absolute; width:6cqw; height:6cqw; margin:-3cqw 0 0 -3cqw; border-radius:50%; background:url(./assets/coin.webp) center/contain no-repeat; animation:coin-fly .7s cubic-bezier(.2,.7,.3,1) forwards; pointer-events:none; }
 @keyframes coin-fly { 0% { opacity:1; transform:translate(0,0) scale(.6); } 100% { opacity:0; transform:translate(var(--dx), var(--dy)) scale(1.1) rotate(300deg); } }
 @media (prefers-reduced-motion: reduce) { .ra-rays, #res-confetti i { animation:none !important; } }
 
