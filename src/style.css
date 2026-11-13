@@ -1519,3 +1519,12 @@ body {
 #coin-hud { height:38px; }
 .coin-pill { gap:6px; padding:4px 12px 4px 8px; font-size:17px; }
 .coin-pill .coin { font-size:21px; }
+
+/* Booster buy popup: one row per button (xN + price / free ad), ad button first */
+.buy-actions .buy-opt { flex-direction:row; justify-content:center; align-items:center; gap:10px; }
+.buy-actions .buy-opt > span { font-size:24px; font-weight:900; }
+.buy-actions .buy-opt em { display:flex; align-items:center; gap:5px; font-size:22px; }
+.buy-actions .buy-opt em b { font-size:19px; }
+.buy-opt .ad-ic { width:30px; height:30px; flex:none; filter:drop-shadow(0 1px 0 var(--btn-glow,#ffed97)); }
+.buy-opt.ad em { color:var(--btn-ink,#805022); }
+.ad-pop .os-icon svg { width:100%; height:100%; color:#0b57d0; }

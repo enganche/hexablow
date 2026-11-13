@@ -164,6 +164,22 @@ function syncModeUI() {
 const buyPop = $('buy-pop');
 const buyCard = buyPop.querySelector('.buy-card');
 let buyingId = null;
+const AD_ICON = '<svg class="ad-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3.5" fill="currentColor"/><path d="M10 9.2v5.6l5-2.8z" fill="#fff"/></svg>';
+
+/** Debug stand-in for a rewarded video ad. Swap for the ad SDK later: call onReward() once the ad is completed. */
+function showFakeRewardedAd(onReward) {
+  const pop = document.createElement('div');
+  pop.className = 'os-pop ad-pop';
+  pop.setAttribute('role', 'alertdialog');
+  pop.setAttribute('aria-modal', 'true');
+  pop.setAttribute('aria-label', 'Rewarded ad');
+  pop.innerHTML = `<div class="os-sheet"><div class="os-head"><span class="os-icon">${AD_ICON}</span><div><b>Rewarded video</b><small>Fake ad (debug)</small></div></div><p class="os-note">DEBUG: a real rewarded video plays here. Tap Claim to pretend it finished.</p><div class="os-actions"><button type="button" class="os-cancel">Close</button><button type="button" class="os-ok">Claim reward</button></div></div>`;
+  pop.querySelector('.os-cancel').onclick = () => { audio.tap(); pop.remove(); };
+  pop.querySelector('.os-ok').onclick = () => { pop.remove(); onReward(); };
+  pop.addEventListener('keydown', (e) => { if (e.key === 'Escape') pop.remove(); });
+  stageEl.append(pop);
+  pop.querySelector('.os-ok').focus({ preventScroll: true });
+}
 function openBuyPop(id) {
   buyingId = id;
   const cfg = BOOSTERS[id];
@@ -175,22 +191,26 @@ function openBuyPop(id) {
      <button class="buy-x" type="button" aria-label="Close">×</button>
      <div class="buy-showcase"><div class="buy-ic b-${id}">${boosterArt[id]}</div><span class="buy-spark" aria-hidden="true">✦</span></div>
      <p class="buy-desc">${cfg.desc}</p>
-     <p class="buy-have">You have <b>${boosterCount(progress, id)}</b> · ${COIN} <b>${coinsOf(progress)}</b></p>
      <div class="buy-actions">
-       <button class="buy-opt" type="button" data-qty="1"><span>Buy ×1</span><em>${COIN} ${cfg.price}</em></button>
-       <button class="buy-opt best" type="button" data-qty="${pack}"><span>Buy ×${pack}</span><em>${COIN} ${packCost}</em><small>Save ${saving}%</small></button>
+       <button class="buy-opt ad" type="button"><span>×1</span><em>${AD_ICON}<b>Free</b></em></button>
+       <button class="buy-opt best" type="button" data-qty="${pack}"><span>×${pack}</span><em>${COIN} ${packCost}</em><small>Save ${saving}%</small></button>
      </div>`;
-  buyCard.querySelectorAll('.buy-opt').forEach((btn) => {
-    const qty = Number(btn.dataset.qty);
-    const cost = qty === pack ? packCost : cfg.price * qty;
-    btn.classList.toggle('poor', !canAfford(progress, cost));
-    btn.onclick = () => {
-      if (!buyBooster(progress, id, qty)) return shakeEl(btn);
-      audio.tap();
+  const coinBtn = buyCard.querySelector('.buy-opt.best');
+  coinBtn.classList.toggle('poor', !canAfford(progress, packCost));
+  coinBtn.onclick = () => {
+    if (!buyBooster(progress, id, pack)) return shakeEl(coinBtn);
+    audio.tap();
+    closeBuyPop();
+    renderCoins();
+  };
+  buyCard.querySelector('.buy-opt.ad').onclick = () => {
+    audio.tap();
+    showFakeRewardedAd(() => {
+      grantBooster(progress, id, 1);
       closeBuyPop();
-      renderCoins();
-    };
-  });
+      renderBoosters();
+    });
+  };
   buyCard.querySelector('.buy-x').onclick = () => { audio.tap(); closeBuyPop(); };
   buyPop.classList.remove('hidden');
   showCoinHud();
@@ -933,7 +953,7 @@ function showReward(title, rewards, art) {
   pop.querySelector('button').onclick = close;
   pop.addEventListener('click', (e) => { if (e.target === pop) close(); });
   stageEl.append(pop);
-  pop.querySelector('button').focus();
+  pop.querySelector('button').focus({ preventScroll: true });
 }
 
 /** Fake OS purchase sheet so a stray tap never buys anything. Replace with the store SDK's own sheet later. */
@@ -950,7 +970,7 @@ function confirmPurchase(title, price, art, onConfirm) {
   pop.addEventListener('click', (e) => { if (e.target === pop) close(); });
   pop.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
   stageEl.append(pop);
-  pop.querySelector('.os-cancel').focus();
+  pop.querySelector('.os-cancel').focus({ preventScroll: true });
 }
 
 function buyPack(p, art, once = false) {
