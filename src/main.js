@@ -1250,7 +1250,7 @@ function renderAlbum() {
     const { have, total } = setProgress(progress, set.id);
     const h = document.createElement('h3');
     const ready = have === total && !progress.setsClaimed.includes(set.id);
-    h.innerHTML = `${set.name} <small>${have}/${total}${have < total ? ` · bonus ${set.bonus}` : ready ? ' · claim bonus!' : ' ✓'}</small>`;
+    h.innerHTML = `<span class="al-name">${set.name}</span> <small>${have}/${total}${have < total ? ` · bonus ${set.bonus}` : ready ? ' · claim bonus!' : ' ✓'}</small>`;
     if (have < total || ready) h.querySelector('small').insertAdjacentHTML('beforeend', ` ${COIN}`);
     if (ready) { h.classList.add('claimable'); h.onclick = () => { audio.tap(); showClaim(set); }; }
     body.appendChild(h);

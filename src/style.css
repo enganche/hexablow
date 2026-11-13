@@ -1700,3 +1700,15 @@ button.album-card:active { transform:translateY(.8cqw); }
 #home #home-settings svg { width:100%; height:100%; }
 #home .h-daily { top:21.5cqw; }
 :is(#hud .icon-btn, #levels-back) { width:12cqw; height:12cqw; padding:1.7cqw; border-radius:4cqw; }
+
+/* Album set titles: a themed ribbon pill so each habitat reads as a section header */
+#album .shop-body h3 .al-name { position:relative; display:inline-block; padding:1.3cqw 5cqw 1.5cqw 4.4cqw; font-size:5.4cqw; font-weight:900; letter-spacing:.02em; color:#fff;
+  text-shadow:0 .5cqw 0 color-mix(in srgb,var(--leaf-edge,#2d6d28) 70%,transparent);
+  background:linear-gradient(var(--leaf-hi,#7fe05a),var(--leaf-lo,#3bb53a));
+  border:.6cqw solid var(--leaf-rim,#e9ffb8); border-radius:2cqw 6cqw 6cqw 2cqw;
+  box-shadow:0 .9cqw 0 var(--leaf-edge,#2d6d28), inset 0 .6cqw 0 color-mix(in srgb,var(--leaf-glow,#b6f58e) 60%,transparent); }
+#album .shop-body h3 .al-name::before { content:''; position:absolute; left:-1.4cqw; top:50%; width:2.4cqw; height:2.4cqw; margin-top:-1.2cqw; border-radius:50%; background:var(--leaf-rim,#e9ffb8); box-shadow:0 0 0 .6cqw var(--leaf-edge,#2d6d28); }
+#album .shop-body h3 { margin:5cqw 0 4cqw; }
+
+/* Continue / Play button group sits a little higher on the main menu */
+#home .h-actions { top:-5cqw; }

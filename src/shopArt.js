@@ -19,5 +19,5 @@ export const shopArt = {
   coin4: svg(`${chest('#9a62e0', '#b987f2', '#4e2b92', '#ffd54a')}${coin(26, 30, 11)}${coin(46, 24, 12)}${coin(66, 30, 11)}${coin(36, 36, 9)}${coin(58, 36, 9)}${sparkle(86, 18, 1.2)}${sparkle(10, 24, .9)}`),
   coin5: svg(`${chest('#ffc83b', '#ffe27a', '#a8641c', '#e8465a')}${coin(22, 26, 11)}${coin(42, 18, 12)}${coin(64, 20, 12)}${coin(76, 30, 9)}${coin(30, 33, 9)}${coin(52, 30, 10)}${sparkle(86, 12, 1.3)}${sparkle(8, 14, 1)}`),
   jackpot: svg(`${chest('#59b84a', '#8ad46a', '#2b6a27', '#ffd54a')}${coin(22, 30, 12)}${coin(44, 22, 13)}${coin(68, 26, 12)}${coin(32, 38, 10)}${coin(58, 36, 10)}${flower(10, 32, '#ff9ec4', .8)}${sparkle(86, 12, 1.3)}${sparkle(48, 8, 1)}`),
-  claim: svg(`${shadow(26, 68)}<path d="M26 40h44l-5 26q-1 4-6 4H37q-5 0-6-4Z" fill="#e58a4f" stroke="#8a4a1f"/><ellipse cx="48" cy="40" rx="22" ry="7" fill="#7a4b27" stroke="#4a2c14"/>${sprout(48, 40, 2.6)}${sparkle(76, 20)}`),
+  claim: svg(`${shadow(26, 68)}<path d="M26 40h44l-5 26q-1 4-6 4H37q-5 0-6-4Z" fill="#e58a4f" stroke="#8a4a1f"/><ellipse cx="48" cy="40" rx="22" ry="7" fill="#7a4b27" stroke="#4a2c14"/>${sprout(48, 40, 1.7)}${sparkle(76, 20)}`),
 };
