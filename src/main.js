@@ -554,7 +554,8 @@ const tut = {
       this.steps = [0];
     } else if (jump) {
       this.steps = [0];
-      this.jumpSteps = [[1, 2], [3, 4], [6, 5]]; // [number to tap, neighbour the list jumps to]
+      // [number to tap, neighbour the list jumps to]: the tray is ascending, so the jumps swing right / left / right
+      this.jumpSteps = [[19, 18], [1, 2], [17, 16]];
       this.jumpIdx = 0;
       this.jumpPhase = 'tap';
     } else if (bid) {
@@ -727,7 +728,7 @@ const tut = {
   },
   /** Game input gate: true when the lesson's current step allows this action. */
   allows(type, data) {
-    if (!this.active || this.kind !== 'booster') return true; // level lessons (1-3) are free-form again
+    if (!this.active || this.kind === 'hearts') return true; // hearts lesson is just a spotlight; lessons 1, 2 and boosters are locked
     const t = this.target();
     switch (type) {
       case 'grab': return !!t && data.piece.numbers[0] === t.n;
