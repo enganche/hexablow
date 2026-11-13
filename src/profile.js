@@ -1,21 +1,24 @@
 // Local player identity, independent of gameplay saves.
 const KEY = 'gardendoku.profile.v1';
 import { coinsOf, spend } from './progress.js';
+import avatar_cat from './assets/avatars/cat.png';
+import avatar_cow from './assets/avatars/cow.png';
+import avatar_fox from './assets/avatars/fox.png';
+import avatar_chick from './assets/avatars/chick.png';
+import avatar_pig from './assets/avatars/pig.png';
+import avatar_sheep from './assets/avatars/sheep.png';
+import avatar_rabbit from './assets/avatars/rabbit.png';
+import avatar_bee from './assets/avatars/bee.png';
+import avatar_duck from './assets/avatars/duck.png';
+const avatarImages = [avatar_cat, avatar_cow, avatar_fox, avatar_chick, avatar_pig, avatar_sheep, avatar_rabbit, avatar_bee, avatar_duck];
 const prices = [0, 0, 0, 50, 50, 50, 100, 100, 100];
 const avatars = [ ['🐱', 'Cat'], ['🐮', 'Cow'], ['🦊', 'Fox'], ['🐥', 'Chick'], ['🐷', 'Pig'], ['🐑', 'Sheep'], ['🐰', 'Rabbit'], ['🐝', 'Bee'], ['🦆', 'Duck'] ];
 
-// Small garden scenes stay crisp at both thumbnail and portrait sizes.
-const avatarPalettes = [
-  ['#7edbed', '#def8fa', '#8cc66b'], ['#a6dcee', '#f1fcff', '#91c96b'],
-  ['#f3bd88', '#fff0cb', '#b3c96c'], ['#f4d77f', '#fff8d5', '#b0d777'],
-  ['#eebbd6', '#fff0f5', '#a8cd8c'], ['#c9c1ed', '#f5f1ff', '#9dc8a3'],
-  ['#bcb8ed', '#eeecff', '#a9cda0'], ['#a6dce0', '#effcdd', '#a3cd64'],
-  ['#86cde9', '#e1f7ff', '#73bbba'],
-];
+// Each avatar image already contains its own garden scene.
 function avatarArt(i) {
-  const [sky, light, hill] = avatarPalettes[i];
-  return `<span class="avatar-scene" aria-hidden="true"><svg class="avatar-landscape" viewBox="0 0 100 100" preserveAspectRatio="none"><path fill="${sky}" d="M0 0h100v100H0z"/><circle cx="51" cy="44" r="36" fill="${light}" opacity=".48"/><circle cx="80" cy="19" r="11" fill="#fff3b4"/><path d="M-4 25h31m42 14h35" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".6"/><path d="M0 74Q25 55 53 73T100 65v35H0Z" fill="${hill}"/><path d="M0 87Q37 69 100 85v15H0Z" fill="${hill}"/><path d="M0 87Q37 69 100 85v15H0Z" fill="#386d55" opacity=".16"/><ellipse cx="51" cy="84" rx="25" ry="5" fill="#315f58" opacity=".18"/><g fill="${light}"><path d="m16 45 1.5 4.5L22 51l-4.5 1.5L16 57l-1.5-4.5L10 51l4.5-1.5Z"/><path d="m84 52 1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/></g><g stroke="#4f8b56" stroke-width="1.8" stroke-linecap="round"><path d="M11 91v-9m-3 4 3 3 4-5M88 89V76m-4 5 4 4 4-5"/></g><g fill="#fff8d7"><circle cx="11" cy="80" r="3.5"/><circle cx="88" cy="75" r="4"/></g><g fill="#eeb459"><circle cx="11" cy="80" r="1.5"/><circle cx="88" cy="75" r="1.7"/></g></svg><span class="avatar-character">${avatars[i][0]}</span></span>`;
+  return `<span class="avatar-scene" aria-hidden="true"><img class="avatar-character" src="${avatarImages[i]}" alt="" draggable="false"></span>`;
 }
+
 
 export function initProfile(progress, audio, onCoinsChange = () => {}) {
   const home = document.getElementById('home');
@@ -37,7 +40,7 @@ export function initProfile(progress, audio, onCoinsChange = () => {}) {
   current.type = 'button';
   current.className = 'home-nav-item current';
   current.setAttribute('aria-current', 'page');
-  current.innerHTML = '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="33" y="8" width="5" height="10" rx="1" fill="#e9695c" stroke="#8a3a2e" stroke-width="2"/><path d="M9 23h30v19H9Z" fill="#fff0b8" stroke="#8a5a2a" stroke-width="2.4" stroke-linejoin="round"/><path d="M3 25 24 6l21 19-4 3.5L24 13 7 28.5Z" fill="#f2655a" stroke="#8a3a2e" stroke-width="2.4" stroke-linejoin="round"/><path d="M19 42V30q0-3 3-3h4q3 0 3 3v12Z" fill="#4fb4e8" stroke="#2a6a96" stroke-width="2"/><circle cx="28" cy="35" r="1.2" fill="#fff"/><rect x="11.5" y="27" width="5" height="5" rx="1" fill="#bfe9f7" stroke="#2a6a96" stroke-width="1.5"/><circle cx="35" cy="34" r="2.2" fill="#f47e88"/><circle cx="35" cy="34" r=".8" fill="#ffe66b"/><path d="M35 36v5" stroke="#4d9a3a" stroke-width="1.6"/></svg><span>Home</span>';
+  current.innerHTML = '<img src="/src/assets/nav-home.png" alt="" aria-hidden="true"><span>Home</span>';
   nav.append(shop, current, album);
   document.getElementById('stage').append(nav);
   let saved;
