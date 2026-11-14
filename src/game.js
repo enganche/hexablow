@@ -3,6 +3,7 @@ import tuning from './tuning.json';
 import economy from './economy.json';
 import { FIREWORK_MS } from './fireworks.js';
 import { axialToPixel, pixelToAxial, key, areAdjacent, DIRS } from './hex.js';
+import { portalMap, linked as linkedCells } from './mechanics.js';
 import {
   LIFT, mulberry, makeLawnCell, setLawnOpacity, spriteGeo, plantMaterial, PLANT_ANCHOR, FLOWER_KINDS,
   houseMaterial, HOUSE_SIZE, HOUSE_ANCHOR, HOUSE_REACH,
@@ -127,6 +128,10 @@ function setTileSkinColors(skin) {
 let REVEAL = { text: 0x70a42a, fill: 0xb6dc7a, dash: 0x7da84a };
 const FINISH_FACE = waxSurface(0xffb3d3, 0xed77b2, TILE_BODY_GEO);
 const FINISH_RIM = waxSurface(0xffd0e5, 0xf7afd0, TILE_BODY_GEO);
+// mystery given: a violet "?" tile that keeps its meaning in every skin
+const MYSTERY_BASE = 0x7f62b8;
+const MYSTERY_FACE = waxSurface(0xcdb4f2, 0x9a78d8, TILE_BODY_GEO);
+const MYSTERY_RIM = waxSurface(0xe4d6fa, 0xcbb4f0, TILE_BODY_GEO);
 const LABEL_GEO = new THREE.PlaneGeometry(1.5, 1.5);
 
 const matCache = new Map();
@@ -416,19 +421,123 @@ pathSegment.closePath();
 const PATH_SEGMENT_GEO = new THREE.ShapeGeometry(pathSegment, 8);
 const STRAIGHT_PATH_GEO = new THREE.PlaneGeometry(1, 0.42);
 
-function makeTile(n, directions, isFinish = false, connected = false) {
+function makeTile(n, directions, isFinish = false, connected = false, mystery = false) {
   const group = new THREE.Group();
-  const label = new THREE.Mesh(LABEL_GEO, labelMaterial(n, connected ? 0x70a42a : isFinish ? 0xd9609c : TILE_BASE));
+  const base = mystery ? MYSTERY_BASE : connected ? 0x70a42a : isFinish ? 0xd9609c : TILE_BASE;
+  const label = new THREE.Mesh(LABEL_GEO, labelMaterial(mystery ? '?' : n, base));
   label.scale.setScalar(0.72);
   label.position.set(0, TILE_TOP_LIFT, 0.5);
   group.add(
     hexLayer(HEX_GEO, basicMat(0xb5651a, 0.10), 0.97, -0.08, 0.08),
-    hexLayer(TILE_BODY_GEO, basicMat(connected ? 0x70a42a : isFinish ? 0xd9609c : TILE_BASE), 1, 0, 0.14),
-    hexLayer(connected ? CONNECTED_RIM : isFinish ? FINISH_RIM : TILE_RIM, WAX_MAT, 1, TILE_TOP_LIFT, 0.16),
-    hexLayer(connected ? CONNECTED_FACE : isFinish ? FINISH_FACE : TILE_FACE, WAX_MAT, 0.92, TILE_FACE_Y, 0.20),
+    hexLayer(TILE_BODY_GEO, basicMat(base), 1, 0, 0.14),
+    hexLayer(mystery ? MYSTERY_RIM : connected ? CONNECTED_RIM : isFinish ? FINISH_RIM : TILE_RIM, WAX_MAT, 1, TILE_TOP_LIFT, 0.16),
+    hexLayer(mystery ? MYSTERY_FACE : connected ? CONNECTED_FACE : isFinish ? FINISH_FACE : TILE_FACE, WAX_MAT, 0.92, TILE_FACE_Y, 0.20),
     label
   );
   return group;
+}
+
+// ---- Mechanic overlays: twin portals and locked cells (canvas sprites, built once) ----
+const PORTAL_COLORS = ['#18b5ae', '#e0529c', '#4d86ee'];
+const PORTAL_HEX = [0x18b5ae, 0xe0529c, 0x4d86ee];
+const portalCache = new Map();
+/** Swirl glyph for portal pair `idx`, drawn on a transparent canvas. */
+function portalMaterial(idx) {
+  const ck = idx % PORTAL_COLORS.length;
+  if (portalCache.has(ck)) return portalCache.get(ck);
+  const S = 256, m = S / 2, col = PORTAL_COLORS[ck];
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.lineCap = 'round';
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 30;
+  g.beginPath();
+  for (let t = 0; t <= 1; t += 0.02) {
+    const a = t * Math.PI * 4.2, r = 14 + t * 84;
+    g[t === 0 ? 'moveTo' : 'lineTo'](m + Math.cos(a) * r, m + Math.sin(a) * r);
+  }
+  g.stroke();
+  g.strokeStyle = col;
+  g.lineWidth = 17;
+  g.beginPath();
+  for (let t = 0; t <= 1; t += 0.02) {
+    const a = t * Math.PI * 4.2, r = 14 + t * 84;
+    g[t === 0 ? 'moveTo' : 'lineTo'](m + Math.cos(a) * r, m + Math.sin(a) * r);
+  }
+  g.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+  portalCache.set(ck, mat);
+  return mat;
+}
+
+const lockCache = new Map();
+/** Padlock with the number of cells still to solve in its body (0 = open lock, used for the unlock flash). */
+function lockMaterial(left) {
+  if (lockCache.has(left)) return lockCache.get(left);
+  const S = 256, m = S / 2;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  const open = left <= 0;
+  // shackle
+  g.strokeStyle = '#4a3c2c';
+  g.lineWidth = 34;
+  g.lineCap = 'round';
+  g.beginPath();
+  if (open) {
+    g.moveTo(m + 44, 118);
+    g.lineTo(m + 44, 78);
+    g.arc(m + 4, 78, 40, 0, -Math.PI, true);
+    g.lineTo(m - 36, 98);
+  } else {
+    g.moveTo(m - 40, 122);
+    g.lineTo(m - 40, 84);
+    g.arc(m, 84, 40, Math.PI, 0);
+    g.lineTo(m + 40, 122);
+  }
+  g.stroke();
+  g.strokeStyle = '#d7cfbf';
+  g.lineWidth = 20;
+  g.stroke();
+  // body
+  const bx = m - 82, by = 108, bw = 164, bh = 128, r = 26;
+  g.beginPath();
+  g.moveTo(bx + r, by);
+  g.arcTo(bx + bw, by, bx + bw, by + bh, r);
+  g.arcTo(bx + bw, by + bh, bx, by + bh, r);
+  g.arcTo(bx, by + bh, bx, by, r);
+  g.arcTo(bx, by, bx + bw, by, r);
+  g.closePath();
+  g.fillStyle = '#6e5a43';
+  g.fill();
+  g.lineWidth = 10;
+  g.strokeStyle = '#4a3c2c';
+  g.stroke();
+  g.fillStyle = '#8b7556';
+  g.fillRect(bx + 8, by + 8, bw - 16, 20);
+  // number / keyhole
+  g.fillStyle = '#fff6dc';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  if (open) {
+    g.beginPath();
+    g.arc(m, by + 66, 14, 0, Math.PI * 2);
+    g.fill();
+    g.fillRect(m - 6, by + 66, 12, 28);
+  } else {
+    g.font = `900 ${left >= 10 ? 84 : 100}px "Nunito", ui-rounded, system-ui, sans-serif`;
+    g.fillText(String(left), m, by + 72);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+  lockCache.set(left, mat);
+  return mat;
 }
 
 
@@ -548,6 +657,13 @@ export class Game {
     this.ptr = null;
     this.placed = new Map();
     this.revealed = new Map();
+    // mechanics: mystery numbers (hidden until a tile touches them), twin portals, locked cells
+    this.mystery = new Set(level.mystery || []);
+    this.mysteryOpen = new Set();
+    this.portals = portalMap(level);
+    this.locks = (level.locks || []).map((l) => ({ k: key(l.cell[0], l.cell[1]), cell: l.cell, need: l.need }));
+    this.portalMarks = new Map();
+    this.lockMarks = new Map();
     this._setMode(null, true);
     this.hooks.onHearts(this.hearts, false);
     this.pieces = buildPieces(level).map((p) => ({ ...p, group: null, slot: { x: 0, y: 0 }, scale: 1 }));
@@ -650,6 +766,92 @@ export class Game {
     return this.level.cells.filter(([q, r]) => !this._occupied(key(q, r)));
   }
 
+  // ---------- mechanics ----------
+  /** Mystery given whose number the player does not know yet. */
+  _isHidden(n) {
+    return this.mystery.has(n) && !this.mysteryOpen.has(n);
+  }
+
+  /** Numbers still hidden behind a "?" (the hint and the tap-to-jump must ignore them). */
+  hiddenNumbers() {
+    return new Set([...this.mystery].filter((n) => !this.mysteryOpen.has(n)));
+  }
+
+  _hiddenAt(k) {
+    for (const n of this.mystery) {
+      if (this.mysteryOpen.has(n)) continue;
+      const c = this.level.givens[n];
+      if (c && key(c[0], c[1]) === k) return true;
+    }
+    return false;
+  }
+
+  /** A lock is open once the player has solved `need` cells (givens do not count). */
+  _lockClosed(l) {
+    return this.placed.size < l.need;
+  }
+
+  _isLocked(k) {
+    return this.locks.some((l) => l.k === k && this._lockClosed(l));
+  }
+
+  /** Keys of the cells that cannot take a tile right now. */
+  closedLockKeys() {
+    return new Set(this.locks.filter((l) => this._lockClosed(l)).map((l) => l.k));
+  }
+
+  _pieceLocked(p) {
+    return this._solutionCells(p).some(([q, r]) => this._isLocked(key(q, r)));
+  }
+
+  /** Wobble a sprite a little: feedback for a tap that does nothing. */
+  _wobble(obj) {
+    if (!obj) return;
+    const base = obj.position.x;
+    this._tween(320, (k) => { obj.position.x = base + Math.sin(k * Math.PI * 5) * this.R * 0.08 * (1 - k); }, () => { obj.position.x = base; });
+  }
+
+  /** Both ends of a portal pair pulse, so the player sees where the other side is. */
+  _pingPortal(k) {
+    const p = this.portals.get(k);
+    if (!p) return;
+    for (const g of [this.portalMarks.get(k), this.portalMarks.get(key(p.to[0], p.to[1]))]) {
+      if (!g) continue;
+      this._tween(520, (t) => g.scale.setScalar(this.R * (1 + 0.22 * Math.sin(Math.PI * t))), () => g.scale.setScalar(this.R));
+    }
+  }
+
+  /** After a placement: pads next to the new tiles open, locks that reached their count burst open. */
+  _afterPlace(before) {
+    const opened = [];
+    for (const n of this.mystery) {
+      if (this.mysteryOpen.has(n)) continue;
+      if (this.placed.has(n - 1) || this.placed.has(n + 1)) { this.mysteryOpen.add(n); opened.push(n); }
+    }
+    const freed = this.locks.filter((l) => before < l.need && this.placed.size >= l.need);
+    return { opened, freed };
+  }
+
+  _unlockFx(l) {
+    const s = this._cellScreen(l.cell[0], l.cell[1]);
+    const g = new THREE.Group();
+    const plane = new THREE.Mesh(LABEL_GEO, lockMaterial(0).clone());
+    plane.scale.setScalar(0.95);
+    plane.position.z = 0.3;
+    g.add(plane);
+    g.position.copy(this._w(s.x, s.y - LIFT * this.R, this._tileZ(s.y)));
+    g.scale.setScalar(this.R);
+    this.contentGroup.add(g);
+    this._tween(700, (t) => {
+      g.scale.setScalar(this.R * (1 + 0.5 * easeOut(t)));
+      g.position.y += this.R * 0.012;
+      plane.material.opacity = 1 - t * t;
+    }, () => {
+      this.contentGroup.remove(g);
+      plane.material.dispose();
+    });
+  }
+
   /** Reveal: show the exact number of one random empty cell. Returns false if nothing to reveal. */
   reveal() {
     if (!this.canBoost()) return false;
@@ -741,7 +943,8 @@ export class Game {
     if (!this.canBoost()) return false;
     this.cancelMode();
     this._select(null);
-    this._flyPiece(this.pieces[0]);
+    const next = this.pieces.find((p) => !this._pieceLocked(p)) ?? this.pieces[0]; // debug helper: skip tiles behind a padlock
+    this._flyPiece(next);
     return true;
   }
 
@@ -749,12 +952,21 @@ export class Game {
     const k = key(cell[0], cell[1]);
     const p = this.pieces.find((x) => this._solutionCells(x).some(([q, r]) => key(q, r) === k));
     if (!p) return;
+    if (this._pieceLocked(p)) {
+      // the tile's cells sit behind a padlock: keep Find armed, show which lock is in the way
+      for (const g of this.lockMarks.values()) this._wobble(g);
+      return;
+    }
     this._setMode(null);
     this.hooks.onBoosterUsed?.('find');
     this._flyPiece(p);
   }
 
   _pickPiece(p) {
+    if (this._pieceLocked(p)) {
+      for (const g of this.lockMarks.values()) this._wobble(g); // its cells are behind a padlock: nothing happens
+      return;
+    }
     // the chosen tile leaves the list; the panel closes and the others settle back into the tray
     this.trayGroup.remove(p.group);
     this.dragGroup.add(p.group);
@@ -957,23 +1169,18 @@ export class Game {
       run = [];
     };
     for (let n = 1; n <= lastN; n++) {
-      if (!pos.has(n)) { flush(); continue; }
-      if (run.length && !areAdjacent(pos.get(n), pos.get(n - 1))) flush();
+      if (!pos.has(n) || this._isHidden(n)) { flush(); continue; } // a hidden "?" never joins a green run
+      if (run.length && !linkedCells(this.portals, pos.get(n), pos.get(n - 1))) flush();
       run.push(n);
     }
     flush();
 
     for (const [n, c] of pos) {
       const s = this._cellScreen(c[0], c[1]);
-      const directions = [];
-      for (const neighbor of [pos.get(n - 1), pos.get(n + 1)]) {
-        if (neighbor && areAdjacent(c, neighbor)) {
-          directions.push(unitPos(neighbor[0] - c[0], neighbor[1] - c[1]));
-        }
-      }
       const last = this.level.cells.length;
+      const hidden = this._isHidden(n);
       const connected = n !== last && linked.has(n);
-      const t = makeTile(n, [], n === last, connected);
+      const t = makeTile(n, [], n === last, connected, hidden);
       t.position.copy(this._w(s.x, s.y, this._tileZ(s.y)));
       t.scale.setScalar(this.R);
       this.contentGroup.add(t);
@@ -1016,6 +1223,43 @@ export class Game {
       mark.scale.setScalar(this.R);
       this.contentGroup.add(mark);
       this.revealMarks.set(k, mark);
+    }
+
+    // twin portals: a swirl on empty cells, a small corner badge once a tile covers the cell
+    this.portalMarks.clear();
+    for (const [k, p] of this.portals) {
+      const [q, r] = k.split(',').map(Number);
+      const s = this._cellScreen(q, r);
+      const g = new THREE.Group();
+      const covered = this._occupied(k);
+      const ring = hexLayer(OUTLINE_GEO, basicMat(PORTAL_HEX[p.idx % PORTAL_HEX.length], 0.95), 1, 0, 0.62);
+      g.add(ring);
+      if (!covered) g.add(hexLayer(HEX_GEO, basicMat(PORTAL_HEX[p.idx % PORTAL_HEX.length], 0.22), 0.86, 0, 0.1));
+      const glyph = new THREE.Mesh(LABEL_GEO, portalMaterial(p.idx));
+      glyph.scale.setScalar(covered ? 0.3 : 0.62);
+      glyph.position.set(covered ? 0.58 : 0, covered ? -0.5 : 0, 0.65);
+      g.add(glyph);
+      g.position.copy(this._w(s.x, s.y - LIFT * this.R, this._tileZ(s.y)));
+      g.scale.setScalar(this.R);
+      this.contentGroup.add(g);
+      this.portalMarks.set(k, g);
+    }
+
+    // locked cells: a dimmed cell with a padlock that counts down the cells still to solve
+    this.lockMarks.clear();
+    for (const l of this.locks) {
+      if (!this._lockClosed(l)) continue;
+      const s = this._cellScreen(l.cell[0], l.cell[1]);
+      const g = new THREE.Group();
+      g.add(hexLayer(HEX_GEO, basicMat(0x4a3c2c, 0.62), 0.9, 0, 0.1));
+      const icon = new THREE.Mesh(LABEL_GEO, lockMaterial(l.need - this.placed.size));
+      icon.scale.setScalar(0.92);
+      icon.position.set(0, 0.02, 0.3);
+      g.add(icon);
+      g.position.copy(this._w(s.x, s.y - LIFT * this.R, this._tileZ(s.y)));
+      g.scale.setScalar(this.R);
+      this.contentGroup.add(g);
+      this.lockMarks.set(l.k, g);
     }
   }
 
@@ -1371,7 +1615,9 @@ export class Game {
     if (this.findMode) {
       const cell = this._screenToCell(pt.x, pt.y);
       const k = key(cell[0], cell[1]);
-      if (this.cellKeys.has(k) && !this._occupied(k)) {
+      if (this.cellKeys.has(k) && this._isLocked(k)) {
+        this._wobble(this.lockMarks.get(k)); // stays in Find mode: pick another cell
+      } else if (this.cellKeys.has(k) && !this._occupied(k)) {
         if (this._ok('find', { cell })) this._findCell(cell);
       } else if (this._ok('dismiss')) this.cancelMode();
       return;
@@ -1390,12 +1636,21 @@ export class Game {
       // tapping a numbered cell scrolls the list to the tile with the number right after/before it
       const cell = this._screenToCell(pt.x, pt.y);
       const k = key(cell[0], cell[1]);
-      if (this.cellKeys.has(k) && this._occupied(k) && this._ok('cell', { n: this._numberAt(k) })) this._scrollToNeighbor(k);
+      if (this.portals.has(k)) this._pingPortal(k);
+      if (this._isLocked(k)) {
+        this._wobble(this.lockMarks.get(k));
+      } else if (this._hiddenAt(k)) {
+        // a "?" has no number yet, so there is no neighbour to jump to
+        const pad = this.tileGroups.get([...this.mystery].find((n) => !this.mysteryOpen.has(n) && key(...this.level.givens[n]) === k));
+        this._wobble(pad);
+      } else if (this.cellKeys.has(k) && this._occupied(k) && this._ok('cell', { n: this._numberAt(k) })) {
+        this._scrollToNeighbor(k);
+      }
     }
   }
 
   _numberAt(k) {
-    for (const [n, c] of Object.entries(this.level.givens)) if (key(c[0], c[1]) === k) return Number(n);
+    for (const [n, c] of Object.entries(this.level.givens)) if (key(c[0], c[1]) === k) return this._isHidden(Number(n)) ? null : Number(n);
     for (const [n, c] of this.placed) if (key(c[0], c[1]) === k) return n;
     return null;
   }
@@ -1461,6 +1716,7 @@ export class Game {
     return cells.every(([q, r]) => {
       const k = key(q, r);
       if (!this.cellKeys.has(k)) return false;
+      if (this._isLocked(k)) return false; // padlock: no tile until enough cells are solved
       return !this._occupied(k);
     });
   }
@@ -1514,11 +1770,15 @@ export class Game {
     } else {
       this.trayGroup.remove(p.group);
     }
+    const solvedBefore = this.placed.size;
     p.numbers.forEach((n, i) => this.placed.set(n, cells[i]));
     this.pieces = this.pieces.filter((x) => x !== p);
     this.selected = null;
     this._updateHighlights(null);
-    this._buildContent(p.numbers);
+    const { opened, freed } = this._afterPlace(solvedBefore);
+    this._buildContent([...p.numbers, ...opened]);
+    for (const l of freed) this._unlockFx(l);
+    if (opened.length || freed.length) this.hooks.onMechanic?.({ opened, freed: freed.length });
     this._reflowTray();
     const pts = cells.map(([q, r]) => this._cellScreen(q, r));
     const mid = { x: pts.reduce((a, s) => a + s.x, 0) / pts.length, y: pts.reduce((a, s) => a + s.y, 0) / pts.length };
@@ -1620,7 +1880,7 @@ export class Game {
     // the consecutive numbers (n-1 / n+1) of the dropped piece that already sit on the map;
     // for 2/3-cell pieces only the first number that has any is used
     const known = new Map();
-    for (const [n, c] of Object.entries(this.level.givens)) known.set(Number(n), c);
+    for (const [n, c] of Object.entries(this.level.givens)) if (!this._isHidden(Number(n))) known.set(Number(n), c);
     for (const [n, c] of this.placed) known.set(n, c);
     let best = [];
     for (const [i, n] of p.numbers.entries()) {
@@ -1674,7 +1934,7 @@ export class Game {
       this.hlGroup.add(m);
     };
     if (this.findMode) {
-      for (const [q, r] of this._emptyCells()) {
+      for (const [q, r] of this._emptyCells().filter(([a, b]) => !this._isLocked(key(a, b)))) {
         // theme-driven (same hues as the Reveal ghost) so the empty cells never look like golden tiles
         add(q, r, REVEAL.fill, 0.5, this.R * 0.15);
         add(q, r, REVEAL.text, 0.7, this.R * 0.2, true);
@@ -1694,6 +1954,10 @@ export class Game {
     const filled = Object.keys(this.level.givens).length + this.placed.size;
     if (filled < N) return;
     this.locked = true;
+    if (this.mystery.size > this.mysteryOpen.size) {
+      this.mystery.forEach((n) => this.mysteryOpen.add(n)); // show the real numbers on the finished board
+      this._buildContent(null);
+    }
     const token = ++this._winToken;
     this.hooks.onWinStart?.();
     // 1) gentle wave pulse over the chain (as before)

@@ -16,6 +16,9 @@ const MENU_BG = { 'tile-honey': menuBgHoney, 'tile-ocean': menuBgOcean, 'tile-li
 const LEVEL_BG = { 'tile-honey': levelBgHoney, 'tile-ocean': levelBgOcean, 'tile-lilac': levelBgLilac, 'tile-snow': levelBgSnow, 'tile-sakura': levelBgSakura, 'tile-autumn': levelBgAutumn };
 import { initProfile } from './profile.js';
 import levels from './levels.json';
+import { introFor, mechInfo, unlockProgress } from './mechanics.js';
+import { MECH_ICON, MECH_DEMO } from './mechArt.js';
+import { createHumanBot } from './debugBot.js';
 import { Game } from './game.js';
 import { AudioManager, vibrate } from './audio.js';
 import { Praise } from './praise.js';
@@ -339,6 +342,7 @@ function showResult(o) {
   result.setAttribute('aria-label', o.title);
   $('res-reward').innerHTML = '';
   home.innerHTML = `${HOME_SVG}${o.win ? '' : '<span>Home</span>'}`;
+  renderUnlockBar(o.win ? o.unlock : null);
   if (o.win) confetti($('res-confetti'));
   else $('res-confetti').innerHTML = '';
   btn.disabled = false;
@@ -461,6 +465,11 @@ const game = new Game($('game'), {
     vibrate(settings, 12);
     praise.hit(pos, count, isLast);
   },
+  onMechanic: ({ freed }) => {
+    // a mystery pad opened or a padlock released: a brighter pop than a normal placement
+    audio.place(3);
+    vibrate(settings, freed ? [10, 30, 10] : 8);
+  },
   onMistake: () => {
     praise.miss();
     tut.placed();
@@ -499,6 +508,7 @@ const game = new Game($('game'), {
       find,
       sub: `<b>${levels[levelIdx].name}</b> · ${praise} · ${note}`,
       starsIntro: rec.firstClear && levels[levelIdx].id === 3,
+      unlock: unlockProgress(Math.max(0, ...Object.keys(progress.stars).map(Number))),
       next: last ? 'You grew every garden!' : `Next: ${levels[levelIdx + 1].name}`,
       onClaim: () => {
         // Opening flow: first clear of level 1 and 2 rolls straight into the next level (no menu until level 3 is cleared)
@@ -820,7 +830,7 @@ const tut = {
 
 // ---- Auto hint: stuck for a while -> point at the easiest tile (by the difficulty rule), via tap-to-jump ----
 // A hand asks the player to tap a number on the grid; the tap makes the list jump to the tile. That is the whole hint.
-const NOT_PLAYING = '.result-mode, :has(#home:not(.hidden)), :has(#levels:not(.hidden)), :has(#shop:not(.hidden)), :has(#album:not(.hidden)), :has(#settings:not(.hidden))';
+const NOT_PLAYING = '.result-mode, :has(#home:not(.hidden)), :has(#levels:not(.hidden)), :has(#shop:not(.hidden)), :has(#album:not(.hidden)), :has(#settings:not(.hidden)), :has(#mech-intro:not(.hidden))';
 const hint = {
   active: false,
   info: null,
@@ -849,7 +859,7 @@ const hint = {
       return;
     }
     if (performance.now() - this.last < HINT_IDLE_SECONDS * 1000) return;
-    const info = game.maxScroll > 0 ? pickHint(game.level, game.placed, game.pieces) : null; // nothing to scroll: nothing to show
+    const info = game.maxScroll > 0 ? pickHint(game.level, game.placed, game.pieces, { hidden: game.hiddenNumbers(), closed: game.closedLockKeys() }) : null; // nothing to scroll: nothing to show
     if (!info) { this.last = performance.now(); return; }
     game._jumpFrom = null; // so the first tap on the grid number lands on the hinted tile
     this.info = info;
@@ -934,9 +944,55 @@ function startLevel(i) {
   game.loadLevel(level, { randomOrder: level.id > 2, bare, freeHearts: freeRun });
   syncModeUI();
   renderCoins();
-  tut.start(level);
   hint.reset();
-  if (level.difficulty === 'hard') showHardWarning();
+  closeMechIntro();
+  const intro = introFor(level);
+  // the intro comes first; the level's lesson (e.g. the hearts spotlight on level 3) starts once it is dismissed
+  if (intro && !hasSeen(progress, 'mech-' + intro)) showMechIntro(intro, () => tut.start(level));
+  else {
+    tut.start(level);
+    if (level.difficulty === 'hard') showHardWarning();
+  }
+}
+
+/** Win screen: progress toward the next mechanic (the pond counts too). */
+function renderUnlockBar(u) {
+  const el = $('res-unlock');
+  el.classList.toggle('hidden', !u);
+  el.classList.remove('ready');
+  if (!u) { el.innerHTML = ''; return; }
+  const m = mechInfo(u.id);
+  const ready = u.left === 0;
+  const pct = Math.round((u.filled / u.total) * 100);
+  const from = Math.round((Math.max(0, u.filled - 1) / u.total) * 100);
+  const note = ready ? '100% · Next level!' : `${pct}% · Level ${u.at}`;
+  el.innerHTML =
+    `<span class="ru-ic">${MECH_ICON[u.id]}</span><div class="ru-tx"><div class="ru-top"><b>${m.name}</b><small>${note}</small></div>` +
+    `<div class="ru-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="--from:${from}%;--to:${pct}%"></i></div></div>`;
+  el.classList.toggle('ready', ready);
+}
+
+/** Intro screen shown once per save, before the level that introduces a mechanic. */
+const mechIntroEl = $('mech-intro');
+function closeMechIntro() {
+  mechIntroEl.classList.add('hidden');
+  mechIntroEl.innerHTML = '';
+}
+function showMechIntro(id, done) {
+  const m = mechInfo(id);
+  mechIntroEl.innerHTML =
+    '<div class="fp-card si-card mi-card"><div class="fp-rays"></div><span class="fp-new">NEW!</span>' +
+    `<div class="mi-demo">${MECH_DEMO[id]}</div><h4>${m.title}</h4>` +
+    `<ul class="si-list">${m.lines.map((l) => `<li>${l}</li>`).join('')}</ul>` +
+    '<button class="claim-btn fp-btn">Got it</button></div>';
+  mechIntroEl.classList.remove('hidden', 'out');
+  audio.win();
+  mechIntroEl.querySelector('.fp-btn').onclick = () => {
+    audio.tap();
+    markSeen(progress, 'mech-' + id);
+    mechIntroEl.classList.add('out');
+    setTimeout(() => { closeMechIntro(); hint.reset(); done?.(); }, 260);
+  };
 }
 
 /** Where Continue goes: the first level not yet cleared (or the last one when everything is cleared). */
@@ -1836,7 +1892,8 @@ inputs.forEach((inp) =>
 window.addEventListener('pointerdown', () => audio.unlock(), { once: false });
 
 // debug handle (handy for testing)
-window.__hexablow = { game, levels, startLevel, progress, resetProgress: () => resetProgress(progress) };
+const humanBot = createHumanBot({ game, tut, $, lastLevelId: levels[levels.length - 1].id, onChange: () => { if (dbg.style.display !== 'none') renderDebug(); } });
+window.__hexablow = { game, tut, levels, startLevel, progress, bot: humanBot, resetProgress: () => resetProgress(progress) };
 
 applyCosmetics();
 showHome();
@@ -1937,6 +1994,11 @@ function renderDebug() {
       clearInterval(debugAutoTimer);
       if (debugAutoPlay) debugAutoTimer = setInterval(() => { if (!game.pieces.length) { debugAutoPlay = false; clearInterval(debugAutoTimer); renderDebug(); } else game.autoPlaceNext(); }, 650);
     }, debugAutoPlay ? '#3f7d3a' : '#8a5a2b'],
+  ]);
+  row(`Human bot (plays via the UI, follows tutorials) · ${humanBot.running ? 'RUNNING' : 'off'} · ${humanBot.levels.length} attempts`, [
+    [humanBot.running ? 'Stop' : 'Start', () => (humanBot.running ? humanBot.stop() : humanBot.start()), humanBot.running ? '#a8402e' : '#3f7d3a'],
+    [`Speed x${humanBot.speed}`, () => { humanBot.speed = humanBot.speed === 1 ? 4 : humanBot.speed === 4 ? 10 : 1; }],
+    ['Copy log', () => navigator.clipboard?.writeText(humanBot.summary() + '\n\n' + humanBot.log.join('\n'))],
   ]);
   row('Instant win (stars)', [
     ['★', () => debugWin(1), '#3f7d3a'],

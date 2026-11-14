@@ -13,6 +13,19 @@
   HB.adjacent = (a, b) => HB.dist(a, b) === 1;
   HB.neighbors = (c) => HB.DIRS.map(([dq, dr]) => [c[0] + dq, c[1] + dr]);
 
+  /** Twin portals: cell key -> partner cell [q,r]. `portals` = [[[q,r],[q,r]], ...]. */
+  HB.portalMap = function (portals) {
+    const m = new Map();
+    for (const [a, b] of portals || []) { m.set(HB.key(a[0], a[1]), b); m.set(HB.key(b[0], b[1]), a); }
+    return m;
+  };
+  /** Neighbours for the number chain: touching on the grid, or the two ends of a portal pair. */
+  HB.linked = function (pmap, a, b) {
+    if (HB.adjacent(a, b)) return true;
+    const p = pmap && pmap.get(HB.key(a[0], a[1]));
+    return !!p && p[0] === b[0] && p[1] === b[1];
+  };
+
   HB.rng = function (seed) {
     let a = seed >>> 0;
     return () => {

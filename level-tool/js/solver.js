@@ -7,9 +7,16 @@
   const HB = g.HB;
   const { key, parse, DIRS, dist } = HB;
 
-  /** problem = { cells:[[q,r]], givens:Map num->[q,r], pieces:[{nums, offs}] } */
+  /**
+   * problem = { cells:[[q,r]], givens:Map num->[q,r], pieces:[{nums, offs}],
+   *             portals?:[[[q,r],[q,r]]], mystery?:[{n, cell:[q,r]}] }
+   * Portals add edges (the two ends count as neighbours). Mystery givens are NOT in `givens`: the player sees a "?"
+   * on a known cell, and the number is one of the mystery numbers (found by elimination), so those numbers are
+   * restricted to the mystery cells and no other number may use them.
+   */
   function build(problem) {
     const { cells, givens, pieces } = problem;
+    const mystery = problem.mystery || [];
     const N = cells.length;
     const keys = cells.map(([q, r]) => key(q, r));
     const cellSet = new Set(keys);
@@ -18,17 +25,37 @@
       const [q, r] = parse(k);
       adj.set(k, new Set(DIRS.map(([dq, dr]) => key(q + dq, r + dr)).filter((x) => cellSet.has(x))));
     }
+    for (const [a, b] of problem.portals || []) {
+      const ka = key(a[0], a[1]), kb = key(b[0], b[1]);
+      if (adj.has(ka) && adj.has(kb)) { adj.get(ka).add(kb); adj.get(kb).add(ka); }
+    }
+    // graph distance (walls, water and portals all count), used to prune domains
+    const gd = new Map();
+    for (const s of keys) {
+      const d = new Map([[s, 0]]), qu = [s];
+      for (let i = 0; i < qu.length; i++) for (const x of adj.get(qu[i])) if (!d.has(x)) { d.set(x, d.get(qu[i]) + 1); qu.push(x); }
+      gd.set(s, d);
+    }
+    const dist = (a, b) => { const v = gd.get(key(a[0], a[1])).get(key(b[0], b[1])); return v === undefined ? 1e9 : v; };
     const givenKey = new Map([...givens].map(([n, c]) => [n, key(c[0], c[1])]));
     const taken = new Set(givenKey.values());
+    const mysteryNums = new Set(mystery.map((m) => m.n));
+    const mysteryKeys = new Set(mystery.map((m) => key(m.cell[0], m.cell[1])));
     const freeCells = keys.filter((k) => !taken.has(k));
     const gnums = [...givens.keys()].sort((a, b) => a - b);
     const dom = new Map();
     for (let n = 1; n <= N; n++) {
       if (givens.has(n)) continue;
+      if (mysteryNums.has(n)) {
+        // one of the "?" cells; the exact one is a deduction (this is where the elimination puzzle lives)
+        dom.set(n, new Set(mysteryKeys));
+        continue;
+      }
       let lo, hi;
       for (const x of gnums) { if (x < n) lo = x; else if (x > n) { hi = x; break; } }
       const d = new Set();
       for (const k of freeCells) {
+        if (mysteryKeys.has(k)) continue;
         const c = parse(k);
         if (lo !== undefined && dist(c, givens.get(lo)) > n - lo) continue;
         if (hi !== undefined && dist(c, givens.get(hi)) > hi - n) continue;
@@ -120,7 +147,10 @@
   HB.solve = function (level, opts) {
     const sol = new Map(Object.entries(level.solution).map(([n, c]) => [+n, c]));
     const givens = new Map(Object.entries(level.givens).map(([n, c]) => [+n, c]));
-    return HB.solveCore({ cells: level.cells, givens, pieces: HB.shapesOf(level.pieces, sol) }, opts);
+    const hidden = new Set(level.mystery || []);
+    for (const n of hidden) givens.delete(n);
+    const mystery = [...hidden].map((n) => ({ n, cell: sol.get(n) }));
+    return HB.solveCore({ cells: level.cells, givens, pieces: HB.shapesOf(level.pieces, sol), portals: level.portals || [], mystery }, opts);
   };
 
   HB.shapesOf = function (pieces, sol) {

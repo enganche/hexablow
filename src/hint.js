@@ -3,7 +3,8 @@
 // touches every n-1 / n+1 already on the grid ("strict" count). The player is asked to tap the grid number
 // next to that tile; the game's tap-to-jump then scrolls the tray to it.
 import tuning from './tuning.json';
-import { DIRS, key, areAdjacent } from './hex.js';
+import { DIRS, key } from './hex.js';
+import { portalMap, linked } from './mechanics.js';
 
 /** Seconds without placing a tile before the hint appears. */
 export const HINT_IDLE_SECONDS = tuning.hint.idleSeconds;
@@ -13,18 +14,25 @@ export const HINT_IDLE_SECONDS = tuning.hint.idleSeconds;
  * @param level  {cells, givens: {n: [q,r]}}
  * @param placed Map number -> [q,r] of tiles the player already placed
  * @param pieces remaining tray pieces [{numbers, offsets}] (offsets relative to numbers[0])
+ * @param opts   { hidden: Set of mystery numbers still shown as '?', closed: Set of cell keys behind a closed padlock }
  * @returns {piece, count, tapNumber, tapCell, partner} | null   (null: no tile has a number to hook onto yet)
  */
-export function pickHint(level, placed, pieces) {
-  const grid = new Map();
-  for (const [n, c] of Object.entries(level.givens)) grid.set(Number(n), c);
+export function pickHint(level, placed, pieces, opts = {}) {
+  const hidden = opts.hidden || new Set();
+  const closed = opts.closed || new Set();
+  const portals = portalMap(level);
+  const grid = new Map(); // numbers the player can see (a hidden "?" is not one of them)
+  for (const [n, c] of Object.entries(level.givens)) if (!hidden.has(Number(n))) grid.set(Number(n), c);
   for (const [n, c] of placed) grid.set(n, c);
-  const occ = new Set([...grid.values()].map((c) => key(c[0], c[1])));
+  const occ = new Set(Object.values(level.givens).map((c) => key(c[0], c[1])));
+  for (const c of placed.values()) occ.add(key(c[0], c[1]));
   const cellSet = new Set(level.cells.map((c) => key(c[0], c[1])));
   const find = (m) => pieces.find((p) => p.numbers.includes(m));
 
   let best = null;
   for (const p of pieces) {
+    // a tile whose true cells are behind a closed padlock cannot be placed yet: do not point at it
+    if (p.numbers.some((n) => closed.has(key(level.solution[n][0], level.solution[n][1])))) continue;
     const anchors = []; // [piece number, grid number it touches]
     const seen = new Set();
     let count = 0;
@@ -33,16 +41,19 @@ export function pickHint(level, placed, pieces) {
         if (!grid.has(v) || p.numbers.includes(v)) continue;
         anchors.push([m, v]);
         const vc = grid.get(v);
-        for (const [dq, dr] of DIRS) {
-          const t = [vc[0] + dq - p.offsets[i][0], vc[1] + dr - p.offsets[i][1]]; // where numbers[0] would sit
+        const hooks = DIRS.map(([dq, dr]) => [vc[0] + dq, vc[1] + dr]); // cells where m could sit: the 6 neighbours...
+        const gate = portals.get(key(vc[0], vc[1]));
+        if (gate) hooks.push(gate.to); // ...plus the other end of a portal
+        for (const hook of hooks) {
+          const t = [hook[0] - p.offsets[i][0], hook[1] - p.offsets[i][1]]; // where numbers[0] would sit
           const tk = key(t[0], t[1]);
           if (seen.has(tk)) continue;
           seen.add(tk);
           const cells = p.offsets.map(([oq, or]) => [t[0] + oq, t[1] + or]);
-          if (!cells.every((c) => cellSet.has(key(c[0], c[1])) && !occ.has(key(c[0], c[1])))) continue; // covered / blocked / shape
+          if (!cells.every((c) => cellSet.has(key(c[0], c[1])) && !occ.has(key(c[0], c[1])) && !closed.has(key(c[0], c[1])))) continue; // covered / blocked / shape / locked
           let ok = true;
           p.numbers.forEach((n, j) => {
-            for (const w of [n - 1, n + 1]) if (grid.has(w) && !p.numbers.includes(w) && !areAdjacent(cells[j], grid.get(w))) ok = false;
+            for (const w of [n - 1, n + 1]) if (grid.has(w) && !p.numbers.includes(w) && !linked(portals, cells[j], grid.get(w))) ok = false;
           });
           if (ok) count++;
         }

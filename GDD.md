@@ -24,7 +24,8 @@ A calm, tactile number-path puzzle on a hex grid, set in a cozy garden. The play
   - If the tile matches the solution, it locks in.
   - Wrong spot: the tile stays on the board for a moment while the neighbours it should have touched pulse red. Then you lose a heart and the tile returns to the tray.
   - Occupied or water cell, or off the board: the tile bounces back with no penalty.
-- **Tap-to-jump:** when the tray is longer than the screen, tapping a number on the board scrolls the tray to the tile holding n−1 or n+1. Tapping again switches between the two. This is how players find tiles in long trays.
+- **Tap-to-jump:** when the tray is longer than the screen, tapping a number on the board scrolls the tray to the tile holding n−1 or n+1. Tapping again switches between the two. This is how players find tiles in long trays. A "?" (mystery number, §6.1) has no number yet, so tapping it does nothing (the pad wobbles).
+- **Obstacles:** besides the pond, three mechanics change the board from level 7 on: mystery numbers, twin portals and locked cells. See §6.1.
 - **Tile looks:** honey-orange tiles; the finishing number N is pink; chains of consecutive, adjacent numbers that include a placed tile turn green.
 - **Tray order:** level 1 uses a fixed shuffle, level 2 is ascending (for the jump lesson), and from level 3 the tray is shuffled on every play.
 
@@ -73,6 +74,7 @@ Boosters never cost a heart. When you tap a booster you have none of, a buy popu
 | Levels 1–2 | On the first clear, the game continues straight into the next level (the menus appear only after level 3) |
 | Level 3 | Hearts lesson: a spotlight on the three hearts. On the first clear, a "Stars!" popup explains that each lost heart costs a star. |
 | Levels 4 / 6 / 8 | Booster lesson for Reveal / Find / Picker (gift up to 2, use 1) |
+| Levels 3 / 7 / 9 / 11 | Intro screen before the level for Pond / Mystery numbers / Twin portals / Locked cells (once per save, §6.1). On level 3 the hearts lesson starts after it is dismissed. |
 | Any level | **Auto hint** (`hint.js`, Settings → Hints, on by default): after 5 s without progress (`tuning.hint.idleSeconds`), a hand points at a number on the board next to the *easiest* tile (fewest valid spots, see the difficulty rule). Tapping that number jumps the tray to the tile. |
 
 ## 6. Levels
@@ -90,7 +92,20 @@ Boosters never cost a heart. When you tap a booster you have none of, a buy popu
     "cells": [[q,r]], "blocked": [[q,r]], "givens": {"7": [q,r]},
     "pieces": [[2],[4,25]], "solution": {"1": [q,r]} }
   ```
+  Optional mechanic fields: `mystery`, `portals`, `locks` (§6.1).
 - Levels are made in the **level tool** (draw the map and path, place givens, cut the tiles, check the rules and the solver, playtest) and checked with `node level-tool/analyze.mjs` and the **bot simulator** (`npm run sim`). See [level-tool/ANALYSIS_15_LEVELS.md](level-tool/ANALYSIS_15_LEVELS.md) for the current status.
+
+### 6.1 Level mechanics
+The pond (level 3) is the first obstacle. Three more unlock in order. Each has an **intro screen** before the level that introduces it (shown once per save, `mech-<id>` in the seen-tips list), and the win screen shows a **progress bar (in %)** toward the next unlock (the pond counts as the first step; hidden once everything is unlocked). Data lives in `src/mechanics.json`; helpers in `src/mechanics.js`.
+
+| Mechanic | Unlocks | Level data | Rule |
+|---|---|---|---|
+| **Pond** (water) | Lv 3 | `blocked` | Cell cannot hold a tile (bounce, no penalty). |
+| **Mystery numbers** | Lv 7 | `mystery: [n…]` | A given shows a violet "?". Its number is found by elimination (it is the number missing from the board and the tray). A tile placed next to it opens it (the pad turns into the real number, with a pop). It never counts as a neighbour for the green runs, the red wrong-drop pulse, the auto hint or tap-to-jump until opened. All pads open on the win. Never the last number N. |
+| **Twin portals** | Lv 9 | `portals: [[[q,r],[q,r]]…]` | The two cells count as neighbours: n and n+1 may sit on opposite ends. Drawn as a swirl ring in a pair colour (teal, pink, blue); a covered portal keeps a small badge. Tapping one end pulses both. The solution must cross every portal. |
+| **Locked cells** | Lv 11 | `locks: [{cell:[q,r], need:K}…]` | A padlock shows how many more cells must be solved. When the player has placed K numbers (givens do not count) it bursts open. A tile cannot go on a locked cell (bounce, no penalty); Find and Picker skip tiles behind a padlock; the auto hint ignores them. Lock cells are never givens. |
+
+Per level, **at most 2 mechanics** (the pond counts). Current plan: 7 pond + mystery · 8 mystery · 9 pond + portal · 10 pond + mystery · 11 lock · 12 pond + portal · 13 pond + lock · 14 pond + mystery · 15 pond + portal. Intro levels (7, 9, 11) keep the tile mix of their tier. Rules are checked by `node level-tool/check-mechanics.mjs`. The level tool has editor tools for all three (Số ẩn, Cổng, Khóa) and its playtest follows the same rules.
 
 ## 7. Economy (soft currency: coins)
 All numbers are in `src/economy.json` / `src/shop.json`.
@@ -185,6 +200,7 @@ Saves are versioned and validated on load. A corrupt save starts fresh. Old v1 s
   - UI art is WebP in `src/assets/`.
 - **Hex math:** axial, pointy-top: `x = size·√3·(q + r/2)`, `y = size·1.5·r`.
 - **Config:** gameplay and economy tuning live in `src/*.json`. `economy.json`, `shop.json`, `cosmetics.json` and `collection.json` hold content and prices; `tuning.json` holds the constants that used to be hard-coded (max hearts, auto-hint delay, daily-gift unlock level, avatar prices, combo praise tiers and timing, board layout gaps, board colours). Booster unlock levels in `economy.json` also drive which levels show a tutorial.
+- **Debug human bot:** press the backtick key in the game, then *Human bot → Start*. It plays through the real UI (clicks buttons, drags tiles with pointer events, follows every tutorial, dismisses intro and daily popups, presses Continue / Try again) and logs each level. Code: `src/debugBot.js`; `window.__hexablow.bot` holds the log and `summary()`.
 - **Tools:** level tool (`level-tool/`), config tool (`config-tool/`), bot simulator (`sim/`). The level tool and the simulator reuse the same difficulty rule and solver.
 - **Config tool:** an HTML inspector (like Unity's Serialize Field panel) for every config file above plus `sim/personas.json`. It builds its form from the JSON itself, so any value is editable; `config-tool/js/meta.js` only adds labels, tooltips and ranges. Run `npm run config` (port 5190) to save straight into the files. See [config-tool/README.md](config-tool/README.md).
 - **Deploy:** Vercel project `hexablow`; pushing `master` deploys to production.

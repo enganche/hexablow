@@ -100,7 +100,7 @@ export function playAttempt(level, persona, rand, meta = null, opts = {}) {
       return best;
     };
 
-    const tray = board.pieces;
+    const tray = board.pieces.filter((p) => board.placeable(p)); // tiles behind a padlock wait
     let scope = tray.slice(0, Math.min(tray.length, sk.scan));
     let depth = sk.depth;
     let best = evaluate(scope, depth);

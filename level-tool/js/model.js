@@ -5,6 +5,10 @@
  *   path     ["q,r"]   the drawn path, path[0] is number 1 (may be partial while drawing)
  *   givenCells ["q,r"] cells whose number is pre-filled (the number is whatever the path puts there)
  *   groups   [["q,r"]] tray pieces of 2-3 ADJACENT cells (every other free cell is a lone tile)
+ *   Mechanics (all optional):
+ *   portals  [[[q,r],[q,r]]]  twin portals: the two cells count as neighbours (the path may jump)
+ *   mysteryCells ["q,r"]      givenCells that show "?" until a tile is placed next to them (never the last number)
+ *   locks    [{cell:[q,r], need}]  a cell that opens once the player has solved `need` cells
  * Drawing the path and cutting the tray are independent steps, exactly like the game generator.
  *
  * compile(draft) produces the level object the game loads from src/levels.json:
@@ -14,8 +18,19 @@
   const HB = g.HB;
   const { key, parse, adjacent, components } = HB;
 
+  /** Unlock level of each mechanic (keep in sync with src/mechanics.json). */
+  HB.MECH_UNLOCK = { water: 3, mystery: 7, portal: 9, lock: 11 };
+  HB.mechanicsOf = function (level) {
+    const used = [];
+    if ((level.blocked || []).length) used.push('water');
+    if ((level.mystery || []).length) used.push('mystery');
+    if ((level.portals || []).length) used.push('portal');
+    if ((level.locks || []).length) used.push('lock');
+    return used;
+  };
+
   HB.emptyDraft = function (id) {
-    return { id: id || 1, name: 'Level ' + (id || 1), difficulty: 'normal', cells: [], blocked: [], path: [], givenCells: [], groups: [] };
+    return { id: id || 1, name: 'Level ' + (id || 1), difficulty: 'normal', cells: [], blocked: [], path: [], givenCells: [], groups: [], portals: [], mysteryCells: [], locks: [] };
   };
 
   HB.draftFromLevel = function (lv) {
@@ -30,21 +45,35 @@
       id: lv.id, name: lv.name || 'Level ' + lv.id, difficulty: lv.difficulty || 'normal',
       cells: lv.cells.map((c) => c.slice()), blocked: (lv.blocked || []).map((c) => c.slice()),
       path, givenCells, groups,
+      portals: (lv.portals || []).map(([a, b]) => [a.slice(), b.slice()]),
+      mysteryCells: (lv.mystery || []).map((n) => key(lv.solution[n][0], lv.solution[n][1])),
+      locks: (lv.locks || []).map((l) => ({ cell: l.cell.slice(), need: l.need })),
     };
   };
 
   /** Drop everything that no longer fits the map; keep groups valid (adjacent, 2-3, not given). */
   HB.normalize = function (d) {
     const cellSet = new Set(d.cells.map((c) => key(c[0], c[1])));
+    // portals: both ends on playable cells, different cells, no cell in two pairs
+    const usedEnds = new Set();
+    d.portals = (d.portals || []).filter(([a, b]) => {
+      const ka = key(a[0], a[1]), kb = key(b[0], b[1]);
+      if (ka === kb || !cellSet.has(ka) || !cellSet.has(kb) || usedEnds.has(ka) || usedEnds.has(kb)) return false;
+      usedEnds.add(ka); usedEnds.add(kb);
+      return true;
+    });
     // path: cut at the first cell that is off-map / repeated / not adjacent to the previous one
+    const pmap = HB.portalMap(d.portals);
     const path = [], seen = new Set();
     for (const k of d.path) {
       if (!cellSet.has(k) || seen.has(k)) break;
-      if (path.length && !adjacent(parse(path[path.length - 1]), parse(k))) break;
+      if (path.length && !HB.linked(pmap, parse(path[path.length - 1]), parse(k))) break;
       path.push(k); seen.add(k);
     }
     d.path = path;
     d.givenCells = [...new Set(d.givenCells.filter((k) => cellSet.has(k)))];
+    d.mysteryCells = (d.mysteryCells || []).filter((k) => d.givenCells.includes(k));
+    d.locks = (d.locks || []).filter((l) => cellSet.has(key(l.cell[0], l.cell[1])) && !d.givenCells.includes(key(l.cell[0], l.cell[1])));
     const given = new Set(d.givenCells);
     const used = new Set();
     const groups = [];
@@ -68,8 +97,9 @@
     const N = d.cells.length;
     if (!N) return { ok: false, errors: ['Chưa có ô nào trên bản đồ.'], warnings };
     if (d.path.length !== N) errors.push(`Đường đi mới có ${d.path.length}/${N} ô.`);
+    const pmap = HB.portalMap(d.portals);
     for (let i = 1; i < d.path.length; i++)
-      if (!adjacent(parse(d.path[i - 1]), parse(d.path[i]))) { errors.push(`Bước ${i} → ${i + 1} không liền kề.`); break; }
+      if (!HB.linked(pmap, parse(d.path[i - 1]), parse(d.path[i]))) { errors.push(`Bước ${i} → ${i + 1} không liền kề.`); break; }
     if (errors.length) return { ok: false, errors, warnings };
 
     const num = new Map(d.path.map((k, i) => [k, i + 1]));
@@ -96,6 +126,37 @@
       cells: d.cells.map((c) => c.slice()), blocked: d.blocked.map((c) => c.slice()),
       givens, pieces, solution,
     };
+    // ---- mechanics ----
+    const cellKeys = new Set(d.cells.map((c) => key(c[0], c[1])));
+    const mystery = (d.mysteryCells || []).map((k) => num.get(k)).filter(Boolean).sort((a, b) => a - b);
+    if (mystery.includes(N)) errors.push('Số cuối N không được là số bí ẩn.');
+    if (mystery.length) level.mystery = mystery;
+    if ((d.portals || []).length) {
+      level.portals = d.portals.map(([a, b]) => [a.slice(), b.slice()]);
+      let used = 0;
+      for (const [a, b] of level.portals) {
+        if (!cellKeys.has(key(a[0], a[1])) || !cellKeys.has(key(b[0], b[1]))) errors.push('Cổng đôi phải nằm trên ô chơi được.');
+        if (adjacent(a, b)) warnings.push('Hai đầu cổng đang liền kề nhau — cổng không có tác dụng.');
+        const na = num.get(key(a[0], a[1])), nb = num.get(key(b[0], b[1]));
+        if (Math.abs(na - nb) === 1) used++;
+        else warnings.push(`Cổng ${key(a[0], a[1])}↔${key(b[0], b[1])} không được lời giải dùng (số ${na} và ${nb} không liên tiếp).`);
+      }
+    }
+    if ((d.locks || []).length) {
+      level.locks = d.locks.map((l) => ({ cell: l.cell.slice(), need: l.need }));
+      const lockKeys = new Set(level.locks.map((l) => key(l.cell[0], l.cell[1])));
+      for (const l of level.locks) {
+        const k = key(l.cell[0], l.cell[1]);
+        if (!cellKeys.has(k)) errors.push('Ô khóa phải nằm trên ô chơi được.');
+        if (givenSet.has(k)) errors.push('Ô khóa không được là ô given.');
+      }
+      // cells the player can solve without touching a padlock: tiles that do not cover a locked cell
+      const open = pieces.filter((p) => !p.some((n) => lockKeys.has(d.path[n - 1]))).reduce((a, p) => a + p.length, 0);
+      for (const l of level.locks) if (l.need > open) errors.push(`Ô khóa cần ${l.need} ô nhưng chỉ có ${open} ô giải được khi chưa mở khóa.`);
+    }
+    const used = HB.mechanicsOf(level);
+    if (used.length > 2) warnings.push(`Level dùng ${used.length} cơ chế (${used.join(', ')}) — tối đa 2 (hồ nước tính 1).`);
+    for (const m of used) if (HB.MECH_UNLOCK[m] && d.id < HB.MECH_UNLOCK[m]) warnings.push(`Cơ chế "${m}" mở ở level ${HB.MECH_UNLOCK[m]} nhưng level này là ${d.id}.`);
     if (d.id >= 5 && HB.isSpiral(d.path)) warnings.push('Đường đi dạng xoắn ốc (dễ đoán) — nên đổi đường khác (luật: level ≥ 5 không xoắn ốc).');
     return { ok: errors.length === 0, level, errors, warnings };
   };

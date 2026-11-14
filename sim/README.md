@@ -14,6 +14,8 @@ node sim/run.mjs --seed 7                      # đổi seed (cùng seed = cùng
 ```
 Kết quả: bảng trên console + `sim/out/report.html` (biểu đồ, mở bằng trình duyệt) + `sim/out/report.json` (dữ liệu thô). `sim/out/` không commit.
 
+> Cơ chế level 7+ (số bí ẩn, cổng đôi, ô khóa): `board.mjs` đã xử lý — "?" chiếm ô và không là mốc cho tới khi mở, cổng là cạnh liền kề, mảnh sau ổ khóa chờ đủ số ô đã giải. Bộ suy luận `domains()` vẫn chưa biết rằng số "?" nằm trong tập số bị thiếu (bot không tận dụng phép loại trừ).
+
 ## 1. Bot chơi một lượt thế nào (`bot.mjs`, `board.mjs`)
 
 Luật giống `src/game.js`: mảnh giữ nguyên hình, thả vào chỗ nào cũng được miễn mọi ô trống; sai chỗ thì −1 tim (trừ lượt đầu level 1–2), 0 tim thì thua; sao = số tim còn lại (tối thiểu 1).

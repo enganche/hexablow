@@ -188,3 +188,22 @@ body[data-view=play] .floatBar, body[data-view=play] .toolHint, body[data-view=p
   #side { grid-column: 1 / 4; border-left: none; border-top: 1px solid var(--line); max-height: 42vh; }
   body { overflow: auto; }
 }
+
+/* mechanics: mystery numbers, twin portals, locked cells */
+svg .myst { fill: rgba(127, 98, 184, .55); stroke: #5b3f9a; stroke-width: 2.5; pointer-events: none; }
+svg .mystT { font: 800 20px system-ui; text-anchor: middle; dominant-baseline: central; fill: #fff; pointer-events: none; }
+svg .pring { fill: none; stroke-width: 3.5; pointer-events: none; }
+svg .plink { stroke-width: 3; stroke-dasharray: 2 7; stroke-linecap: round; opacity: .8; pointer-events: none; }
+svg .pbadgeT { font: 800 10px system-ui; text-anchor: middle; dominant-baseline: central; fill: #fff; pointer-events: none; }
+svg .pbadge { stroke: #fff; stroke-width: 1.5; pointer-events: none; }
+svg .lockc { fill: rgba(74, 60, 44, .62); stroke: #4a3c2c; stroke-width: 2; pointer-events: none; }
+svg .lockT { font: 800 13px system-ui; text-anchor: middle; dominant-baseline: central; fill: #fff6dc; pointer-events: none; }
+svg .pend { fill: rgba(24, 181, 174, .25); stroke: #18b5ae; stroke-width: 3; stroke-dasharray: 4 3; pointer-events: none; }
+svg .mark.q { font: 800 12px system-ui; text-anchor: middle; dominant-baseline: central; fill: #fff; pointer-events: none; }
+#board.t-mystery, #board.t-portal, #board.t-lock { cursor: pointer; }
+.toolOpt { display: flex; align-items: center; gap: 4px; padding: 2px 6px; font-size: 11px; color: #ddd6c8; }
+.toolOpt input { width: 44px; }
+.mechList { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+.mechList .mk { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+.trayitem.locked { opacity: .4; }

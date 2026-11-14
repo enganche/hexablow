@@ -29,8 +29,17 @@ export class Board {
         home: key(b[0], b[1]),
       };
     });
-    this.grid = new Map(this.ctx.givens); // number -> [q,r] currently on the board
-    this.occ = new Set([...this.grid.values()].map((c) => key(c[0], c[1])));
+    // portals: the two ends are neighbours
+    for (const [a, b] of level.portals || []) {
+      const ka = key(a[0], a[1]), kb = key(b[0], b[1]);
+      if (!this.adj.get(ka).includes(kb)) { this.adj.get(ka).push(kb); this.adj.get(kb).push(ka); }
+    }
+    this.grid = new Map(this.ctx.givens); // number -> [q,r] currently on the board (a "?" is not on it until opened)
+    this.hidden = new Map(this.ctx.hidden); // mystery givens still shown as "?"
+    this.occ = new Set([...this.grid.values(), ...this.hidden.values()].map((c) => key(c[0], c[1])));
+    this.solved = 0; // cells the player solved (unlocks padlocks)
+    this.placedNums = new Set();
+    this.locks = (level.locks || []).map((l) => ({ k: key(l.cell[0], l.cell[1]), need: l.need }));
     this.revealed = new Map(); // number -> cell key (Reveal booster)
   }
 
@@ -38,7 +47,17 @@ export class Board {
     return this.pieces.length === 0;
   }
   get filled() {
-    return this.grid.size / this.N;
+    return (this.grid.size + this.hidden.size) / this.N;
+  }
+
+  lockedKeys() {
+    return new Set(this.locks.filter((l) => this.solved < l.need).map((l) => l.k));
+  }
+
+  /** A tile whose true cells sit behind a closed padlock cannot be dropped yet. */
+  placeable(p) {
+    const closed = this.lockedKeys();
+    return !closed.size || !this.cellsAt(p, p.home).some((k) => closed.has(k));
   }
 
   cellsAt(p, t) {
@@ -47,7 +66,8 @@ export class Board {
   }
 
   fits(p, t) {
-    return this.cellsAt(p, t).every((k) => this.cellSet.has(k) && !this.occ.has(k));
+    const closed = this.lockedKeys();
+    return this.cellsAt(p, t).every((k) => this.cellSet.has(k) && !this.occ.has(k) && !closed.has(k));
   }
 
   /** Every spot the piece physically fits (what a blind drop could hit). */
@@ -67,7 +87,13 @@ export class Board {
     p.nums.forEach((n, i) => {
       this.grid.set(n, parse(cells[i]));
       this.occ.add(cells[i]);
+      this.placedNums.add(n);
     });
+    this.solved += p.nums.length;
+    // a tile placed next to a "?" opens it
+    for (const [n, c] of [...this.hidden]) {
+      if (this.placedNums.has(n - 1) || this.placedNums.has(n + 1)) { this.grid.set(n, c); this.hidden.delete(n); }
+    }
     this.pieces = this.pieces.filter((x) => x !== p);
   }
 

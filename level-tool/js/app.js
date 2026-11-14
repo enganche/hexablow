@@ -20,6 +20,9 @@
     group: 'Kéo qua 2–3 ô kề nhau để ghép thành 1 ô khay.',
     split: 'Bấm một ô ghép để tách thành ô lẻ.',
     select: 'Bấm một ô khay để xem mọi vị trí nó kéo vào được (nét đứt; vị trí đúng viền xanh liền).',
+    mystery: 'Bấm một ô given để bật/tắt "?": người chơi thấy dấu hỏi tới khi đặt một ô khay liền kề. Không dùng cho số cuối N.',
+    portal: 'Bấm ô thứ nhất rồi ô thứ hai để nối cổng đôi (hai ô được tính là liền kề). Bấm một đầu cổng có sẵn để xoá. Lời giải phải đi qua cổng.',
+    lock: 'Bấm một ô (không phải given) để khóa; ô mở khi người chơi đã giải đủ số ô ở ô "cần". Bấm lại để gỡ (đổi số cần thì bấm lại để cập nhật).',
   };
 
   const S = {
@@ -125,6 +128,7 @@
     S.tool = t;
     if (t !== 'select') S.sel = -1;
     S.preview = null;
+    S.pend = null;
     document.querySelectorAll('.tool').forEach((b) => b.classList.toggle('on', b.dataset.tool === t));
     $('board').className = 't-' + t;
     $('toolHint').textContent = TOOL_HELP[t];
@@ -207,6 +211,10 @@
           if (adjacent(parse(grp[i]), parse(grp[j]))) h += V.line(parse(grp[i]), parse(grp[j]), 'gbar').replace('class="gbar"', `class="gbar" style="stroke:${col}"`);
     });
     if (S.preview) for (const k of S.preview) h += V.hex(parse(k), 'preview');
+    h += V.mysteryLayer((d.mysteryCells || []).map(parse));
+    h += V.portalLayer(d.portals);
+    h += V.lockLayer(d.locks);
+    if (S.pend) h += V.hex(parse(S.pend), 'pend');
     if ((S.opt.path || S.tool === 'path') && d.path.length > 1)
       h += `<polyline class="path" points="${d.path.map((k) => { const p = V.xy(parse(k)); return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ')}"/>`;
     if (S.opt.nums || S.tool === 'path') {
@@ -216,6 +224,7 @@
         h += V.text(c, n, 'num' + (isG ? ' given' : '') + (S.tool === 'path' ? ' small' : ''));
       }
     }
+    for (const k of d.mysteryCells || []) h += V.text(parse(k), '?', 'mystT', -11);
     if (S.tool === 'path' && d.path.length) {
       h += V.circle(parse(d.path[0]), 21, 'endring');
       h += V.circle(parse(d.path[d.path.length - 1]), 21, 'sel');
@@ -308,6 +317,13 @@
     if (act !== $('mName')) $('mName').value = d.name;
     $('mDiff').value = d.difficulty || 'normal';
     $('mapInfo').innerHTML = `Ô chơi <b>${d.cells.length}</b> · ô nước <b>${d.blocked.length}</b>`;
+    const used = HB.mechanicsOf({ blocked: d.blocked, mystery: d.mysteryCells, portals: d.portals, locks: d.locks });
+    const rows = [];
+    if (d.blocked.length) rows.push(`<span><i class="mk" style="background:#8fd8ea"></i>Hồ nước: ${d.blocked.length} ô</span>`);
+    if (d.mysteryCells.length) rows.push(`<span><i class="mk" style="background:#7f62b8"></i>Số bí ẩn: ${d.mysteryCells.length}</span>`);
+    d.portals.forEach((p, i) => rows.push(`<span><i class="mk" style="background:${V.portalColor(i)}"></i>Cổng ${String.fromCharCode(65 + (i % 26))}: ${key(p[0][0], p[0][1])} ↔ ${key(p[1][0], p[1][1])}</span>`));
+    d.locks.forEach((l) => rows.push(`<span><i class="mk" style="background:#4a3c2c"></i>Khóa ${key(l.cell[0], l.cell[1])}: cần ${l.need} ô</span>`));
+    $('mechInfo').innerHTML = rows.join('') + (used.length > 2 ? '<span style="color:#a63a36">⚠ quá 2 cơ chế</span>' : '');
     const c = S.compiled, sizes = [0, 0, 0, 0];
     if (c && c.ok) c.level.pieces.forEach((p) => sizes[p.length]++);
     else {
@@ -387,6 +403,30 @@
     } else if (t === 'group') {
       if (!d.givenCells.includes(k)) { S.drag.stroke = [k]; S.preview = [k]; drawBoard(); }
       else toast('Ô given không ghép được — bỏ given trước.', '', 1800);
+    } else if (t === 'mystery') {
+      if (!d.givenCells.includes(k)) { toast('Chỉ ô given mới thành số bí ẩn — đặt given trước (G).', '', 2200); return; }
+      const n = d.path.indexOf(k) + 1;
+      if (n && n === d.cells.length) { toast('Số cuối N luôn phải hiện rõ.', 'err'); return; }
+      pushHist();
+      const i = d.mysteryCells.indexOf(k);
+      if (i >= 0) d.mysteryCells.splice(i, 1); else d.mysteryCells.push(k);
+      commit();
+    } else if (t === 'portal') {
+      const pi = d.portals.findIndex(([a, b]) => key(a[0], a[1]) === k || key(b[0], b[1]) === k);
+      if (pi >= 0) { pushHist(); d.portals.splice(pi, 1); S.pend = null; commit(); return; }
+      if (!S.pend) { S.pend = k; drawBoard(); return; }
+      if (S.pend === k) { S.pend = null; drawBoard(); return; }
+      const a = parse(S.pend);
+      if (adjacent(a, c)) { toast('Hai đầu đang liền kề nhau — cổng sẽ vô nghĩa. Chọn ô xa hơn.', 'err', 2600); return; }
+      pushHist(); d.portals.push([a, [c[0], c[1]]]); S.pend = null; commit();
+    } else if (t === 'lock') {
+      if (d.givenCells.includes(k)) { toast('Ô khóa không được là ô given.', 'err', 2000); return; }
+      const li = d.locks.findIndex((l) => key(l.cell[0], l.cell[1]) === k), need = Math.max(1, +$('lockNeed').value || 1);
+      pushHist();
+      if (li >= 0 && d.locks[li].need !== need) d.locks[li].need = need;
+      else if (li >= 0) d.locks.splice(li, 1);
+      else d.locks.push({ cell: [c[0], c[1]], need });
+      commit();
     } else if (t === 'select') {
       const ti = S.ana ? tileCellMap().get(k) : undefined;
       if (ti === undefined) { toast(S.ana ? 'Ô given không nằm trong khay.' : 'Cần đường đi hoàn chỉnh để soi ô.', '', 1800); return; }
@@ -432,6 +472,11 @@
     if (!inCells(k)) return d.blocked.some((x) => key(x[0], x[1]) === k) ? 'Ô nước (chặn)' : null;
     const n = d.path.indexOf(k) + 1;
     let s = n ? `Số <b>${n}</b>` : 'Chưa có số';
+    const pi = d.portals.findIndex(([a, b]) => key(a[0], a[1]) === k || key(b[0], b[1]) === k);
+    if (pi >= 0) s += ` · cổng ${String.fromCharCode(65 + (pi % 26))}`;
+    const lk = d.locks.find((l) => key(l.cell[0], l.cell[1]) === k);
+    if (lk) s += ` · khóa: cần ${lk.need} ô`;
+    if (d.mysteryCells.includes(k)) return s + ' · given bí ẩn (?)';
     if (d.givenCells.includes(k)) return s + ' · given';
     const ti = S.ana ? tileCellMap().get(k) : undefined;
     if (ti !== undefined) {
@@ -542,7 +587,7 @@
     if (S.gen.running) return;
     const e = +$('gE').value, m = +$('gM').value, hh = +$('gH').value, tot = e + m + hh || 1;
     const opts = {
-      base: { id: d.id, name: d.name, difficulty: d.difficulty, cells: d.cells, blocked: d.blocked },
+      base: { id: d.id, name: d.name, difficulty: d.difficulty, cells: d.cells, blocked: d.blocked, portals: d.portals, mysteryCells: d.mysteryCells, locks: d.locks },
       target: { easy: e / tot, medium: m / tot, hard: hh / tot },
       tol: +$('gTol').value / 100, maxPiece: +$('gMax').value,
       givenRange: [+$('gGmin').value / 100, +$('gGmax').value / 100], maxOrphan: +$('gOrph').value / 100,
@@ -618,7 +663,7 @@
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (k === ' ') { S.space = true; e.preventDefault(); return; }
       if (S.view !== 'edit') return;
-      const map = { b: 'paint', w: 'water', e: 'erase', p: 'path', g: 'given', h: 'group', x: 'split', v: 'select' };
+      const map = { b: 'paint', w: 'water', e: 'erase', p: 'path', g: 'given', h: 'group', x: 'split', v: 'select', m: 'mystery', o: 'portal', k: 'lock' };
       if (map[k]) setTool(map[k]);
       else if (k === 'f') fit();
       else if (k === 'd') { $('optDiff').checked = !$('optDiff').checked; $('optDiff').onchange(); }
@@ -640,15 +685,17 @@
 
     $('mapHex').onclick = () => { pushHist(); const d = D(); d.cells = HB.hexRegion(+$('mapRadius').value).map((c) => c.slice()); d.blocked = []; commit(); fit(); };
     $('mapFlower').onclick = () => { pushHist(); const d = D(); d.cells = HB.minus(HB.hexRegion(3), [[3, 0], [0, 3], [-3, 3], [-3, 0], [0, -3], [3, -3]]).map((c) => c.slice()); d.blocked = []; commit(); fit(); };
-    $('mapClear').onclick = () => { pushHist(); const d = D(); d.cells = []; d.blocked = []; d.path = []; d.givenCells = []; d.groups = []; commit(); };
+    $('mapClear').onclick = () => { pushHist(); const d = D(); d.cells = []; d.blocked = []; d.path = []; d.givenCells = []; d.groups = []; d.portals = []; d.mysteryCells = []; d.locks = []; commit(); };
 
     $('pathAuto').onclick = () => {
       const d = D();
       if (!d.cells.length) { toast('Vẽ bản đồ trước.', 'err'); return; }
       const style = $('pathStyle').value;
       const prefix = d.path.length && d.path.length < d.cells.length ? d.path.slice() : null;
-      let got = HB.autoPath(d.cells, { style, tries: prefix ? 12 : 24, seed: S.pathSeed++, prefix });
-      if (!got && prefix) got = HB.autoPath(d.cells, { style, tries: 24, seed: S.pathSeed++ });
+      const portals = d.portals.map(([a, b]) => [key(a[0], a[1]), key(b[0], b[1])]); // the path must cross every portal
+      const pOpt = { portals, requirePortals: portals.length > 0 };
+      let got = HB.autoPath(d.cells, { style, tries: prefix ? 12 : 24, seed: S.pathSeed++, prefix, ...pOpt });
+      if (!got && prefix) got = HB.autoPath(d.cells, { style, tries: 24, seed: S.pathSeed++, ...pOpt });
       if (!got) { toast('Không tìm được đường phủ kín bản đồ này (thử bỏ bớt ô).', 'err'); return; }
       pushHist(); d.path = got[0].path; commit();
     };
@@ -719,6 +766,7 @@
     try { ws = JSON.parse(lsGet(LS_WS) || 'null'); } catch (e) { ws = null; }
     if (ws && ws.levels && ws.levels.length) {
       S.levels = ws.levels; S.cur = Math.min(ws.cur || 0, ws.levels.length - 1); S.fileName = ws.file || '';
+      S.levels.forEach((d) => { d.portals = d.portals || []; d.mysteryCells = d.mysteryCells || []; d.locks = d.locks || []; }); // older saved workspaces
       $('fileInfo').textContent = (S.fileName ? S.fileName + ' · ' : '') + S.levels.length + ' level (khôi phục)';
     } else {
       S.levels = [mkStarter()];

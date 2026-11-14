@@ -41,6 +41,38 @@
     return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}"/>`;
   };
 
+  // ---- mechanic overlays (editor board + playtest board) ----
+  const PCOL = ['#18b5ae', '#e0529c', '#4d86ee', '#e08a1e'];
+  V.portalColor = (i) => PCOL[i % PCOL.length];
+  /** Twin portals: a coloured ring on both ends, a letter badge and a dashed link. `covered(k)` -> end is under a tile. */
+  V.portalLayer = function (portals, R) {
+    let h = '';
+    (portals || []).forEach(([a, b], i) => {
+      const col = V.portalColor(i), pa = V.xy(a, R), pb = V.xy(b, R), L = String.fromCharCode(65 + (i % 26));
+      h += `<line class="plink" style="stroke:${col}" x1="${pa.x.toFixed(1)}" y1="${pa.y.toFixed(1)}" x2="${pb.x.toFixed(1)}" y2="${pb.y.toFixed(1)}"/>`;
+      for (const c of [a, b]) {
+        const p = V.xy(c, R);
+        h += `<polygon class="pring" style="stroke:${col}" points="${HB.hexPoints(p.x, p.y, (R || V.R) - 4)}"/>`;
+        h += `<circle class="pbadge" style="fill:${col}" cx="${(p.x + (R || V.R) * 0.55).toFixed(1)}" cy="${(p.y - (R || V.R) * 0.5).toFixed(1)}" r="8"/>`;
+        h += `<text class="pbadgeT" x="${(p.x + (R || V.R) * 0.55).toFixed(1)}" y="${(p.y - (R || V.R) * 0.5).toFixed(1)}">${L}</text>`;
+      }
+    });
+    return h;
+  };
+  /** Padlocks: dimmed cell with the number of cells still to solve (`left(lock)` overrides the label). */
+  V.lockLayer = function (locks, label, R) {
+    let h = '';
+    for (const l of locks || []) {
+      h += V.hex(l.cell, 'lockc', '', R);
+      h += V.text(l.cell, '🔒' + (label ? label(l) : l.need), 'lockT', 0, R);
+    }
+    return h;
+  };
+  /** "?" mark on mystery givens. */
+  V.mysteryLayer = function (cells, R) {
+    return (cells || []).map((c) => V.hex(c, 'myst', '', R)).join('');
+  };
+
   /** pointer event -> axial cell under it, for an <svg> drawn with V.* helpers (origin = axial 0,0) */
   V.pick = function (svg, clientX, clientY, R) {
     const pt = svg.createSVGPoint();

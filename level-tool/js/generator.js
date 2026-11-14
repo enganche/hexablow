@@ -15,7 +15,11 @@
   };
   const turnCost = (d1, d2) => { const t = Math.abs(d1 - d2) % 6; return Math.min(t, 6 - t); };
 
-  /** One Hamiltonian path attempt. opts: {budget, prefix:[keys], turnW} -> [keys] | null */
+  /**
+   * One Hamiltonian path attempt. opts: {budget, prefix:[keys], turnW, portals:[[keyA,keyB]], requirePortals}
+   * With portals the two ends are linked; with requirePortals the walk MUST cross every portal (stepping on an end
+   * whose partner is still free forces the jump), so the portal is part of the solution. -> [keys] | null
+   */
   HB.findPath = function (cells, rand, opts) {
     opts = opts || {};
     const budget = opts.budget || 200000, turnW = opts.turnW == null ? 0.7 : opts.turnW;
@@ -25,6 +29,12 @@
     for (const k of set) {
       const [q, r] = parse(k);
       adj.set(k, DIRS.map(([dq, dr]) => key(q + dq, r + dr)).filter((x) => set.has(x)));
+    }
+    const portalOf = new Map();
+    for (const [a, b] of opts.portals || []) {
+      if (!set.has(a) || !set.has(b)) return null;
+      portalOf.set(a, b); portalOf.set(b, a);
+      if (!adj.get(a).includes(b)) { adj.get(a).push(b); adj.get(b).push(a); }
     }
     let nodes = 0;
     const visited = new Set(), path = [];
@@ -40,8 +50,11 @@
       if (path.length === N) return true;
       if (++nodes > budget) return false;
       const prev = path.length > 1 ? dirIdx(path[path.length - 2], cur) : -1;
-      const scored = shuffle(adj.get(cur).filter((n) => !visited.has(n)), rand).map((n) => ({
-        n, s: adj.get(n).filter((m) => !visited.has(m)).length + (prev < 0 ? 0 : turnCost(prev, dirIdx(cur, n)) * turnW),
+      let cand = adj.get(cur).filter((n) => !visited.has(n));
+      const mate = portalOf.get(cur);
+      if (opts.requirePortals && mate && !visited.has(mate)) cand = [mate]; // standing on a portal: take it
+      const scored = shuffle(cand, rand).map((n) => ({
+        n, s: adj.get(n).filter((m) => !visited.has(m)).length + (prev < 0 || dirIdx(cur, n) < 0 ? 0 : turnCost(prev, dirIdx(cur, n)) * turnW),
       }));
       scored.sort((a, b) => a.s - b.s);
       for (const { n } of scored) {
@@ -73,7 +86,7 @@
     const turnW = style === 'straight' ? 0.7 : style === 'wiggly' ? -0.4 : 0;
     const out = [];
     for (let i = 0; i < tries; i++) {
-      const p = HB.findPath(cells, rng((opts.seed || 1) * 1000 + i), { prefix: opts.prefix, turnW, budget: opts.budget || 60000 });
+      const p = HB.findPath(cells, rng((opts.seed || 1) * 1000 + i), { prefix: opts.prefix, turnW, budget: opts.budget || 60000, portals: opts.portals, requirePortals: opts.requirePortals });
       if (p) out.push({ path: p, turns: HB.turns(p) });
       if (opts.prefix && out.length >= 4) break;
     }
@@ -132,11 +145,16 @@
   };
 
   const numMap = (path) => new Map(path.map((k, i) => [k, i + 1]));
-  const mkDraft = (base, path, givenSet, groups) => ({
-    id: base.id, name: base.name, difficulty: base.difficulty,
-    cells: base.cells, blocked: base.blocked, path,
-    givenCells: path.filter((k, i) => givenSet.has(i + 1)), groups,
-  });
+  const mkDraft = (base, path, givenSet, groups) => {
+    const givenCells = path.filter((k, i) => givenSet.has(i + 1));
+    return {
+      id: base.id, name: base.name, difficulty: base.difficulty,
+      cells: base.cells, blocked: base.blocked, path,
+      givenCells, groups,
+      portals: base.portals || [], locks: base.locks || [],
+      mysteryCells: (base.mysteryCells || []).filter((k) => givenCells.includes(k)),
+    };
+  };
   /** givens as a Set of numbers -> logic status of the resulting level */
   function logicOK(base, path, givenNums, groups) {
     const c = HB.compile(mkDraft(base, path, givenNums, groups));
@@ -258,7 +276,8 @@
     let paths = [];
     if (opts.keepPath && opts.path && opts.path.length === N) paths = [opts.path.slice()];
     else {
-      const got = HB.autoPath(base.cells, { style: opts.pathStyle || 'straight', tries: 14, seed: opts.seed || 1, budget: 40000 });
+      const portalKeys = (base.portals || []).map(([a, b]) => [key(a[0], a[1]), key(b[0], b[1])]);
+      const got = HB.autoPath(base.cells, { style: opts.pathStyle || 'straight', tries: 14, seed: opts.seed || 1, budget: 40000, portals: portalKeys, requirePortals: portalKeys.length > 0 });
       if (!got) return { results: [], tried: 0, error: 'Không tìm được đường đi phủ kín bản đồ.' };
       paths = got.slice(0, 4).map((x) => x.path);
     }

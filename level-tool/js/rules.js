@@ -37,12 +37,18 @@
   /** Normalise a compiled level (game format) into lookup tables. */
   HB.ctx = function (level) {
     const sol = new Map(Object.entries(level.solution).map(([n, c]) => [+n, c]));
-    const givens = new Map(Object.entries(level.givens).map(([n, c]) => [+n, c]));
+    const all = new Map(Object.entries(level.givens).map(([n, c]) => [+n, c]));
+    // mystery givens ("?"): on the board but their number is unknown, so they are neither anchors nor free cells
+    const hidden = new Map();
+    for (const n of level.mystery || []) if (all.has(n)) { hidden.set(n, all.get(n)); all.delete(n); }
     return {
       level,
       N: level.cells.length,
       sol,
-      givens,
+      givens: all,
+      hidden,
+      hiddenCells: new Set([...hidden.values()].map((c) => key(c[0], c[1]))),
+      portals: HB.portalMap(level.portals),
       cellSet: new Set(level.cells.map((c) => key(c[0], c[1]))),
       blockedSet: new Set((level.blocked || []).map((c) => key(c[0], c[1]))),
     };
@@ -58,7 +64,7 @@
     const mode = rules.tile.anchorMode;
     const base = ctx.sol.get(nums[0]);
     const offs = nums.map((n) => [ctx.sol.get(n)[0] - base[0], ctx.sol.get(n)[1] - base[1]]);
-    const occ = new Set();
+    const occ = new Set(ctx.hiddenCells || []);
     for (const c of grid.values()) occ.add(key(c[0], c[1]));
     const inPiece = new Set(nums);
 
@@ -72,8 +78,10 @@
         if (!grid.has(v) || inPiece.has(v)) continue;
         const vc = grid.get(v);
         anchors.push({ num: m, anchorNum: v, anchorCell: vc });
-        for (const [dq, dr] of DIRS) {
-          const hook = [vc[0] + dq, vc[1] + dr];                 // where number m would sit
+        const hooks = DIRS.map(([dq, dr]) => [vc[0] + dq, vc[1] + dr]);   // the 6 neighbours...
+        const gate = ctx.portals && ctx.portals.get(key(vc[0], vc[1]));    // ...plus the other end of a portal
+        if (gate) hooks.push(gate);
+        for (const hook of hooks) {                              // where number m would sit
           const t = [hook[0] - offs[i][0], hook[1] - offs[i][1]]; // where the tile's first number would sit
           const tk = key(t[0], t[1]);
           if (seen.has(tk)) continue;
@@ -95,7 +103,7 @@
             let ok = true;
             for (let j = 0; j < nums.length && ok; j++)
               for (const w of [nums[j] - 1, nums[j] + 1])
-                if (grid.has(w) && !inPiece.has(w) && !adjacent(cells[j], grid.get(w))) { ok = false; break; }
+                if (grid.has(w) && !inPiece.has(w) && !HB.linked(ctx.portals, cells[j], grid.get(w))) { ok = false; break; }
             if (!ok) { reasons.strict++; continue; }
           }
           const correct = tk === key(base[0], base[1]);
@@ -159,6 +167,7 @@
       const chosen = infos[pick];
       steps.push({ nums: chosen.nums, count: stuck ? 0 : chosen.count, cls: stuck ? 'orphan' : chosen.cls, stuck });
       chosen.nums.forEach((n) => grid.set(n, ctx.sol.get(n)));
+      for (const [n, c] of ctx.hidden) if (!grid.has(n) && (grid.has(n - 1) || grid.has(n + 1)) && chosen.nums.some((m) => Math.abs(m - n) === 1)) grid.set(n, c); // a placed tile next to a "?" opens it
       left.splice(pick, 1);
     }
     return steps;
@@ -182,8 +191,8 @@
     const steps = opts && opts.fast ? [] : HB.playthrough(ctx, rules);
     const metrics = {
       cells: ctx.N,
-      givens: ctx.givens.size,
-      givenPct: ctx.givens.size / ctx.N,
+      givens: Object.keys(level.givens).length,
+      givenPct: Object.keys(level.givens).length / ctx.N,
       tiles: tiles.length,
       easy: cnt.easy, medium: cnt.medium, hard: cnt.hard, orphan,
       easyPct: cnt.easy / n, mediumPct: cnt.medium / n, hardPct: cnt.hard / n, orphanPct: orphan / n,

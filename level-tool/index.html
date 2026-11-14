@@ -48,6 +48,11 @@
     <button class="tool" data-tool="given" title="Bật/tắt given (G)"><i>📌</i><span>Given</span><kbd>G</kbd></button>
     <button class="tool" data-tool="group" title="Ghép 2–3 ô kề nhau thành 1 ô khay (H)"><i>⛓</i><span>Ghép ô</span><kbd>H</kbd></button>
     <button class="tool" data-tool="split" title="Tách ô ghép (X)"><i>✂</i><span>Tách ô</span><kbd>X</kbd></button>
+    <div class="grp">Cơ chế</div>
+    <button class="tool" data-tool="mystery" title="Bật/tắt số bí ẩn trên một ô given (M)"><i>❓</i><span>Số ẩn</span><kbd>M</kbd></button>
+    <button class="tool" data-tool="portal" title="Cổng đôi: bấm 2 ô để nối (O)"><i>🌀</i><span>Cổng</span><kbd>O</kbd></button>
+    <button class="tool" data-tool="lock" title="Ô khóa: bấm ô để khóa, bấm lại để gỡ (K)"><i>🔒</i><span>Khóa</span><kbd>K</kbd></button>
+    <label class="toolOpt" title="Số ô phải giải để mở khóa">cần <input type="number" id="lockNeed" min="1" max="60" value="5"></label>
     <div class="grp">Xem</div>
     <button class="tool" data-tool="select" title="Chọn ô khay để xem vị trí kéo vào được (V)"><i>🔍</i><span>Soi ô</span><kbd>V</kbd></button>
   </div>
@@ -104,6 +109,7 @@
         <button id="mapHex">Tạo</button><button id="mapFlower" title="Bán kính 3, bỏ 6 góc">Hoa</button><button id="mapClear">Xoá hết</button>
       </div>
       <div class="kv" id="mapInfo"></div>
+      <div class="mechList" id="mechInfo"></div>
     </details>
 
     <details class="card" id="cardDiff" open>

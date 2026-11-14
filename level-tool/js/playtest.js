@@ -30,6 +30,7 @@
     st = {
       level, ctx, rules, pieces,
       placed: new Map(),         // num -> cell
+      revealed: new Map(),       // mystery givens that a placed tile has opened: num -> cell
       hearts: 3, mistakes: 0, moves: 0, hints: 0, undone: 0,
       history: [], sel: -1, preview: null, flash: null, over: null,
       t0: Date.now(), showCls: !!opts.showCls, ghost: null, drag: null,
@@ -54,8 +55,22 @@
     st.timer = setInterval(tick, 500);
   }
 
+  /** Mystery givens open once a placed tile sits next to them. */
+  const recomputeReveal = (all) => {
+    st.revealed = new Map();
+    for (const [n, c] of st.ctx.hidden) if (all || st.placed.has(n - 1) || st.placed.has(n + 1)) st.revealed.set(n, c);
+  };
+  /** Cells behind a padlock that has not been opened yet (the player has not solved enough cells). */
+  const closedLocks = () => {
+    const out = new Map();
+    for (const l of st.level.locks || []) if (st.placed.size < l.need) out.set(key(l.cell[0], l.cell[1]), l.need - st.placed.size);
+    return out;
+  };
+  const pieceLocked = (p) => { const cl = closedLocks(); return p.nums.some((n) => cl.has(key(st.level.solution[n][0], st.level.solution[n][1]))); };
+  const visibleGrid = () => new Map([...st.ctx.givens, ...st.revealed, ...st.placed]);
+
   const occupiedKeys = () => {
-    const s = new Set();
+    const s = new Set(st.ctx.hiddenCells);
     for (const c of st.ctx.givens.values()) s.add(key(c[0], c[1]));
     for (const c of st.placed.values()) s.add(key(c[0], c[1]));
     return s;
@@ -66,15 +81,20 @@
     return p.offs.map(([dq, dr]) => [a[0] + dq, a[1] + dr]);
   };
   const fits = (cells) => {
-    const occ = occupiedKeys();
-    return cells.every((c) => st.ctx.cellSet.has(key(c[0], c[1])) && !occ.has(key(c[0], c[1])));
+    const occ = occupiedKeys(), cl = closedLocks();
+    return cells.every((c) => st.ctx.cellSet.has(key(c[0], c[1])) && !occ.has(key(c[0], c[1])) && !cl.has(key(c[0], c[1])));
   };
 
   function attempt(i, pivotCell) {
     const p = st.pieces[i];
     if (!p || p.placed || !pivotCell) return;
     const cells = cellsFor(p, pivotCell);
-    if (!fits(cells)) { flash(cells, 'bounce'); setMsg('Không đặt được (ra ngoài / nước / đã có ô).'); return; }
+    if (!fits(cells)) {
+      flash(cells, 'bounce');
+      const cl = closedLocks(), hit = cells.map((c) => cl.get(key(c[0], c[1]))).find(Boolean);
+      setMsg(hit ? `Ô bị khóa: cần giải thêm ${hit} ô.` : 'Không đặt được (ra ngoài / nước / đã có ô).');
+      return;
+    }
     const ok = p.nums.every((n, j) => st.level.solution[n][0] === cells[j][0] && st.level.solution[n][1] === cells[j][1]);
     st.moves++;
     if (!ok) {
@@ -89,8 +109,10 @@
     p.nums.forEach((n, j) => st.placed.set(n, cells[j]));
     st.history.push(i);
     st.sel = -1;
+    const wasOpen = closedLocks().size, wasHidden = st.ctx.hidden.size - st.revealed.size;
+    recomputeReveal();
     flash(cells, 'good');
-    setMsg('');
+    setMsg(st.ctx.hidden.size - st.revealed.size < wasHidden ? '❓ Ô bí ẩn đã mở!' : closedLocks().size < wasOpen ? '🔓 Ô khóa đã mở!' : '');
     if (st.pieces.every((x) => x.placed)) end(true);
     render();
   }
@@ -101,16 +123,17 @@
     const p = st.pieces[i];
     p.placed = false;
     p.nums.forEach((n) => st.placed.delete(n));
+    recomputeReveal();
     st.undone++;
     render();
   }
 
   function hint() {
     if (!st || st.over) return;
-    const grid = new Map([...st.ctx.givens, ...st.placed]);
+    const grid = visibleGrid();
     let best = null;
     st.pieces.forEach((p, i) => {
-      if (p.placed) return;
+      if (p.placed || pieceLocked(p)) return;
       const inf = HB.tileCandidates(st.ctx, p.nums, grid, st.rules);
       const c = inf.orphan ? 99 : inf.count;
       if (!best || c < best.c) best = { i, c };
@@ -129,6 +152,7 @@
 
   function end(win) {
     st.over = win ? 'win' : 'lose';
+    if (win) recomputeReveal(true);
     st.elapsed = (Date.now() - st.t0) / 1000;
     const byCls = {};
     for (const p of st.pieces) {
@@ -171,16 +195,19 @@
     svg.setAttribute('viewBox', V.vbFor(lv.cells.concat(lv.blocked)));
     let h = '';
     for (const c of lv.blocked) h += V.hex(c, 'water');
-    const gk = new Set([...st.ctx.givens.values()].map((c) => key(c[0], c[1])));
+    const gk = new Set([...st.ctx.givens.values(), ...st.ctx.hidden.values()].map((c) => key(c[0], c[1])));
     const placedAt = new Map([...st.placed].map(([n, c]) => [key(c[0], c[1]), n]));
     for (const c of lv.cells) {
       const k = key(c[0], c[1]);
       h += V.hex(c, gk.has(k) ? 'given' : placedAt.has(k) ? 'placed' : 'cell');
     }
-    // connector bars between consecutive visible numbers
-    const pos = new Map([...st.ctx.givens, ...st.placed]);
-    for (const [n, c] of pos) if (pos.has(n + 1)) h += V.line(c, pos.get(n + 1), 'bar');
+    // connector bars between consecutive visible numbers (a portal jump is drawn dashed)
+    const pos = visibleGrid();
+    for (const [n, c] of pos) if (pos.has(n + 1)) h += V.line(c, pos.get(n + 1), HB.adjacent(c, pos.get(n + 1)) ? 'bar' : 'plink');
+    h += V.portalLayer(lv.portals);
     for (const [n, c] of pos) h += V.text(c, n, gk.has(key(c[0], c[1])) ? 'num given' : 'num');
+    for (const [n, c] of st.ctx.hidden) if (!st.revealed.has(n)) h += V.hex(c, 'myst') + V.text(c, '?', 'mystT');
+    h += V.lockLayer((lv.locks || []).filter((l) => st.placed.size < l.need), (l) => l.need - st.placed.size);
     if (st.preview) for (const c of st.preview.cells) if (st.ctx.cellSet.has(key(c[0], c[1]))) h += V.hex(c, 'ghostcell ' + (st.preview.ok ? 'ok' : 'bad'));
     if (st.flash) for (const c of st.flash.cells) if (st.ctx.cellSet.has(key(c[0], c[1]))) h += V.hex(c, 'flash ' + st.flash.kind);
     svg.innerHTML = h;
@@ -204,7 +231,7 @@
     st.pieces.forEach((p, i) => {
       if (p.placed) return;
       const d = document.createElement('div');
-      d.className = 'trayitem' + (st.sel === i ? ' sel' : '') + (st.showCls ? ' c-' + p.cls : '');
+      d.className = 'trayitem' + (pieceLocked(p) ? ' locked' : '') + (st.sel === i ? ' sel' : '') + (st.showCls ? ' c-' + p.cls : '');
       d.innerHTML = pieceSVG(p, PR);
       d.title = st.showCls ? `${HB.CLASS_LABEL[p.cls]} (${p.count} vị trí)` : '';
       d.onpointerdown = (e) => startDrag(e, i, d);

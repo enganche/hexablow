@@ -1,0 +1,41 @@
+{
+  "order": ["water", "mystery", "portal", "lock"],
+  "water": {
+    "name": "Pond",
+    "unlockLevel": 3,
+    "intro": true,
+    "title": "Pond",
+    "lines": ["Water cells can't hold a tile.", "Plan your path around them."]
+  },
+  "mystery": {
+    "name": "Mystery numbers",
+    "unlockLevel": 7,
+    "intro": true,
+    "title": "Mystery numbers",
+    "lines": [
+      "A lily pad hides a number.",
+      "Find it by elimination: it's the number missing from the board and the tray.",
+      "Place a tile next to it and the pad opens."
+    ]
+  },
+  "portal": {
+    "name": "Twin portals",
+    "unlockLevel": 9,
+    "intro": true,
+    "title": "Twin portals",
+    "lines": [
+      "Two cells with the same glowing ring are linked.",
+      "They count as neighbours, so the path can jump from one to the other."
+    ]
+  },
+  "lock": {
+    "name": "Locked cells",
+    "unlockLevel": 11,
+    "intro": true,
+    "title": "Locked cells",
+    "lines": [
+      "A padlock shows how many more cells you must solve.",
+      "Solve that many cells anywhere on the board and the lock opens."
+    ]
+  }
+}

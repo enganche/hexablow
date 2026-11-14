@@ -34,6 +34,8 @@ node level-tool/analyze.mjs path/to/levels.json
 node level-tool/regen.mjs [fromId=5]           # giữ map + đường đi, sinh lại given + cắt ô theo mục tiêu độ khó từng level
 node level-tool/regen-paths.mjs [fromId=5]     # thay đường giải xoắn ốc (thêm --check để chỉ kiểm tra)
 node level-tool/regen-boss.mjs [--write]       # level boss 5 / 10 / 15: ít ô dễ, nhiều ô khó / mồ côi, nhãn "hard"
+node level-tool/regen-mechanics.mjs [--write]  # level 7–15: thêm số bí ẩn / cổng đôi / ô khóa (tối đa 2 cơ chế mỗi level, hồ nước tính 1)
+node level-tool/check-mechanics.mjs            # kiểm tra luật cơ chế cho mọi level (solver, round-trip, cổng được dùng, "?" mở được, khóa đạt được)
 ```
 
 Sau khi đổi level, chạy bot để xem độ khó thực tế với nhiều kiểu người chơi: `npm run sim -- --only lab` (xem [`../sim/README.md`](../sim/README.md)). Kết quả hiện tại: [`ANALYSIS_15_LEVELS.md`](ANALYSIS_15_LEVELS.md).
@@ -50,7 +52,7 @@ level-tool/
   js/generator.js đường đi / given / cắt ô / sinh theo độ khó
   js/view.js  js/playtest.js  js/app.js
   analyze.mjs  serve.mjs
-  regen.mjs  regen-paths.mjs  regen-boss.mjs   script sửa hàng loạt
+  regen.mjs  regen-paths.mjs  regen-boss.mjs  regen-mechanics.mjs  check-mechanics.mjs   script sửa hàng loạt / kiểm tra
   DIFFICULTY_RULES.md   ANALYSIS_15_LEVELS.md
 ```
 
@@ -64,6 +66,19 @@ Mọi file JS là script thường (không ES module) nên chạy được từ 
   "givens": {"1": [q,r]}, "pieces": [[2],[4,25]], "solution": {"1": [q,r]} }
 ```
 `pieces` = các ô khay (số tăng dần); ô khay giữ hình dạng như trong `solution`. Cắt ô độc lập với đường đi nên một ô có thể chứa số không liên tiếp (vd `[4,25]`).
+
+### Cơ chế mở rộng (tuỳ chọn, từ level 7)
+
+```json
+{ "mystery": [12],
+  "portals": [[[1,1],[3,-3]]],
+  "locks": [{ "cell": [2,-2], "need": 5 }] }
+```
+- `mystery`: số given hiển thị "?" cho tới khi đặt một ô khay liền kề. Solver coi số đó là ẩn: mỗi số bí ẩn phải nằm ở một trong các ô "?" (suy ra bằng loại trừ); luật ô khay không tính "?" là mốc.
+- `portals`: hai ô được tính là liền kề (solver, luật ô khay, tạo đường đi đều dùng cạnh này). `HB.findPath` nhận `portals` + `requirePortals` để đường giải bắt buộc đi qua cổng.
+- `locks`: ô mở khi người chơi đã giải `need` ô. Không ảnh hưởng solver/độ khó tĩnh; compile kiểm tra `need` ≤ số ô giải được khi chưa mở khóa.
+- **Trong editor** (nhóm công cụ *Cơ chế*): **Số ẩn** (M) bật/tắt "?" trên ô given (không cho số cuối N); **Cổng** (O) bấm 2 ô để nối, bấm một đầu để xoá, *Tự vẽ* đường đi sẽ bắt buộc đi qua cổng; **Khóa** (K) bấm ô để khóa với số ô ở ô "cần", bấm lại để gỡ hoặc đổi số. Thanh trạng thái cảnh báo cổng không được lời giải dùng, quá 2 cơ chế, cơ chế dùng trước level mở khóa; mục *Bản đồ* liệt kê cơ chế của level. Tab Playtest chạy đúng luật game (mở "?", mở khóa, cổng).
+- Vẫn nên chạy `check-mechanics.mjs` trước khi chép vào `src/`.
 
 ## Giới hạn hiện tại
 
