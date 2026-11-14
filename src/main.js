@@ -914,6 +914,7 @@ function clearHardWarning() {
 }
 function showHardWarning() {
   clearHardWarning();
+  audio.warn();
   const el = document.createElement('div');
   el.id = 'hard-warning';
   el.setAttribute('role', 'alert');
@@ -1890,6 +1891,12 @@ inputs.forEach((inp) =>
 
 // Browsers only allow audio after a gesture.
 window.addEventListener('pointerdown', () => audio.unlock(), { once: false });
+// Every UI button clicks (audio.tap dedupes against buttons that already call it; honours the Sound setting).
+const CLOSE_BTN = '.buy-x, .st-close, .dl-x, .profile-close, button[aria-label^="Close"]';
+document.addEventListener('click', (e) => {
+  const b = e.target.closest?.('button:not(:disabled)');
+  if (b) b.matches(CLOSE_BTN) ? audio.close() : audio.tap();
+}, true);
 
 // debug handle (handy for testing)
 const humanBot = createHumanBot({ game, tut, $, lastLevelId: levels[levels.length - 1].id, onChange: () => { if (dbg.style.display !== 'none') renderDebug(); } });
