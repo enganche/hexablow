@@ -4,8 +4,6 @@ const LEVEL_KEY = 'hexablow.level.v1';
 export const DEFAULT_SETTINGS = {
   sound: true,
   music: true,
-  vibration: true,
-  notifications: false,
   hints: true, // auto-hint when the player is stuck (on by default)
 };
 

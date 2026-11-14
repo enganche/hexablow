@@ -336,12 +336,3 @@ export class AudioManager {
     }
   }
 }
-
-export function vibrate(settings, pattern) {
-  if (!settings.vibration) return;
-  try {
-    navigator.vibrate?.(pattern);
-  } catch {
-    /* unsupported */
-  }
-}

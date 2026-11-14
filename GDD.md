@@ -180,13 +180,13 @@ Balancing notes from the bot simulator (see `sim/out/report.html` after `npm run
   - HUD: back, level name, hearts, settings, coin pill.
   - Board, then tray, then booster bar. Locked boosters show "Lv N".
 - **Result:** art, then the solved map, then actions. Win: *Continue* / *Claim* with the coin reward. Lose: revive / try again / home.
-- **Settings:** Sound, Music, Vibration, Notifications, Hints, and **Delete account** (tap twice to erase every save and reload).
+- **Settings:** Sound, Music, Hints, and **Delete account** (tap twice to erase every save and reload).
 
 ## 9. Save data (localStorage)
 | Key | Contents |
 |---|---|
 | `hexablow.progress.v1` | Schema v2: stars per level, coins, boosters, owned / equipped cosmetics, album (found species, claimed sets), seen tips, one-time purchases, shop gift time, daily streak |
-| `hexablow.settings.v1` | sound, music, vibration, notifications, hints |
+| `hexablow.settings.v1` | sound, music, hints |
 | `hexablow.level.v1` | Index of the level "Play" continues from |
 | `gardendoku.profile.v1` | Nickname, avatar, owned avatars, player ID |
 
@@ -209,8 +209,7 @@ Saves are versioned and validated on load. A corrupt save starts fresh. Old v1 s
 - Cozy garden: warm cream and green UI, honey-orange tiles, pond water.
 - The gardener character guides the tutorial, and a gardener / seed-shop theme runs through the nav icons.
 - Rounded heavy numerals. The last number N has its own pink tile.
-- Sound: soft pops, chimes and a calm music loop, from mp3 files with a synthesised fallback. Vibration is used for placing, mistakes and wins (it can be turned off).
-- Rule from the team: **no visual redesign without a new request** from Tuan.
+- Sound: soft pops, chimes and a calm music loop, from mp3 files with a synthesised fallback.- Rule from the team: **no visual redesign without a new request** from Tuan.
 
 ## 12. Not built yet / open questions
 - Ad SDK (rewarded ads, possibly interstitials and a banner) and a billing SDK. Both are placeholders now.

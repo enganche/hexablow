@@ -20,7 +20,7 @@ import { introFor, mechInfo, unlockProgress } from './mechanics.js';
 import { MECH_ICON, MECH_DEMO } from './mechArt.js';
 import { createHumanBot } from './debugBot.js';
 import { Game } from './game.js';
-import { AudioManager, vibrate } from './audio.js';
+import { AudioManager } from './audio.js';
 import { Praise } from './praise.js';
 import { pickHint, HINT_IDLE_SECONDS } from './hint.js';
 import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex, hasOpenedLevel } from './settings.js';
@@ -468,25 +468,21 @@ const game = new Game($('game'), {
     audio.place(count);
     hint.reset(); // progress: restart the stuck timer
     tut.placed();
-    vibrate(settings, 12);
     praise.hit(pos, count, isLast);
   },
   onMechanic: ({ freed }) => {
     // a mystery pad opened or a padlock released: a brighter pop than a normal placement
     audio.place(3);
-    vibrate(settings, freed ? [10, 30, 10] : 8);
   },
   onMistake: () => {
     praise.miss();
     tut.placed();
     audio.wrong();
-    vibrate(settings, 60);
   },
   onWinStart: () => {
     audio.setLowHealth(false);
     const stars = freeRun ? 3 : scoreRun(heartsLeft);
     audio.victory(stars);
-    vibrate(settings, [20, 40, 20, 40, 80]);
     playFireworks($('stage'));
     tut.stop();
     const last = levelIndex === levels.length - 1;
@@ -537,7 +533,6 @@ const game = new Game($('game'), {
     tut.stop();
     audio.setLowHealth(false);
     setTimeout(() => audio.defeat(), 350); // after the wrong-drop thud
-    vibrate(settings, [80, 60, 160]);
     showResult({
       win: false,
       title: 'Out of hearts',
@@ -1960,27 +1955,10 @@ inputs.forEach((inp) =>
     settings[name] = inp.checked;
     note.textContent = '';
 
-    if (name === 'notifications' && inp.checked) {
-      if (!('Notification' in window)) {
-        note.textContent = 'Notifications are not supported on this device.';
-        settings.notifications = inp.checked = false;
-      } else if (Notification.permission === 'default') {
-        const p = await Notification.requestPermission();
-        if (p !== 'granted') {
-          note.textContent = 'Notifications are blocked in your browser settings.';
-          settings.notifications = inp.checked = false;
-        }
-      } else if (Notification.permission === 'denied') {
-        note.textContent = 'Notifications are blocked in your browser settings.';
-        settings.notifications = inp.checked = false;
-      }
-    }
-
     saveSettings(settings);
     if (name === 'music') audio.syncMusic();
     if (name === 'hints') hint.reset();
     audio.tap();
-    if (name === 'vibration') vibrate(settings, 20);
   })
 );
 
