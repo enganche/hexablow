@@ -2,6 +2,7 @@
 const KEY = 'gardendoku.profile.v1';
 import { coinsOf, spend } from './progress.js';
 import tuning from './tuning.json';
+import navHomeImg from './assets/nav-home.webp';
 import avatar_cat from './assets/avatars/cat.webp';
 import avatar_cow from './assets/avatars/cow.webp';
 import avatar_fox from './assets/avatars/fox.webp';
@@ -41,7 +42,7 @@ export function initProfile(progress, audio, onCoinsChange = () => {}) {
   current.type = 'button';
   current.className = 'home-nav-item current';
   current.setAttribute('aria-current', 'page');
-  current.innerHTML = '<img src="/src/assets/nav-home.webp" alt="" aria-hidden="true"><span>Home</span>';
+  current.innerHTML = `<img src="${navHomeImg}" alt="" aria-hidden="true"><span>Home</span>`;
   nav.append(shop, current, album);
   document.getElementById('stage').append(nav);
   let saved;
