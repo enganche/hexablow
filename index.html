@@ -44,6 +44,18 @@
       <div class="buy-card"></div>
     </div>
 
+    <!-- leave-level confirmation -->
+    <div id="leave-pop" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="leave-title">
+      <div class="buy-card">
+        <h3 id="leave-title">Leave level?</h3>
+        <p class="buy-desc">Your progress in this level will be lost.</p>
+        <div class="leave-actions">
+          <button type="button" class="buy-opt best" id="leave-stay">Keep playing</button>
+          <button type="button" class="buy-opt" id="leave-go">Leave</button>
+        </div>
+      </div>
+    </div>
+
     <!-- level 1 tutorial overlay (never blocks input) -->
     <div id="tutorial" class="hidden" aria-live="polite">
       <div id="heart-spot"></div>

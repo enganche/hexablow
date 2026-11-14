@@ -1045,7 +1045,7 @@ body {
 @media(prefers-reduced-motion:reduce) { .buy-card,#boost-tip { animation:none; } .boost { transition:none; } }
 
 /* Booster purchase: raised title, showcase and two side-by-side packs. */
-#buy-pop { background:#102c35bf; padding:40px 20px 24px; }
+#buy-pop, #leave-pop { background:#102c35bf; padding:40px 20px 24px; }
 .buy-card { width:min(380px,100%); padding:42px 22px 26px; gap:12px; border:4px solid #fffbe6; border-radius:24px; background:linear-gradient(#eef5d6,#dcebbd); box-shadow:inset 0 0 0 2px #b5cf8d,0 6px 0 #779b51,0 15px 30px #102b3b55; }
 .buy-card h3 { position:absolute; top:-28px; left:50%; transform:translateX(-50%); width:76%; margin:0; padding:10px 8px; border:3px solid #fffbe6; border-radius:16px; background:linear-gradient(#ffe77c,var(--btn-mid,#ffc446)); box-shadow:inset 0 3px var(--btn-rim,#fff0a7),0 4px var(--btn-edge,#ca953b); color:#fffdf1; font-size:28px; line-height:1.15; font-weight:900; -webkit-text-stroke:3px var(--btn-edge,#ac6829); paint-order:stroke fill; text-shadow:0 2px var(--btn-edge,#ac6829); }
 .buy-card .buy-x { z-index:2; top:-15px; right:-12px; width:40px; height:40px; border-radius:13px; border:3px solid var(--btn-rim,#fff9dc); background:linear-gradient(#ff9c7e,#f06d59); box-shadow:inset 0 2px #ffc5a4,0 4px #b74e39; color:#fff9e9; font-size:30px; text-shadow:0 2px #b74e39; }
@@ -1788,3 +1788,9 @@ button.album-card:active { transform:translateY(.8cqw); }
 /* Level header buttons: keep them perfectly square (grid min-height:auto let the image stretch them taller than wide) */
 :is(#hud .icon-btn, #levels-back) { box-sizing:border-box; min-width:0; min-height:0; aspect-ratio:1 / 1; flex:none; }
 :is(#hud .icon-btn, #levels-back) img { width:100%; height:100%; min-width:0; min-height:0; }
+
+/* Leave-level confirmation: reuses the buy card; two stacked buttons, the safe choice first */
+#leave-pop { z-index:95; }
+#leave-pop .buy-card { padding-top:44px; }
+.leave-actions { display:grid; gap:12px; width:100%; padding-top:6px; }
+.leave-actions .buy-opt { justify-content:center; text-align:center; min-height:54px; margin:0; font-size:19px; }

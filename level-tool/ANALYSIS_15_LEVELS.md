@@ -18,7 +18,7 @@ Mix = trung bình theo tỉ trọng persona: Người mới 30%, Phổ thông 40
 
 ## 1. Bảng tổng hợp
 
-Cột Dễ / TB / Khó là số ô khay; số trong ngoặc là ô mồ côi đã tính vào Khó. Cột Given đếm cả given bị che thành "?". Cơ chế: nước = hồ, ẩn = số bí ẩn, cổng = cổng đôi, khóa = ô khóa (mỗi level tối đa 2, hồ nước tính 1). Cả 15 level đều **giải được bằng suy luận**.
+Cột Dễ / TB / Khó là số ô khay; số trong ngoặc là ô mồ côi đã tính vào Khó. Cột Given đếm cả given bị che thành "?". Cơ chế: nước = hồ, ẩn = số bí ẩn, cổng = cổng đôi, khóa = ô khóa (mỗi level tối đa 2 trong ba cơ chế mới, hồ nước không tính). Cả 15 level đều **giải được bằng suy luận**.
 
 <!-- table:start -->
 | Lv | Nhãn | Cơ chế | Ô | Given | Ô khay | Dễ / TB / Khó | Index | Rule | Đỉnh play-through | Bot: thắng lần đầu (mix) | Người mới / Phổ thông | Sai mỗi lượt | 3★ | Thời gian tới khi thắng |
@@ -31,16 +31,16 @@ Cột Dễ / TB / Khó là số ô khay; số trong ngoặc là ô mồ côi đ�
 | 6 | normal | nước | 29 | 10 | 12 | 5 / 5 / 2 (2) | 1.75 | ✅ | 1 | 100% | 99 / 100 | 0.21 | 83% | 1.0 ph |
 | 7 | normal | nước + ẩn | 30 | 10 (1 ẩn) | 12 | 5 / 5 / 2 (1) | 1.75 | ✅ | 1 | 100% | 100 / 100 | 0.21 | 82% | 1.0 ph |
 | 8 | normal | ẩn | 31 | 10 (2 ẩn) | 10 | 4 / 4 / 2 (2) | 1.80 | ✅ | 1 | 100% | 100 / 100 | 0.20 | 83% | 0.8 ph |
-| 9 | normal | ẩn + cổng | 33 | 13 (1 ẩn) | 13 | 6 / 4 / 3 (3) | 1.77 | ✅ | 1 | 100% | 99 / 100 | 0.19 | 84% | 1.0 ph |
-| 10 | **hard** | ẩn + cổng | 34 | 8 (2 ẩn) | 16 | 1 / 4 / 11 (9) | 2.63 | ❌ Ô dễ ↓, Ô khó ↑, Ô mồ côi ↑, Chỉ số độ khó ↑ | 3 | **58%** | 16 / 64 | 1.78 | 28% | 2.7 ph |
+| 9 | normal | nước + ẩn + cổng | 33 | 13 (1 ẩn) | 13 | 6 / 4 / 3 (3) | 1.77 | ✅ | 1 | 100% | 99 / 100 | 0.19 | 84% | 1.0 ph |
+| 10 | **hard** | nước + ẩn + cổng | 34 | 8 (2 ẩn) | 16 | 1 / 4 / 11 (9) | 2.63 | ❌ Ô dễ ↓, Ô khó ↑, Ô mồ côi ↑, Chỉ số độ khó ↑ | 3 | **58%** | 16 / 64 | 1.78 | 28% | 2.7 ph |
 | 11 | normal | cổng + khóa | 37 | 13 | 13 | 5 / 5 / 3 (3) | 1.85 | ✅ | 1 | 99% | 98 / 100 | 0.20 | 84% | 1.0 ph |
-| 12 | normal | cổng + khóa | 41 | 12 | 17 | 5 / 7 / 5 (4) | 2.00 | ✅ | 1 | 97% | 92 / 99 | 0.40 | 72% | 1.4 ph |
+| 12 | normal | nước + cổng + khóa | 41 | 12 | 17 | 5 / 7 / 5 (4) | 2.00 | ✅ | 1 | 97% | 92 / 99 | 0.40 | 72% | 1.4 ph |
 | 13 | normal | nước + khóa | 45 | 15 | 18 | 5 / 7 / 6 (5) | 2.06 | ✅ | 1 | 92% | 82 / 95 | 0.77 | 55% | 1.6 ph |
 | 14 | normal | nước + khóa | 49 | 14 | 19 | 5 / 7 / 7 (4) | 2.11 | ✅ | 1 | 92% | 76 / 99 | 0.73 | 56% | 1.7 ph |
 | 15 | **hard** | nước + cổng | 53 | 13 | 30 | 1 / 11 / 18 (14) | 2.57 | ❌ Ô dễ ↓, Ô khó ↑, Ô mồ côi ↑, Ô ba (3 số) ↓, Chỉ số độ khó ↑ | 2 | **29%** | 0 / 12 | 2.34 | 16% | 7.4 ph |
 <!-- table:end -->
 
-Bố cục cơ chế: số bí ẩn 7–10, cổng đôi 9–12 (+ L15), ô khóa 11–14. Hồ nước bỏ ở L8–L12 để mỗi level không quá 2 loại cơ chế.
+Bố cục cơ chế: số bí ẩn 7–10, cổng đôi 9–12 (+ L15), ô khóa 11–14. Hồ nước không tính vào giới hạn 2 cơ chế nên vẫn có ở L9, L10, L12 (L8 và L11 vốn không có hồ).
 
 Ba level boss (5, 10, 15) lệch rule *cố ý*: chúng được làm khó hơn bậc của mình bằng `regen-boss.mjs`. L2 và L3 lệch nhẹ so với dải T1. Level giới thiệu cơ chế (7 ẩn, 9 cổng, 11 khóa) nằm trong dải bậc của mình.
 
@@ -74,4 +74,4 @@ Bot "người chơi thật" trong panel debug (phím `) đã chạy lại sau l�
 - Làm mềm L15 trước tiên (mục tiêu khoảng 50–60% thắng lần đầu theo mix), thêm ô 3 số cho đủ dải, rồi chạy lại `npm run sim` và `analysis-table.mjs --write`.
 - Nâng nhẹ độ khó L6–L9 (bớt given hoặc tăng ô Trung bình), nhưng giữ L7, L9 (level giới thiệu) ở mức dễ.
 - Nếu muốn dùng bot để đánh giá level có số bí ẩn sát thực tế hơn, cho bot dùng phép loại trừ (tập số bị thiếu).
-- Khi đổi level, giữ các luật: không đi xoắn ốc từ L5, chỉ N bắt buộc là given, tối đa 2 loại cơ chế mỗi level, mỗi cơ chế dùng lại ~3 level sau level mở khóa, và chạy `check-mechanics.mjs` trước khi chép vào `src/`.
+- Khi đổi level, giữ các luật: không đi xoắn ốc từ L5, chỉ N bắt buộc là given, tối đa 2 trong ba cơ chế mới (số bí ẩn / cổng / khóa) mỗi level, hồ nước không tính, mỗi cơ chế dùng lại ~3 level sau level mở khóa, và chạy `check-mechanics.mjs` trước khi chép vào `src/`.

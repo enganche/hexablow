@@ -158,7 +158,7 @@ Chưa ràng buộc trong tier; xem mục 6.
 
 ## 10. Cơ chế mở rộng (từ level 7) và ảnh hưởng tới rule
 
-Ngoài hồ nước còn ba cơ chế (mỗi level tối đa **2**, hồ nước tính 1; xem GDD §6.1). Rule tĩnh và bộ giải xử lý như sau:
+Ngoài hồ nước còn ba cơ chế (mỗi level tối đa **2** trong ba cơ chế mới (số bí ẩn / cổng / khóa), hồ nước không tính; xem GDD §6.1). Rule tĩnh và bộ giải xử lý như sau:
 
 | Cơ chế | Trong định nghĩa "vị trí kéo vào được" (mục 2) | Trong bộ giải (mục 5) |
 |---|---|---|

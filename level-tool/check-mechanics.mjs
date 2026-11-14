@@ -1,5 +1,5 @@
 // node level-tool/check-mechanics.mjs [path/to/levels.json]
-// Checks the mechanic rules for every level: <= 2 mechanics per level (the pond counts), the solver still says "logic",
+// Checks the mechanic rules for every level: <= 2 mechanics per level (mystery / portal / lock; the pond does not count), the solver still says "logic",
 // the draft -> compile round trip is lossless, portals are really used by the solution, a "?" can be opened by a tray
 // tile, locks can be reached with the cells solvable without them, and levels >= 5 do not spiral.
 import { readFileSync } from 'node:fs';
@@ -21,7 +21,8 @@ for (const lv of levels) {
   if ((lv.portals || []).length) used.push('portal');
   if ((lv.locks || []).length) used.push('lock');
   const errs = [];
-  if (used.length > 2) errs.push(`${used.length} mechanics (max 2)`);
+  const counted = used.filter((m) => m !== 'water'); // the pond is free: it never counts toward the limit
+  if (counted.length > 2) errs.push(`${counted.length} mechanics (max 2, the pond does not count)`);
   for (const m of used) if (UNLOCK[m] && lv.id < UNLOCK[m]) errs.push(`${m} before its unlock level ${UNLOCK[m]}`);
   const sv = HB.solve(lv).status;
   if (sv !== 'logic') errs.push(`solver: ${sv}`);
@@ -44,7 +45,7 @@ for (const lv of levels) {
   }
   if (lv.mystery?.includes(lv.cells.length)) errs.push('last number is a mystery');
   const tag = [lv.blocked.length ? `water(${lv.blocked.length})` : '', lv.mystery ? `mystery[${lv.mystery}]` : '', lv.portals ? `portals(${lv.portals.length})` : '', lv.locks ? `locks(${lv.locks.map((l) => l.need)})` : ''].filter(Boolean).join(' + ') || '-';
-  console.log(`${String(lv.id).padStart(2)} ${(used.length + '').padStart(1)}  ${tag.padEnd(34)} ${errs.length ? 'FAIL ' + errs.join('; ') : 'ok'}`);
+  console.log(`${String(lv.id).padStart(2)} ${(counted.length + '').padStart(1)}  ${tag.padEnd(34)} ${errs.length ? 'FAIL ' + errs.join('; ') : 'ok'}`);
   bad += errs.length ? 1 : 0;
 }
 console.log(bad ? `\n${bad} level(s) with problems` : '\nall levels pass');

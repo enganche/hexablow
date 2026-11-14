@@ -155,7 +155,8 @@
       for (const l of level.locks) if (l.need > open) errors.push(`Ô khóa cần ${l.need} ô nhưng chỉ có ${open} ô giải được khi chưa mở khóa.`);
     }
     const used = HB.mechanicsOf(level);
-    if (used.length > 2) warnings.push(`Level dùng ${used.length} cơ chế (${used.join(', ')}) — tối đa 2 (hồ nước tính 1).`);
+    const counted = used.filter((m) => m !== 'water');
+    if (counted.length > 2) warnings.push(`Level dùng ${counted.length} cơ chế (${counted.join(', ')}) — tối đa 2 (hồ nước không tính).`);
     for (const m of used) if (HB.MECH_UNLOCK[m] && d.id < HB.MECH_UNLOCK[m]) warnings.push(`Cơ chế "${m}" mở ở level ${HB.MECH_UNLOCK[m]} nhưng level này là ${d.id}.`);
     if (d.id >= 5 && HB.isSpiral(d.path)) warnings.push('Đường đi dạng xoắn ốc (dễ đoán) — nên đổi đường khác (luật: level ≥ 5 không xoắn ốc).');
     return { ok: errors.length === 0, level, errors, warnings };

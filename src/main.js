@@ -1877,8 +1877,23 @@ $('play-btn').addEventListener('click', () => {
   audio.tap();
   enterLevel(continueIndex());
 });
+// Leaving a level that has moves in it loses them, so ask first (an untouched level, the result screen and lessons leave at once).
+const leavePop = $('leave-pop');
+const closeLeavePop = () => leavePop.classList.add('hidden');
+function levelInProgress() {
+  return !!game.level && !game.resultMode && !stageEl.matches(NOT_PLAYING) && (game.placed.size > 0 || game.locked);
+}
+function askLeaveLevel() {
+  leavePop.classList.remove('hidden');
+  $('leave-stay').focus({ preventScroll: true });
+}
+$('leave-stay').addEventListener('click', () => { audio.tap(); closeLeavePop(); });
+$('leave-go').addEventListener('click', () => { audio.tap(); closeLeavePop(); void returnToHome(); });
+leavePop.addEventListener('click', (e) => { if (e.target === leavePop) closeLeavePop(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !leavePop.classList.contains('hidden')) closeLeavePop(); });
 $('back-btn').addEventListener('click', () => {
   audio.tap();
+  if (levelInProgress()) { askLeaveLevel(); return; }
   void returnToHome();
 });
 

@@ -61,6 +61,14 @@ const HEX_GEO = new THREE.ShapeGeometry(roundedHexShape(1, 0.18), 6);
 const outline = roundedHexShape(0.96);
 outline.holes.push(new THREE.Path(roundedHexShape(0.84).getPoints(6)));
 const OUTLINE_GEO = new THREE.ShapeGeometry(outline, 6);
+// portal rings: one hugging the rim of a tile (same sharp hex, radius 1) and one hugging an empty socket (same rounded hex as its wall, radius .87)
+const portalRingShape = (outer, inner, corner) => {
+  const s = roundedHexShape(outer, corner);
+  s.holes.push(new THREE.Path(roundedHexShape(inner, corner).getPoints(6)));
+  return new THREE.ShapeGeometry(s, 6);
+};
+const PORTAL_RING_TILE_GEO = portalRingShape(1, 0.9, 0);
+const PORTAL_RING_SOCKET_GEO = portalRingShape(0.88, 0.78, 0.18);
 // wrong-move pulse: a ring hugging the outside of a placed tile
 const TILE_RING = roundedHexShape(1.1);
 TILE_RING.holes.push(new THREE.Path(roundedHexShape(0.98).getPoints(6)));
@@ -1232,14 +1240,15 @@ export class Game {
       const s = this._cellScreen(q, r);
       const g = new THREE.Group();
       const covered = this._occupied(k);
-      const ring = hexLayer(OUTLINE_GEO, basicMat(PORTAL_HEX[p.idx % PORTAL_HEX.length], 0.95), 1, 0, 0.62);
+      // a covered cell shows the tile (its rim is lifted by LIFT), an empty one shows the flat socket: the ring follows whichever is there
+      const ring = hexLayer(covered ? PORTAL_RING_TILE_GEO : PORTAL_RING_SOCKET_GEO, basicMat(PORTAL_HEX[p.idx % PORTAL_HEX.length], 0.95), 1, 0, 0.62);
       g.add(ring);
-      if (!covered) g.add(hexLayer(HEX_GEO, basicMat(PORTAL_HEX[p.idx % PORTAL_HEX.length], 0.22), 0.86, 0, 0.1));
+      if (!covered) g.add(hexLayer(HEX_GEO, basicMat(PORTAL_HEX[p.idx % PORTAL_HEX.length], 0.22), 0.8, 0, 0.1));
       const glyph = new THREE.Mesh(LABEL_GEO, portalMaterial(p.idx));
       glyph.scale.setScalar(covered ? 0.3 : 0.62);
       glyph.position.set(covered ? 0.58 : 0, covered ? -0.5 : 0, 0.65);
       g.add(glyph);
-      g.position.copy(this._w(s.x, s.y - LIFT * this.R, this._tileZ(s.y)));
+      g.position.copy(this._w(s.x, s.y - (covered ? LIFT : 0) * this.R, this._tileZ(s.y)));
       g.scale.setScalar(this.R);
       this.contentGroup.add(g);
       this.portalMarks.set(k, g);
@@ -1251,12 +1260,12 @@ export class Game {
       if (!this._lockClosed(l)) continue;
       const s = this._cellScreen(l.cell[0], l.cell[1]);
       const g = new THREE.Group();
-      g.add(hexLayer(HEX_GEO, basicMat(0x4a3c2c, 0.62), 0.9, 0, 0.1));
+      g.add(hexLayer(HEX_GEO, basicMat(0x4a3c2c, 0.62), 0.87, 0, 0.1)); // an empty socket: same flat hex as its wall
       const icon = new THREE.Mesh(LABEL_GEO, lockMaterial(l.need - this.placed.size));
       icon.scale.setScalar(0.92);
-      icon.position.set(0, 0.02, 0.3);
+      icon.position.set(0, 0.02 + LIFT * 0.5, 0.3);
       g.add(icon);
-      g.position.copy(this._w(s.x, s.y - LIFT * this.R, this._tileZ(s.y)));
+      g.position.copy(this._w(s.x, s.y, this._tileZ(s.y)));
       g.scale.setScalar(this.R);
       this.contentGroup.add(g);
       this.lockMarks.set(l.k, g);

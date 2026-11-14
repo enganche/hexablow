@@ -35,7 +35,7 @@ node level-tool/analyze.mjs path/to/levels.json
 node level-tool/regen.mjs [fromId=5]           # giữ map + đường đi, sinh lại given + cắt ô theo mục tiêu độ khó từng level
 node level-tool/regen-paths.mjs [fromId=5]     # thay đường giải xoắn ốc (thêm --check để chỉ kiểm tra)
 node level-tool/regen-boss.mjs [--write]       # level boss 5 / 10 / 15: ít ô dễ, nhiều ô khó / mồ côi, nhãn "hard"
-node level-tool/regen-mechanics.mjs [--write]  # level 7–15: xếp số bí ẩn / cổng đôi / ô khóa theo bảng PLAN trong file (mỗi cơ chế dùng lại ~3 level sau level mở khóa; tối đa 2 loại cơ chế mỗi level, hồ nước tính 1)
+node level-tool/regen-mechanics.mjs [--write]  # level 7–15: xếp số bí ẩn / cổng đôi / ô khóa theo bảng PLAN trong file (mỗi cơ chế dùng lại ~3 level sau level mở khóa; tối đa 2 trong ba cơ chế mới mỗi level, hồ nước không tính)
 node level-tool/check-mechanics.mjs            # kiểm tra luật cơ chế cho mọi level (solver, round-trip, cổng được dùng, "?" mở được, khóa đạt được)
 ```
 

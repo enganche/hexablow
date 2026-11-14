@@ -1,5 +1,5 @@
 // node level-tool/regen-mechanics.mjs [--write]
-// Lays out the mechanics (mystery numbers, twin portals, locked cells) on levels 7-15: each is reused for ~3 levels after it unlocks, at most 2 types per level (the pond counts).
+// Lays out the mechanics (mystery numbers, twin portals, locked cells) on levels 7-15: each is reused for ~3 levels after it unlocks, at most 2 types per level (mystery / portal / lock; the pond is free and does not count).
 //   mystery levels : keep map + path + tray, hide `k` givens as "?" (chosen so the tile mix barely changes and the level stays logic-solvable)
 //   lock levels    : keep everything, lock `k` single-tile cells that would otherwise be easy to place
 //   portal levels  : new Hamiltonian path that crosses the portal (so the portal is part of the solution), then givens + tray
@@ -17,16 +17,16 @@ const rules = HB.DEFAULT_RULES;
 const key = (c) => c[0] + ',' + c[1];
 
 // level -> mechanic plan. Rule: after a mechanic unlocks (mystery 7, portal 9, lock 11) the next 3 levels reuse it
-// (mystery 8-10, portal 10-12, lock 12-14), at most 2 mechanic types per level (the pond counts).
-// Where two new mechanics overlap the pond is dropped (`dropWater`: the cells stay, the `blocked` list is emptied).
+// (mystery 8-10, portal 10-12, lock 12-14), at most 2 mechanic types per level; the pond does not count, so it stays.
+// `water`: the pond cells (`blocked`) to put back on the level. A pond is just a list of cells outside `cells`, so it never changes the path, the tray or the solver result.
 // fields: mystery k | portals n (new path through n portals) | keepPortals (keep current portals + path) | locks [need...] | boss | target
 const PLAN = {
   7: { mystery: 1, intro: true },                       // pond + mystery (intro, clean)
   8: { mystery: 2 },                                    // mystery
-  9: { keepPortals: true, dropWater: true, mystery: 1, intro: true }, // portal (intro) + mystery
-  10: { portals: 1, dropWater: true, mystery: 2, boss: { t: [.13, .27, .60], g: [.22, .32], maxTiles: 16 } }, // mystery + portal (boss; tray capped so it is no harder than before)
-  11: { portals: 1, dropWater: true, locks: [5], intro: true, target: [.38, .36, .26] },       // lock (intro) + portal
-  12: { keepPortals: true, dropWater: true, locks: [10] },                                      // portal + lock
+  9: { keepPortals: true, water: [[-2,0],[-2,1],[2,-1],[2,0]], mystery: 1, intro: true }, // pond + portal (intro) + mystery
+  10: { portals: 1, water: [[-1,-1],[0,-1],[-1,0]], mystery: 2, boss: { t: [.13, .27, .60], g: [.22, .32], maxTiles: 16 } }, // mystery + portal (boss; tray capped so it is no harder than before)
+  11: { portals: 1, locks: [5], intro: true, target: [.38, .36, .26] },       // lock (intro) + portal
+  12: { keepPortals: true, water: [[0,0],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[-2,0],[-2,1],[-2,2],[-1,-1],[-1,2],[0,-2],[0,2]], locks: [10] }, // pond + portal + lock
   13: { locks: [8, 14] },                               // pond + lock
   14: { locks: [9, 18] },
   15: { keepPortals: true },                            // boss: pond + portal
@@ -181,7 +181,7 @@ for (const lv of levels) {
   const clean = { ...lv };
   delete clean.mystery; delete clean.locks;
   if (!plan.keepPortals) delete clean.portals;
-  if (plan.dropWater) clean.blocked = [];
+  if (plan.water) clean.blocked = plan.water.map((c) => [...c]);
   let res = clean;
   if (plan.portals) res = await addPortals(res, plan);
   if (res && plan.mystery) res = addMystery(res, plan.mystery, plan.intro);
