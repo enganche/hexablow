@@ -37,7 +37,7 @@ Công cụ **độc lập với game** dùng để vẽ, kiểm tra và chỉnh 
   node level-tool/regen.mjs [fromId=5]        # sinh lại given + cắt mảnh theo mục tiêu độ khó
   node level-tool/regen-paths.mjs [fromId=5]  # thay đường giải xoắn ốc (--check để chỉ kiểm tra)
   node level-tool/regen-boss.mjs [--write]    # level boss 5 / 10 / 15
-  node level-tool/regen-mechanics.mjs [--write]  # level 7–15: thêm số bí ẩn / cổng đôi / ô khóa
+  node level-tool/regen-mechanics.mjs [--write]  # level 7–15: xếp số bí ẩn / cổng đôi / ô khóa (mỗi cơ chế dùng lại ~3 level sau level mở khóa)
   ```
 
 Chi tiết: [level-tool/README.md](level-tool/README.md).

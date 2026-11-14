@@ -1,6 +1,6 @@
-# Phân tích 15 level hiện tại (2026-11-14, sau khi thêm 3 cơ chế mới)
+# Phân tích 15 level hiện tại (2026-11-14, sau khi xếp lại cơ chế level 8–15)
 
-Nguồn: `src/levels.json` hiện tại (level 7–15 đã làm lại với số bí ẩn, cổng đôi, ô khóa). Có hai góc nhìn:
+Nguồn: `src/levels.json` hiện tại (level 7–15 đã xếp lại số bí ẩn, cổng đôi, ô khóa: mỗi cơ chế dùng lại 3 level liên tiếp sau level mở khóa). Có hai góc nhìn:
 - **Rule tĩnh** ([DIFFICULTY_RULES.md](DIFFICULTY_RULES.md)): đếm số vị trí kéo vào được của từng ô khay, chế độ strict, ô mồ côi tính là Khó. Đã hiểu cơ chế mới (xem mục 3).
 - **Bot giả lập** ([../sim/README.md](../sim/README.md)): 5 persona chơi thật từng level, đã hiểu cơ chế mới.
 
@@ -31,30 +31,33 @@ Cột Dễ / TB / Khó là số ô khay; số trong ngoặc là ô mồ côi đ�
 | 6 | normal | nước | 29 | 10 | 12 | 5 / 5 / 2 (2) | 1.75 | ✅ | 1 | 100% | 99 / 100 | 0.21 | 83% | 1.0 ph |
 | 7 | normal | nước + ẩn | 30 | 10 (1 ẩn) | 12 | 5 / 5 / 2 (1) | 1.75 | ✅ | 1 | 100% | 100 / 100 | 0.21 | 82% | 1.0 ph |
 | 8 | normal | ẩn | 31 | 10 (2 ẩn) | 10 | 4 / 4 / 2 (2) | 1.80 | ✅ | 1 | 100% | 100 / 100 | 0.20 | 83% | 0.8 ph |
-| 9 | normal | nước + cổng | 33 | 13 | 13 | 6 / 5 / 2 (2) | 1.69 | ✅ | 1 | 100% | 99 / 100 | 0.19 | 84% | 1.0 ph |
-| 10 | **hard** | nước + ẩn | 34 | 8 (2 ẩn) | 15 | 2 / 4 / 9 (8) | 2.47 | ❌ Ô dễ ↓, Ô khó ↑, Ô mồ côi ↑, Chỉ số độ khó ↑ | 2 | **61%** | 24 / 63 | 1.77 | 22% | 2.2 ph |
-| 11 | normal | khóa | 37 | 12 | 17 | 6 / 6 / 5 (1) | 1.94 | ✅ | 1 | 97% | 91 / 99 | 0.45 | 68% | 1.5 ph |
-| 12 | normal | nước + cổng | 41 | 12 | 17 | 5 / 7 / 5 (4) | 2.00 | ✅ | 1 | 97% | 92 / 99 | 0.43 | 69% | 1.4 ph |
+| 9 | normal | ẩn + cổng | 33 | 13 (1 ẩn) | 13 | 6 / 4 / 3 (3) | 1.77 | ✅ | 1 | 100% | 99 / 100 | 0.19 | 84% | 1.0 ph |
+| 10 | **hard** | ẩn + cổng | 34 | 8 (2 ẩn) | 16 | 1 / 4 / 11 (9) | 2.63 | ❌ Ô dễ ↓, Ô khó ↑, Ô mồ côi ↑, Chỉ số độ khó ↑ | 3 | **58%** | 16 / 64 | 1.78 | 28% | 2.7 ph |
+| 11 | normal | cổng + khóa | 37 | 13 | 13 | 5 / 5 / 3 (3) | 1.85 | ✅ | 1 | 99% | 98 / 100 | 0.20 | 84% | 1.0 ph |
+| 12 | normal | cổng + khóa | 41 | 12 | 17 | 5 / 7 / 5 (4) | 2.00 | ✅ | 1 | 97% | 92 / 99 | 0.40 | 72% | 1.4 ph |
 | 13 | normal | nước + khóa | 45 | 15 | 18 | 5 / 7 / 6 (5) | 2.06 | ✅ | 1 | 92% | 82 / 95 | 0.77 | 55% | 1.6 ph |
-| 14 | normal | nước + ẩn | 49 | 14 (3 ẩn) | 19 | 5 / 7 / 7 (5) | 2.11 | ✅ | 1 | 91% | 74 / 98 | 0.83 | 51% | 1.7 ph |
+| 14 | normal | nước + khóa | 49 | 14 | 19 | 5 / 7 / 7 (4) | 2.11 | ✅ | 1 | 92% | 76 / 99 | 0.73 | 56% | 1.7 ph |
 | 15 | **hard** | nước + cổng | 53 | 13 | 30 | 1 / 11 / 18 (14) | 2.57 | ❌ Ô dễ ↓, Ô khó ↑, Ô mồ côi ↑, Ô ba (3 số) ↓, Chỉ số độ khó ↑ | 2 | **29%** | 0 / 12 | 2.34 | 16% | 7.4 ph |
 <!-- table:end -->
+
+Bố cục cơ chế: số bí ẩn 7–10, cổng đôi 9–12 (+ L15), ô khóa 11–14. Hồ nước bỏ ở L8–L12 để mỗi level không quá 2 loại cơ chế.
 
 Ba level boss (5, 10, 15) lệch rule *cố ý*: chúng được làm khó hơn bậc của mình bằng `regen-boss.mjs`. L2 và L3 lệch nhẹ so với dải T1. Level giới thiệu cơ chế (7 ẩn, 9 cổng, 11 khóa) nằm trong dải bậc của mình.
 
 ## 2. Nhận xét
 
+0. **Phễu độ khó giữ nguyên sau khi xếp lại cơ chế.** Bot thắng lần đầu (mix), trước → sau: L9 100% → 100%, L10 61% → 58%, L11 97% → 99%, L12 97% → 97%, L13 92% → 92%, L14 91% → 92%, L15 29% → 29%; L7, L8 không đổi. Tỉ lệ Dễ / TB / Khó chỉ lệch ≤ 8 điểm % mỗi level (L9 46/38/15 → 46/31/23, L10 13/27/60 → 6/25/69). L10 được giới hạn khay ở 16 mảnh để không khó hơn bản cũ.
 1. **Đường cong vẫn có dạng răng cưa.**
-   - Index tăng đều từ 1.64 (L4) lên 2.11 (L14), riêng các level boss vọt lên: 2.25, 2.47, 2.57.
-   - Bot cho kết quả cùng dạng: các level thường 91–100% thắng lần đầu, còn L5 / L10 / L15 rơi xuống 67% / 61% / 29%.
-2. **L6–L9 gần như không ai thua.** Kể cả Người mới cũng thắng 99–100%, mỗi lượt sai khoảng 0.2 lần. Số bí ẩn (L7, L8) và cổng đôi (L9) *chưa làm khó thêm* theo bot. Đây là chủ ý với level giới thiệu, nhưng đoạn L6–L9 vẫn có thể nhích lên để đường cong đi lên đều giữa hai level boss.
-3. **Đoạn có cơ chế mới L11–L14 tăng đều, đúng ý định.** Sai mỗi lượt: 0.45 (khóa, giới thiệu) → 0.43 (cổng) → 0.77 (khóa) → 0.83 (ẩn); thắng lần đầu 97% → 97% → 92% → 91%. Ba level giới thiệu (L7, L9, L11) đều ≥ 97%, đạt mục tiêu "màn giới thiệu không quá khó".
-4. **L12 không còn khó hơn L13–L14.** Trước đây L12 (87%, 1.03 sai/lượt) khó hơn L13–L14; sau khi làm lại đường đi có cổng, L12 còn 97% / 0.43 và gần bằng L11. Nếu muốn L12 khó hơn L11, chỉnh lại mục tiêu của L12 trong `regen-mechanics.mjs` (hiện 30 / 40 / 30).
+   - Index tăng đều từ 1.64 (L4) lên 2.11 (L14), riêng các level boss vọt lên: 2.25, 2.63, 2.57.
+   - Bot cho kết quả cùng dạng: các level thường 92–100% thắng lần đầu, còn L5 / L10 / L15 rơi xuống 67% / 58% / 29%.
+2. **L6–L9 gần như không ai thua.** Kể cả Người mới cũng thắng 99–100%, mỗi lượt sai khoảng 0.2 lần. Số bí ẩn (L7–L9) và cổng đôi (L9) *chưa làm khó thêm* theo bot. Đây là chủ ý với level giới thiệu, nhưng đoạn L6–L9 vẫn có thể nhích lên để đường cong đi lên đều giữa hai level boss.
+3. **Đoạn L11–L14 tăng đều, đúng ý định.** Sai mỗi lượt: 0.20 (cổng + khóa, giới thiệu) → 0.40 (cổng + khóa) → 0.77 (nước + khóa) → 0.73 (nước + khóa); thắng lần đầu 99% → 97% → 92% → 92%. Ba level giới thiệu (L7, L9, L11) đều ≥ 99%, đạt mục tiêu "màn giới thiệu không quá khó".
+4. **L12 vẫn không khó hơn L13–L14** (97% / 0.40) và gần bằng L11. Nếu muốn L12 khó hơn L11, chỉnh lại mục tiêu của L12 trong `regen-mechanics.mjs` (L12 giữ đường đi có cổng, chỉ thêm khóa nên cần sinh lại đường đi nếu đổi tỉ lệ).
 5. **L15 vẫn là bức tường.**
    - 30 ô khay, trong đó 14 ô mồ côi. Bot: Người mới 0%, Phổ thông 12% thắng lần đầu, trung bình khoảng 6.6 lượt mới qua, thời gian median hơn 7 phút.
-   - Trong career 14 ngày, khoảng 23% bot bỏ game ở L15, và L15 tiêu khoảng 36 booster mỗi lượt qua màn (nhiều nhất cả game).
-   - Sau khi sinh lại với cổng đôi, L15 còn lệch thêm một mục rule (ô 3 số 3% < 5%) ngoài các mục boss đã lệch. Chưa phải vấn đề lớn, nhưng nên sửa cùng lúc khi làm mềm L15.
-6. **L5 và L10 gắt cho người mới:** chỉ 41% và 24% Người mới thắng lần đầu. Có revive và booster nên trong career gần như không ai bỏ game ở hai level này.
+   - Trong career 14 ngày, khoảng 20% bot bỏ game ở L15, và L15 tiêu khoảng 33 booster mỗi lượt qua màn (nhiều nhất cả game).
+   - L15 còn lệch rule ô 3 số (3% < 5%) ngoài các mục boss đã lệch. Chưa phải vấn đề lớn, nhưng nên sửa cùng lúc khi làm mềm L15.
+6. **L5 và L10 gắt cho người mới:** chỉ 41% và 16% Người mới thắng lần đầu. Có revive và booster nên trong career hầu như không ai bỏ game ở hai level này (L10: 0.4%).
 
 ## 3. Cơ chế mới được tính thế nào
 
@@ -65,10 +68,10 @@ Ba level boss (5, 10, 15) lệch rule *cố ý*: chúng được làm khó hơn 
 | Ô khóa | **Không tính** (khóa chỉ đổi thứ tự đặt, không đổi số vị trí kéo vào được). `compile` kiểm `need` ≤ số ô giải được khi chưa mở khóa. | Mảnh nằm sau ổ khóa chờ tới khi đã giải đủ số ô; thả vào ô khóa không phạt. |
 | Solver | Số bí ẩn là số ẩn nằm ở một trong các ô "?"; cổng là cạnh; khoảng cách tính trên đồ thị (nước và cổng đều tính). | – |
 
-Bot "người chơi thật" trong panel debug (phím `) đã chơi qua cả 15 level từ save mới, đi qua đủ tut, màn giới thiệu và nút Continue; thua đúng ở L10 và L15 một lần (level HARD) rồi thắng lần thử lại.
+Bot "người chơi thật" trong panel debug (phím `) chưa chạy lại sau lần xếp lại cơ chế này; chạy lại khi cần xác nhận luồng tut / màn giới thiệu của L9–L11.
 
 ## 4. Đề xuất
 - Làm mềm L15 trước tiên (mục tiêu khoảng 50–60% thắng lần đầu theo mix), thêm ô 3 số cho đủ dải, rồi chạy lại `npm run sim` và `analysis-table.mjs --write`.
 - Nâng nhẹ độ khó L6–L9 (bớt given hoặc tăng ô Trung bình), nhưng giữ L7, L9 (level giới thiệu) ở mức dễ.
 - Nếu muốn dùng bot để đánh giá level có số bí ẩn sát thực tế hơn, cho bot dùng phép loại trừ (tập số bị thiếu).
-- Khi đổi level, giữ các luật: không đi xoắn ốc từ L5, chỉ N bắt buộc là given, tối đa 2 cơ chế mỗi level, và chạy `check-mechanics.mjs` trước khi chép vào `src/`.
+- Khi đổi level, giữ các luật: không đi xoắn ốc từ L5, chỉ N bắt buộc là given, tối đa 2 loại cơ chế mỗi level, mỗi cơ chế dùng lại ~3 level sau level mở khóa, và chạy `check-mechanics.mjs` trước khi chép vào `src/`.

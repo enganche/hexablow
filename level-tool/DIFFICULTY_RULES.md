@@ -170,4 +170,5 @@ Các chỉ số mục 4 vẫn dùng nguyên: `givenPct` đếm cả given bị c
 - Số cuối N **không** được là số bí ẩn; mỗi "?" phải có ít nhất một ô khay liền kề (n−1 hoặc n+1) để có thể mở.
 - Mỗi cổng phải được lời giải dùng (n và n+1 nằm ở hai đầu) và hai đầu không liền kề.
 - Ô khóa không phải given; cơ chế chỉ xuất hiện từ level mở khóa của nó (số bí ẩn 7, cổng 9, ô khóa 11).
+- Mỗi cơ chế được dùng lại ở 3 level liên tiếp ngay sau level mở khóa (số bí ẩn 8–10, cổng 10–12, ô khóa 12–14); chỗ hai cơ chế mới chồng nhau thì bỏ hồ nước. Bảng xếp nằm trong `PLAN` của `regen-mechanics.mjs`; việc xếp lại không đổi phễu độ khó (tỉ lệ Dễ / TB / Khó và bot thắng lần đầu mỗi level giữ gần như cũ).
 - Kiểm bằng `node level-tool/check-mechanics.mjs`.

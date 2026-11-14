@@ -1,5 +1,5 @@
 // node level-tool/regen-mechanics.mjs [--write]
-// Adds the mechanics (mystery numbers, twin portals, locked cells) to levels 7-15, at most 2 per level (the pond counts).
+// Lays out the mechanics (mystery numbers, twin portals, locked cells) on levels 7-15: each is reused for ~3 levels after it unlocks, at most 2 types per level (the pond counts).
 //   mystery levels : keep map + path + tray, hide `k` givens as "?" (chosen so the tile mix barely changes and the level stays logic-solvable)
 //   lock levels    : keep everything, lock `k` single-tile cells that would otherwise be easy to place
 //   portal levels  : new Hamiltonian path that crosses the portal (so the portal is part of the solution), then givens + tray
@@ -16,17 +16,20 @@ const write = process.argv.includes('--write');
 const rules = HB.DEFAULT_RULES;
 const key = (c) => c[0] + ',' + c[1];
 
-// level -> mechanic plan. Intro levels (7 mystery, 9 portal, 11 lock) are kept gentle.
+// level -> mechanic plan. Rule: after a mechanic unlocks (mystery 7, portal 9, lock 11) the next 3 levels reuse it
+// (mystery 8-10, portal 10-12, lock 12-14), at most 2 mechanic types per level (the pond counts).
+// Where two new mechanics overlap the pond is dropped (`dropWater`: the cells stay, the `blocked` list is emptied).
+// fields: mystery k | portals n (new path through n portals) | keepPortals (keep current portals + path) | locks [need...] | boss | target
 const PLAN = {
-  7: { mystery: 1, intro: true },
-  8: { mystery: 2 },
-  9: { portals: 1, intro: true, target: [.44, .40, .16] },
-  10: { mystery: 2 },
-  11: { locks: [5], intro: true },
-  12: { portals: 2, target: [.30, .40, .30] },
-  13: { locks: [8, 14] },
-  14: { mystery: 3 },
-  15: { portals: 2, boss: { t: [.08, .32, .60], g: [.18, .26] } },
+  7: { mystery: 1, intro: true },                       // pond + mystery (intro, clean)
+  8: { mystery: 2 },                                    // mystery
+  9: { keepPortals: true, dropWater: true, mystery: 1, intro: true }, // portal (intro) + mystery
+  10: { portals: 1, dropWater: true, mystery: 2, boss: { t: [.13, .27, .60], g: [.22, .32], maxTiles: 16 } }, // mystery + portal (boss; tray capped so it is no harder than before)
+  11: { portals: 1, dropWater: true, locks: [5], intro: true, target: [.38, .36, .26] },       // lock (intro) + portal
+  12: { keepPortals: true, dropWater: true, locks: [10] },                                      // portal + lock
+  13: { locks: [8, 14] },                               // pond + lock
+  14: { locks: [9, 18] },
+  15: { keepPortals: true },                            // boss: pond + portal
 };
 
 const metricsOf = (lv) => HB.analyzeLevel(lv, rules).metrics;
@@ -67,7 +70,7 @@ function addLocks(lv, needs) {
   const info = new Map(singles.map((n) => [n, HB.tileCandidates(ctx, [n], grid, rules)]));
   // a lock is most visible on a tile that WOULD be easy to place: it has an anchor, but the padlock holds it back
   const easy = singles.filter((n) => info.get(n).count === 1 && !info.get(n).orphan);
-  const pool = (easy.length >= needs.length ? easy : singles.filter((n) => !info.get(n).orphan && info.get(n).count <= 3)).sort((a, b) => a - b);
+  const pool = (easy.length >= needs.length ? easy : singles.filter((n) => !info.get(n).orphan && info.get(n).count <= 5)).sort((a, b) => a - b);
   const picks = [];
   const N = lv.cells.length;
   for (const need of needs) {
@@ -151,6 +154,7 @@ async function addPortals(lv, plan) {
           const a = HB.analyzeLevel(c.level, rules), m = a.metrics;
           let sc;
           if (plan.boss) {
+            if (plan.boss.maxTiles && m.tiles > plan.boss.maxTiles) continue;
             const blind = m.pt.steps.filter((x) => x.count >= 2 || x.stuck).length;
             sc = m.hardPct * 2 + m.orphanPct - m.easyPct * 2 + blind / m.tiles * 2 + m.size3Pct * 0.5 - Math.max(0, m.givenPct - plan.boss.g[1]) * 4;
           } else {
@@ -175,16 +179,19 @@ for (const lv of levels) {
   const plan = PLAN[lv.id];
   if (!plan) { out.push(lv); continue; }
   const clean = { ...lv };
-  delete clean.mystery; delete clean.portals; delete clean.locks;
-  let res = null;
-  if (plan.mystery) res = addMystery(clean, plan.mystery, plan.intro);
-  else if (plan.locks) res = addLocks(clean, plan.locks);
-  else if (plan.portals) res = await addPortals(clean, plan);
+  delete clean.mystery; delete clean.locks;
+  if (!plan.keepPortals) delete clean.portals;
+  if (plan.dropWater) clean.blocked = [];
+  let res = clean;
+  if (plan.portals) res = await addPortals(res, plan);
+  if (res && plan.mystery) res = addMystery(res, plan.mystery, plan.intro);
+  if (res && plan.locks) res = addLocks(res, plan.locks);
   if (!res) { console.log(`level ${lv.id}: FAILED, kept old`); out.push(lv); continue; }
-  const m0 = metricsOf(clean), m = metricsOf(res);
+  const m0 = metricsOf(lv), m = metricsOf(res);
   const tags = [res.blocked.length ? 'water' : '', res.mystery ? `mystery[${res.mystery}]` : '', res.portals ? `portals${JSON.stringify(res.portals)}` : '', res.locks ? `locks${JSON.stringify(res.locks.map((l) => [l.cell, l.need]))}` : ''].filter(Boolean);
   const pct = (x) => Math.round(x * 100);
-  console.log(`level ${lv.id}: ${tags.join(' + ')}\n   E/M/H ${pct(m0.easyPct)}/${pct(m0.mediumPct)}/${pct(m0.hardPct)} -> ${pct(m.easyPct)}/${pct(m.mediumPct)}/${pct(m.hardPct)}  orphan ${m0.orphan}->${m.orphan}  idx ${m0.index.toFixed(2)}->${m.index.toFixed(2)}  givens ${m.givens}/${m.cells}  solver ${HB.solve(res).status}`);
+  console.log(`level ${lv.id}: ${tags.join(' + ')}
+   E/M/H ${pct(m0.easyPct)}/${pct(m0.mediumPct)}/${pct(m0.hardPct)} -> ${pct(m.easyPct)}/${pct(m.mediumPct)}/${pct(m.hardPct)}  orphan ${m0.orphan}->${m.orphan}  idx ${m0.index.toFixed(2)}->${m.index.toFixed(2)}  givens ${m.givens}/${m.cells}  solver ${HB.solve(res).status}`);
   out.push(res);
 }
 if (write) { writeFileSync(file, JSON.stringify(out)); console.log('wrote src/levels.json'); } else console.log('(dry run, --write to save)');
