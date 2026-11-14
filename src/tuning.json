@@ -1,0 +1,95 @@
+{
+  "hearts": {
+    "max": 3
+  },
+  "hint": {
+    "idleSeconds": 5
+  },
+  "daily": {
+    "unlockLevel": 5
+  },
+  "avatars": {
+    "prices": [0, 0, 0, 50, 50, 50, 100, 100, 100]
+  },
+  "praise": {
+    "idleMaxMs": 10000,
+    "idleMinMs": 3000,
+    "chainText": {
+      "2": "Double link!",
+      "3": "Triple link!"
+    },
+    "tiers": [
+      {
+        "min": 1,
+        "text": "Nice!",
+        "colorTop": "#fff6b0",
+        "colorBottom": "#ffd24a",
+        "parts": 8,
+        "size": 1
+      },
+      {
+        "min": 2,
+        "text": "Good!",
+        "colorTop": "#e6ffb0",
+        "colorBottom": "#9be04a",
+        "parts": 11,
+        "size": 1.05
+      },
+      {
+        "min": 3,
+        "text": "Great!",
+        "colorTop": "#d4fff0",
+        "colorBottom": "#3fd6a8",
+        "parts": 14,
+        "size": 1.15
+      },
+      {
+        "min": 4,
+        "text": "Awesome!",
+        "colorTop": "#d6ecff",
+        "colorBottom": "#4ea8ff",
+        "parts": 18,
+        "size": 1.25
+      },
+      {
+        "min": 5,
+        "text": "Amazing!",
+        "colorTop": "#ffe0f4",
+        "colorBottom": "#ff58b8",
+        "parts": 24,
+        "size": 1.38
+      },
+      {
+        "min": 6,
+        "text": "Fantastic!",
+        "colorTop": "#fff0c2",
+        "colorBottom": "#ff9a2e",
+        "parts": 30,
+        "size": 1.5
+      },
+      {
+        "min": 8,
+        "text": "Unstoppable!",
+        "colorTop": "#ffffff",
+        "colorBottom": "#ff4d4d",
+        "parts": 40,
+        "size": 1.65
+      }
+    ]
+  },
+  "layout": {
+    "maxCellRadius": 46,
+    "trayPad": 18,
+    "trayGap": 20,
+    "boardGap": 6,
+    "tutorialGap": 60
+  },
+  "colors": {
+    "background": "#fff4df",
+    "water": "#8fd8ea",
+    "waterEdge": "#6cc3d9",
+    "hint": "#f5c84b",
+    "ghostOk": "#75d7b1",
+    "ghostBad": "#ef6f6c"
+  }
+}

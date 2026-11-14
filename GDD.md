@@ -2,7 +2,7 @@
 
 Hexablow is a casual logic puzzle for phones in portrait (the web build shows a fixed 9:16 frame). It runs on the web with Vite and Three.js and is deployed on Vercel.
 This document describes the game **as it is built now**. Ideas that are not built yet are listed in §12.
-Mechanics research on the reference game: [RESEARCH.md](RESEARCH.md). Level rules and tooling: [level-tool/](level-tool/README.md). Balancing with bots: [sim/](sim/README.md).
+Mechanics research on the reference game: [RESEARCH.md](RESEARCH.md). Level rules and tooling: [level-tool/](level-tool/README.md). Editing every tunable value: [config-tool/](config-tool/README.md). Balancing with bots: [sim/](sim/README.md).
 
 ---
 ## 1. Vision
@@ -31,7 +31,7 @@ A calm, tactile number-path puzzle on a hex grid, set in a cozy garden. The play
 ## 3. Hearts, stars, fail and revive
 | Topic | Rule |
 |---|---|
-| Hearts | 3 per attempt. At 1 heart the screen shows a calm warning (heartbeat sound and a soft glow at the edge). |
+| Hearts | 3 per attempt (`tuning.hearts.max`). At 1 heart the screen shows a calm warning (heartbeat sound and a soft glow at the edge). |
 | Free runs | The first play of levels 1–2: mistakes cost nothing and the result is always 3★. There is no top bar and no boosters. |
 | Stars | Stars = hearts left at the win (minimum 1). Best stars are kept per level; you can replay to improve them. |
 | Fail | At 0 hearts the "Out of hearts" screen offers **Keep growing** (revive with 1 heart), **Try again** (restart with a new tray order) or **Home**. |
@@ -73,7 +73,7 @@ Boosters never cost a heart. When you tap a booster you have none of, a buy popu
 | Levels 1–2 | On the first clear, the game continues straight into the next level (the menus appear only after level 3) |
 | Level 3 | Hearts lesson: a spotlight on the three hearts. On the first clear, a "Stars!" popup explains that each lost heart costs a star. |
 | Levels 4 / 6 / 8 | Booster lesson for Reveal / Find / Picker (gift up to 2, use 1) |
-| Any level | **Auto hint** (`hint.js`, Settings → Hints, on by default): after 5 s without progress, a hand points at a number on the board next to the *easiest* tile (fewest valid spots, see the difficulty rule). Tapping that number jumps the tray to the tile. |
+| Any level | **Auto hint** (`hint.js`, Settings → Hints, on by default): after 5 s without progress (`tuning.hint.idleSeconds`), a hand points at a number on the board next to the *easiest* tile (fewest valid spots, see the difficulty rule). Tapping that number jumps the tray to the tile. |
 
 ## 6. Levels
 - **15 levels** in `src/levels.json`, in 3 chapters of 5 that match the album sets: Meadow 1–5, Pond 6–10, Orchard 11–15.
@@ -184,8 +184,9 @@ Saves are versioned and validated on load. A corrupt save starts fresh. Old v1 s
   - Numbers are drawn on canvas textures.
   - UI art is WebP in `src/assets/`.
 - **Hex math:** axial, pointy-top: `x = size·√3·(q + r/2)`, `y = size·1.5·r`.
-- **Config:** gameplay and economy tuning live in `src/*.json`.
-- **Tools:** level tool (`level-tool/`), bot simulator (`sim/`). Both reuse the same difficulty rule and solver.
+- **Config:** gameplay and economy tuning live in `src/*.json`. `economy.json`, `shop.json`, `cosmetics.json` and `collection.json` hold content and prices; `tuning.json` holds the constants that used to be hard-coded (max hearts, auto-hint delay, daily-gift unlock level, avatar prices, combo praise tiers and timing, board layout gaps, board colours). Booster unlock levels in `economy.json` also drive which levels show a tutorial.
+- **Tools:** level tool (`level-tool/`), config tool (`config-tool/`), bot simulator (`sim/`). The level tool and the simulator reuse the same difficulty rule and solver.
+- **Config tool:** an HTML inspector (like Unity's Serialize Field panel) for every config file above plus `sim/personas.json`. It builds its form from the JSON itself, so any value is editable; `config-tool/js/meta.js` only adds labels, tooltips and ranges. Run `npm run config` (port 5190) to save straight into the files. See [config-tool/README.md](config-tool/README.md).
 - **Deploy:** Vercel project `hexablow`; pushing `master` deploys to production.
 
 ## 11. Art and audio direction

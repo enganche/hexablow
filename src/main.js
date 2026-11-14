@@ -22,6 +22,7 @@ import { Praise } from './praise.js';
 import { pickHint, HINT_IDLE_SECONDS } from './hint.js';
 import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex, hasOpenedLevel } from './settings.js';
 import economy from './economy.json';
+import tuning from './tuning.json';
 import { winArt, loseArt, confetti } from './resultArt.js';
 import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
 import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecies, foundCount, discoverForLevel, claimableSets, claimSet } from './progress.js';
@@ -539,7 +540,7 @@ const game = new Game($('game'), {
 });
 
 /** Level -> booster it unlocks (and teaches the first time). */
-const BOOSTER_TUTORIAL = { 4: 'reveal', 6: 'find', 8: 'picker' };
+const BOOSTER_TUTORIAL = Object.fromEntries(economy.boosters.order.map((id) => [economy.boosters[id].unlockLevel, id])); // from economy.json
 
 // ---- Level 1 tutorial: place the missing numbers in order, guided by a bee + hand ----
 const tut = {
@@ -1344,7 +1345,7 @@ const giftIcon = (r) => (r.coins && !r.boosters ? '<i class="coin"></i>' : giftA
 const giftLabel = (r) => (r.coins ? `+${r.coins}` : `x${Object.values(r.boosters)[0]}`);
 const CHEST_ART = { 7: 'chest7', 14: 'chest14', 21: 'chest21', 28: 'chest28' };
 
-const DAILY_UNLOCK_LEVEL = 5;
+const DAILY_UNLOCK_LEVEL = tuning.daily.unlockLevel;
 /** Daily gifts open once the player has reached level 5 (i.e. cleared level 4). */
 function dailyUnlocked() {
   return levels.some((l) => l.id >= DAILY_UNLOCK_LEVEL - 1 && starsFor(progress, l.id) > 0);

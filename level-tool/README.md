@@ -70,3 +70,7 @@ Mọi file JS là script thường (không ES module) nên chạy được từ 
 - Mảnh không xoay (đúng GDD). Tool chưa chỉnh `tutorial` hay các field khác ngoài định dạng trên.
 - Ô nước chỉ là ô chặn; hình dáng bờ / hoa sen do game tự vẽ.
 - Sinh tự động là tìm kiếm ngẫu nhiên có giới hạn thời gian — bản đồ lớn hoặc mục tiêu khắt khe có thể chỉ ra "kết quả gần nhất".
+
+## Công cụ liên quan
+
+Thông số kinh tế, tim, quà, màu… (không phải level) chỉnh bằng [config tool](../config-tool/README.md).

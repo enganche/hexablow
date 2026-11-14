@@ -20,6 +20,15 @@
         "5180"
       ],
       "port": 5180
+    },
+    {
+      "name": "config-tool",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "config-tool/serve.mjs",
+        "5190"
+      ],
+      "port": 5190
     }
   ]
 }

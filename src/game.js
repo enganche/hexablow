@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import tuning from './tuning.json';
+import economy from './economy.json';
 import { axialToPixel, pixelToAxial, key, areAdjacent, DIRS } from './hex.js';
 import {
   LIFT, mulberry, makeLawnCell, setLawnOpacity, spriteGeo, plantMaterial, PLANT_ANCHOR, FLOWER_KINDS,
@@ -9,21 +11,24 @@ import {
 } from './garden.js';
 
 // ---- Honeycomb palette ----
+// Tunable values live in tuning.json (edit with config-tool/)
+const hexInt = (s) => parseInt(String(s).replace('#', '').slice(0, 6), 16);
 const COLORS = {
-  bg: 0xfff4df,
-  water: 0x8fd8ea,
-  waterEdge: 0x6cc3d9,
-  hint: 0xf5c84b,
-  ghostOk: 0x75d7b1,
-  ghostBad: 0xef6f6c,
+  bg: hexInt(tuning.colors.background),
+  water: hexInt(tuning.colors.water),
+  waterEdge: hexInt(tuning.colors.waterEdge),
+  hint: hexInt(tuning.colors.hint),
+  ghostOk: hexInt(tuning.colors.ghostOk),
+  ghostBad: hexInt(tuning.colors.ghostBad),
 };
 
-const MAX_HEARTS = 3;
-const TRAY_PAD = 18;
-const TUTORIAL_GAP = 60; // HUD bottom -> board top on level 1; the tutorial bubble (~44px) lives in here
-const BOARD_GAP = 6; // HUD bottom -> board top on every other level
-const MAX_CELL_R = 46; // cap for tiny maps (e.g. level 1) so they don't dwarf the normal levels
-const TRAY_GAP = 20;
+const MAX_HEARTS = tuning.hearts.max;
+const TRAY_PAD = tuning.layout.trayPad;
+const TUTORIAL_GAP = tuning.layout.tutorialGap; // HUD bottom -> board top on level 1; the tutorial bubble (~44px) lives in here
+const BOARD_GAP = tuning.layout.boardGap; // HUD bottom -> board top on every other level
+const MAX_CELL_R = tuning.layout.maxCellRadius; // cap for tiny maps (e.g. level 1) so they don't dwarf the normal levels
+const TRAY_GAP = tuning.layout.trayGap;
+const TUTORIAL_LEVELS = [1, ...economy.boosters.order.map((id) => economy.boosters[id].unlockLevel)]; // levels that show a tutorial bubble
 const BAR_H = 92; // booster bar at the very bottom (keep in sync with --bar-h in style.css)
 const BARE_BAR_H = 28; // levels 1-2 have no booster bar (keep in sync with .bare-level --bar-h)
 const trayBottomFor = (barH) => barH + 14 + 6; // booster bar + scrollbar + gap
@@ -816,7 +821,7 @@ export class Game {
     this.trayBottomPad = trayBottomPad;
     const availBottom = H - trayBottomPad;
     // fixed gap under the HUD (room for the tutorial bubble) so the board never moves when it shows
-    const areaTop = hud + ([1, 4, 6, 8].includes(level.id) ? TUTORIAL_GAP : BOARD_GAP);
+    const areaTop = hud + (TUTORIAL_LEVELS.includes(level.id) ? TUTORIAL_GAP : BOARD_GAP);
     const avail = availBottom - areaTop - 12;
 
     // board extents in unit space

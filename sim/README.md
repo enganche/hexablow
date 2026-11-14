@@ -31,7 +31,7 @@ Booster: *Reveal* lộ số của một ô trống ngẫu nhiên (mảnh chứa 
 
 Thời gian ước tính mỗi nước = `base + perPiece × số mảnh nhìn + perCand × log2(1 + số chỗ)` + `think` mỗi lần nghĩ thêm + `mistake` mỗi lần sai.
 
-## 2. Persona (`personas.json` — GD chỉnh trực tiếp)
+## 2. Persona (`personas.json` — GD chỉnh trực tiếp, hoặc bằng [config tool](../config-tool/README.md))
 
 | Persona | Tỉ trọng | Suy luận | Ghi chú |
 |---|---|---|---|

@@ -2,7 +2,7 @@
 
 Một game puzzle số trên lưới lục giác, chạy trên trình duyệt (Vite + Three.js). Đặt các số còn thiếu sao cho mỗi số chạm số kế tiếp, từ 1 đến N.
 
-Dự án gồm **game**, hai **công cụ nội bộ** (level tool và bot giả lập) và các **tài liệu** tương ứng. Phần dưới giới thiệu từng cái và tài liệu nên đọc khi nào.
+Dự án gồm **game**, ba **công cụ nội bộ** (level tool, config tool và bot giả lập) và các **tài liệu** tương ứng. Phần dưới giới thiệu từng cái và tài liệu nên đọc khi nào.
 
 ---
 
@@ -38,7 +38,18 @@ Công cụ **độc lập với game** dùng để vẽ, kiểm tra và chỉnh 
 
 Chi tiết: [level-tool/README.md](level-tool/README.md).
 
-### 2.2 Bot giả lập — `sim/`
+### 2.2 Config tool — `config-tool/`
+Công cụ chạy bằng HTML để **chỉnh mọi thông số của game** theo kiểu Inspector / Serialize Field của Unity: thanh trượt, ô số, bảng chọn màu, danh sách thêm / xoá / nhân đôi / đổi thứ tự phần tử. Giá trị đã sửa so với bản đã lưu được tô xanh và có nút ↺ để hoàn lại.
+
+- **Mở (khuyên dùng):** `npm run config` (hoặc `node config-tool/serve.mjs`) rồi mở <http://localhost:5190/>. Nút **Save** (Ctrl+S) ghi thẳng vào các file JSON trong dự án.
+- **Không cần server:** double-click [`config-tool/index.html`](config-tool/index.html), rồi **Open project folder** (Chrome / Edge, ghi thẳng vào thư mục) hoặc **Open files** (Save sẽ tải file về, tự chép đè lên file gốc).
+- **Chỉnh được gì:** `src/tuning.json` (tim, thời gian gợi ý, khen combo, bố cục, màu bàn chơi), `economy.json`, `shop.json`, `cosmetics.json`, `collection.json` và `sim/personas.json` của bot. Level vẫn chỉnh bằng level tool.
+- **Xem ngay trong game:** nút **▶ Game preview** hiện game đang chạy (`npm run dev`) ngay cạnh; Vite tự tải lại khi file JSON đổi.
+- **Thêm thông số mới:** tool tự dựng giao diện từ nội dung JSON, nên giá trị mới thêm vào các file trên tự hiện ra. Muốn có nhãn, chú thích, thanh trượt thì thêm một dòng vào [`config-tool/js/meta.js`](config-tool/js/meta.js).
+
+Chi tiết: [config-tool/README.md](config-tool/README.md).
+
+### 2.3 Bot giả lập — `sim/`
 Cho bot chơi level với nhiều kiểu người chơi để đo **độ khó** và **kinh tế** (xu, booster, revive, cosmetic, IAP) mà không cần playtest thật.
 
 ```bash
@@ -65,6 +76,7 @@ Các persona (người mới, phổ thông, kỹ tính, cao thủ, thích booste
 | [level-tool/DIFFICULTY_RULES.md](level-tool/DIFFICULTY_RULES.md) | Làm level hoặc chỉnh độ khó: định nghĩa mảnh Dễ / Trung bình / Khó, bậc level, ràng buộc giải được và luật đường đi. |
 | [level-tool/ANALYSIS_15_LEVELS.md](level-tool/ANALYSIS_15_LEVELS.md) | Xem bộ 15 level hiện tại đạt hay lệch rule, và kết quả bot cho từng level, kèm đề xuất chỉnh. |
 | [level-tool/README.md](level-tool/README.md) | Hướng dẫn dùng level tool: giao diện, phím tắt, định dạng level, script sửa hàng loạt. |
+| [config-tool/README.md](config-tool/README.md) | Hướng dẫn dùng config tool: file nào chỉnh được gì, cách thêm thông số mới, ghi chú về định dạng file khi lưu. |
 | [sim/README.md](sim/README.md) | Hướng dẫn bot giả lập: cách bot chơi, persona, hai chế độ đo (lab và career), giới hạn cần biết khi đọc số. |
 
 ## 4. Cấu trúc thư mục
@@ -76,14 +88,15 @@ src/                  game (Three.js + HTML/CSS)
   progress.js           dữ liệu lưu và luật kinh tế
   hint.js, praise.js    gợi ý tự động, combo khen
   profile.js, audio.js  hồ sơ người chơi, âm thanh tổng hợp (không dùng file âm thanh)
-  *.json                cấu hình: levels, economy, shop, cosmetics, collection
+  *.json                cấu hình: levels, economy, shop, cosmetics, collection, tuning (hằng số gameplay / bố cục / màu)
   assets/               ảnh WebP cho UI, booster, avatar, nền theme
 level-tool/           công cụ level + tài liệu độ khó
+config-tool/          công cụ chỉnh thông số (kiểu Serialize Field của Unity)
 sim/                  bot giả lập + báo cáo
 GDD.md  RESEARCH.md  README.md   tài liệu gốc
 ```
 
-Gameplay và kinh tế được chỉnh bằng các file JSON trong `src/`; code đọc chúng lúc build. Muốn đổi số liệu thì sửa JSON, còn muốn đổi công thức thì phải sửa code (và cả `sim/career.mjs` nếu muốn bot phản ánh đúng).
+Gameplay và kinh tế được chỉnh bằng các file JSON trong `src/`; code đọc chúng lúc build. Muốn đổi số liệu thì sửa JSON — nên dùng **config tool** (mục 2.2) thay vì sửa tay — còn muốn đổi công thức thì phải sửa code (và cả `sim/career.mjs` nếu muốn bot phản ánh đúng). Sau khi đổi kinh tế, chạy `npm run sim` để xem tác động.
 
 ## 5. Debug trong game
 

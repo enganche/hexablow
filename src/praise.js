@@ -1,25 +1,22 @@
 // Praise / combo system: consecutive correct placements (no mistakes) build a streak.
 // Each correct drop shows praise text, a particle burst and an exciting sound that grow with the streak.
 
-const TIERS = [
-  { min: 1, text: 'Nice!', color: ['#fff6b0', '#ffd24a'], parts: 8, size: 1 },
-  { min: 2, text: 'Good!', color: ['#e6ffb0', '#9be04a'], parts: 11, size: 1.05 },
-  { min: 3, text: 'Great!', color: ['#d4fff0', '#3fd6a8'], parts: 14, size: 1.15 },
-  { min: 4, text: 'Awesome!', color: ['#d6ecff', '#4ea8ff'], parts: 18, size: 1.25 },
-  { min: 5, text: 'Amazing!', color: ['#ffe0f4', '#ff58b8'], parts: 24, size: 1.38 },
-  { min: 6, text: 'Fantastic!', color: ['#fff0c2', '#ff9a2e'], parts: 30, size: 1.5 },
-  { min: 8, text: 'Unstoppable!', color: ['#ffffff', '#ff4d4d'], parts: 40, size: 1.65 },
-];
+import tuning from './tuning.json';
+
+// Values come from tuning.json (edit with config-tool/)
+const TIERS = tuning.praise.tiers
+  .map((t) => ({ min: t.min, text: t.text, color: [t.colorTop, t.colorBottom], parts: t.parts, size: t.size }))
+  .sort((a, b) => a.min - b.min);
 // Time allowed to reach the next streak step before the combo restarts: 10s for 0→1,
 // shrinking linearly to 3s for the step into the top tier (and every step after it).
-const IDLE_MAX_MS = 10000;
-const IDLE_MIN_MS = 3000;
+const IDLE_MAX_MS = tuning.praise.idleMaxMs;
+const IDLE_MIN_MS = tuning.praise.idleMinMs;
 function idleWindow(nextStreak) {
   const top = TIERS[TIERS.length - 1].min;
   const k = Math.min(Math.max(nextStreak - 1, 0) / (top - 1), 1);
   return IDLE_MAX_MS - (IDLE_MAX_MS - IDLE_MIN_MS) * k;
 }
-const CHAIN_TEXT = { 2: 'Double link!', 3: 'Triple link!' };
+const CHAIN_TEXT = tuning.praise.chainText;
 const SPARKS = ['★', '✦', '✧', '●'];
 const CONFETTI = ['#ff6b8b', '#ffd24a', '#6ee06e', '#4ea8ff', '#c07bff', '#ff9a2e'];
 

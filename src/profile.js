@@ -1,6 +1,7 @@
 // Local player identity, independent of gameplay saves.
 const KEY = 'gardendoku.profile.v1';
 import { coinsOf, spend } from './progress.js';
+import tuning from './tuning.json';
 import avatar_cat from './assets/avatars/cat.webp';
 import avatar_cow from './assets/avatars/cow.webp';
 import avatar_fox from './assets/avatars/fox.webp';
@@ -11,7 +12,7 @@ import avatar_rabbit from './assets/avatars/rabbit.webp';
 import avatar_bee from './assets/avatars/bee.webp';
 import avatar_duck from './assets/avatars/duck.webp';
 const avatarImages = [avatar_cat, avatar_cow, avatar_fox, avatar_chick, avatar_pig, avatar_sheep, avatar_rabbit, avatar_bee, avatar_duck];
-const prices = [0, 0, 0, 50, 50, 50, 100, 100, 100];
+const prices = tuning.avatars.prices;
 const avatars = [ ['🐱', 'Cat'], ['🐮', 'Cow'], ['🦊', 'Fox'], ['🐥', 'Chick'], ['🐷', 'Pig'], ['🐑', 'Sheep'], ['🐰', 'Rabbit'], ['🐝', 'Bee'], ['🦆', 'Duck'] ];
 
 // Each avatar image already contains its own garden scene.

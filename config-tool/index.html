@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hexablow Config Tool</title>
+<link rel="stylesheet" href="tool.css">
+</head>
+<body>
+<header>
+  <h1>Hexablow <span>Config</span></h1>
+  <div id="mode" class="mode"></div>
+  <span class="grow"></span>
+  <button id="undo" type="button" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+  <button id="redo" type="button" title="Redo (Ctrl+Shift+Z)" disabled>↷ Redo</button>
+  <button id="revert" type="button" title="Discard unsaved changes in this file" disabled>Revert file</button>
+  <button id="save" class="primary" type="button" title="Save this file (Ctrl+S)" disabled>Save</button>
+  <button id="saveAll" type="button" title="Save every changed file (Ctrl+Shift+S)" disabled>Save all</button>
+  <button id="togglePreview" type="button" title="Show the running game next to the inspector">▶ Game preview</button>
+</header>
+
+<section id="welcome" hidden>
+  <div class="card">
+    <h2>Open the config files</h2>
+    <p>This page is not connected to the project. Pick one way:</p>
+    <ol>
+      <li><b>Recommended:</b> run <code>node config-tool/serve.mjs</code> in the project and open <a href="http://localhost:5190/">http://localhost:5190/</a>. Save then writes straight into <code>src/*.json</code>.</li>
+      <li>Open the project folder here (Chrome / Edge). Save writes into it directly.<br>
+        <button id="openFolder2" type="button" class="primary">Open project folder…</button></li>
+      <li>Or choose the JSON files by hand (<code>src/tuning.json</code>, <code>economy.json</code>…). Save downloads each file; copy it back over the original.<br>
+        <label class="btn">Open files… <input id="openFiles2" type="file" accept=".json" multiple hidden></label></li>
+    </ol>
+  </div>
+</section>
+
+<main id="app" hidden>
+  <nav>
+    <input id="search" type="search" placeholder="Search fields (Ctrl+F)" autocomplete="off">
+    <div id="files"></div>
+    <div class="navbtns">
+      <button id="expandAll" type="button">Expand all</button>
+      <button id="collapseAll" type="button">Collapse all</button>
+    </div>
+    <div class="navbtns">
+      <button id="openFolder" type="button">Open folder…</button>
+      <label class="btn">Open files… <input id="openFiles" type="file" accept=".json" multiple hidden></label>
+    </div>
+    <p id="fsHint" class="small" hidden>This browser can't open folders; use Open files.</p>
+  </nav>
+  <section id="inspector"></section>
+  <aside id="previewPane" hidden>
+    <div class="pv-bar">
+      <input id="previewUrl" type="text" value="http://localhost:5173/" spellcheck="false">
+      <button id="reloadPreview" type="button" title="Reload">⟳</button>
+      <label class="small"><input id="autoReload" type="checkbox" checked> reload on save</label>
+    </div>
+    <div class="phone"><iframe id="preview" title="Game preview"></iframe></div>
+    <p class="small">Needs <code>npm run dev</code> running. Vite reloads the game by itself when a JSON file changes.</p>
+  </aside>
+</main>
+<div id="toast"></div>
+
+<script src="js/meta.js"></script>
+<script src="js/format.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

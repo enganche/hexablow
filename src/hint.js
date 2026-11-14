@@ -2,10 +2,11 @@
 // (level-tool/DIFFICULTY_RULES.md): the tile with the fewest positions it can be dragged to such that it
 // touches every n-1 / n+1 already on the grid ("strict" count). The player is asked to tap the grid number
 // next to that tile; the game's tap-to-jump then scrolls the tray to it.
+import tuning from './tuning.json';
 import { DIRS, key, areAdjacent } from './hex.js';
 
 /** Seconds without placing a tile before the hint appears. */
-export const HINT_IDLE_SECONDS = 5;
+export const HINT_IDLE_SECONDS = tuning.hint.idleSeconds;
 
 /**
  * Easiest tile to place right now.
