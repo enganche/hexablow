@@ -23,6 +23,7 @@ import { pickHint, HINT_IDLE_SECONDS } from './hint.js';
 import { loadSettings, saveSettings, loadLevelIndex, saveLevelIndex, hasOpenedLevel } from './settings.js';
 import economy from './economy.json';
 import tuning from './tuning.json';
+import { playFireworks, stopFireworks } from './fireworks.js';
 import { winArt, loseArt, confetti } from './resultArt.js';
 import { cosmeticItems, isOwned, equippedItem, buyItem, equipItem } from './progress.js';
 import { collectionSets, collectionSpecies, speciesOfSet, setProgress, hasSpecies, foundCount, discoverForLevel, claimableSets, claimSet } from './progress.js';
@@ -471,6 +472,7 @@ const game = new Game($('game'), {
     const stars = freeRun ? 3 : scoreRun(heartsLeft);
     audio.victory(stars);
     vibrate(settings, [20, 40, 20, 40, 80]);
+    playFireworks($('stage'));
     tut.stop();
     const last = levelIndex === levels.length - 1;
     const rec = recordWin(progress, levels[levelIndex].id, stars);
@@ -894,8 +896,29 @@ window.addEventListener('keydown', (e) => {
 // the hearts lesson ends as soon as the player starts interacting with the play field
 $('stage').addEventListener('pointerdown', () => tut.placed(), true);
 
+/** Short non-blocking banner when a HARD level opens. */
+let hardTimer = 0;
+function clearHardWarning() {
+  clearTimeout(hardTimer);
+  document.getElementById('hard-warning')?.remove();
+}
+function showHardWarning() {
+  clearHardWarning();
+  const el = document.createElement('div');
+  el.id = 'hard-warning';
+  el.setAttribute('role', 'alert');
+  el.innerHTML = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 3 41q-1 3 2 3h38q3 0 2-3Z" fill="#ffd54a" stroke="#9f3038" stroke-width="3.5" stroke-linejoin="round"/><path d="M24 17v13" stroke="#9f3038" stroke-width="4.5" stroke-linecap="round"/><circle cx="24" cy="36" r="2.8" fill="#9f3038"/></svg><div><b>HARD LEVEL</b><span>Plan your moves carefully!</span></div>';
+  $('stage').appendChild(el);
+  hardTimer = setTimeout(() => {
+    el.classList.add('out');
+    hardTimer = setTimeout(() => el.remove(), 350);
+  }, 2300);
+}
+
 function startLevel(i) {
   pendingWin = null;
+  stopFireworks();
+  clearHardWarning();
   revivesUsed = 0;
   leaveResult();
   boostBar.classList.remove('hidden');
@@ -913,6 +936,7 @@ function startLevel(i) {
   renderCoins();
   tut.start(level);
   hint.reset();
+  if (level.difficulty === 'hard') showHardWarning();
 }
 
 /** Where Continue goes: the first level not yet cleared (or the last one when everything is cleared). */
@@ -925,6 +949,8 @@ function continueIndex() {
 const home = $('home');
 function showHome() {
   tut.stop();
+  stopFireworks();
+  clearHardWarning();
   stageEl.classList.remove('bare-level');
   game.cancelMode();
   closeBuyPop();

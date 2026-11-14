@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import tuning from './tuning.json';
 import economy from './economy.json';
+import { FIREWORK_MS } from './fireworks.js';
 import { axialToPixel, pixelToAxial, key, areAdjacent, DIRS } from './hex.js';
 import {
   LIFT, mulberry, makeLawnCell, setLawnOpacity, spriteGeo, plantMaterial, PLANT_ANCHOR, FLOWER_KINDS,
@@ -1709,7 +1710,7 @@ export class Game {
       // _growGarden builds the plan synchronously, so the fit already accounts for the cottage.
       this._growGarden();
       this.hooks.onWin();
-    }, N * step + 120);
+    }, Math.max(N * step + 120, FIREWORK_MS)); // fireworks (main.js) run over the sort wave and end just before the result
   }
   _pulse(t) {
     this._tween(220, (k) => t.scale.setScalar(this.R * (1 + 0.12 * Math.sin(k * Math.PI))));
