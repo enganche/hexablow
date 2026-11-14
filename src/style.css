@@ -1462,7 +1462,7 @@ body {
 .shop-pop-art { width:46cqw; }
 .shop-pop-art svg { width:100%; display:block; overflow:visible; filter:drop-shadow(0 1cqw 0 #3a22104a); animation:fp-bob 1.6s ease-in-out infinite alternate; }
 .shop-pop-card h4 { margin:0; font-size:6.4cqw; font-weight:900; color:var(--btn-ink,#97601d); text-align:center; }
-.shop-pop-rw { display:flex; flex-wrap:wrap; justify-content:center; gap:2cqw; padding:2cqw 3cqw; border-radius:3cqw; background:#fffffff0; box-shadow:inset 0 0 0 .5cqw #ffe9a0; }
+.shop-pop-rw { display:flex; flex-wrap:wrap; justify-content:center; gap:2cqw; padding:2.4cqw 4cqw; border:.8cqw solid #f0b640; border-radius:3.4cqw; background:linear-gradient(#ffffff,#fff3cf); box-shadow:0 .9cqw #c98a1e,inset 0 0 0 .5cqw #fff; }
 .shop-pop-rw .rw { width:13cqw; font-size:3.6cqw; }
 .shop-pop-rw .rw-ic { width:11cqw; height:10cqw; }
 .shop-pop .shop-buy { min-width:50%; margin-top:1cqw; }
