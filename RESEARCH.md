@@ -1,5 +1,14 @@
 # HexaDoku (package `com.goodjobgames.hexnumbers`) — Research for a Clone
 
+> **Status (2026-11-14):** a snapshot of the research done on 2026-11-09, before Hexablow was built. It describes the *reference game*, not ours.
+> What Hexablow actually does is in [GDD.md](GDD.md). The main ways it differs from §7 below:
+> - Tray tiles are cut by position (1–3 cells, possibly non-consecutive numbers), not consecutive chains derived at load. They are stored in `levels.json`.
+> - Paid hints became three coin boosters (Reveal / Find / Picker).
+> - Stars come from hearts left. Revive costs coins.
+> - There is a coin economy, daily gifts, a shop, the Garden Album, Garden Sets themes and a profile.
+> - There is no Daily Challenge puzzle and no banner ad yet.
+> - The stack is web (Vite + Three.js); levels are made in `level-tool/`.
+
 Sources: Google Play listing (text + 6 store images), YouTube "hexadoku level 1 to 10" (12:24, sampled at ~8 timestamps; no captions, no audio reviewed).
 **Confidence key:** [S] = stated in store text, [V] = directly seen in image/video, [I] = my inference (verify before relying on it).
 
@@ -64,7 +73,7 @@ A **Hidamari/Hidato-style** puzzle on a hex grid:
 - Daily Challenge [S]: date-seeded puzzle, large board, with a timer; past dates listed [V][I].
 - New levels shipped via updates ("Fresh new levels have blossomed") [S] → clone should load levels from JSON so you can append.
 
-## 7. Suggested clone design (my recommendation)
+## 7. Suggested clone design (original recommendation — superseded by GDD.md)
 **Level data format (JSON):**
 ```json
 { "id": 2, "difficulty": "normal",

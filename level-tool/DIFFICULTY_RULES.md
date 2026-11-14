@@ -1,8 +1,11 @@
 # Rule độ khó — Hexablow
 
 > Tài liệu cho GD / level designer. Phần **định nghĩa ô Dễ / Trung bình / Khó** lấy đúng theo yêu cầu gốc;
-> phần **bậc level (tier)** là đề xuất của tool để có cái so sánh — GD chỉnh trong tab **Luật** hoặc trong `js/rules.js` (`HB.DEFAULT_RULES`).
-> Code thực thi rule: [`js/rules.js`](js/rules.js). Báo cáo áp rule lên 15 level hiện có: [`ANALYSIS_15_LEVELS.md`](ANALYSIS_15_LEVELS.md).
+> phần **bậc level (tier)** là đề xuất của tool để có cái so sánh — GD chỉnh trong thẻ **Luật** của tool hoặc trong `js/rules.js` (`HB.DEFAULT_RULES`).
+> Code thực thi rule: [`js/rules.js`](js/rules.js). Báo cáo áp rule (và bot giả lập) lên 15 level hiện có: [`ANALYSIS_15_LEVELS.md`](ANALYSIS_15_LEVELS.md).
+>
+> Rule này không chỉ dùng trong tool: **gợi ý tự động trong game** (`src/hint.js`) chỉ vào ô khay có ít vị trí nhất theo đúng cách đếm strict ở mục 2,
+> và **bot giả lập** (`sim/`) dùng nó làm mức "nhìn là thấy" (depth 0) của người chơi.
 
 ---
 
@@ -102,13 +105,13 @@ Chưa ràng buộc trong tier; xem mục 6.
 - Đường đi 1 → N phủ **mọi ô chơi đúng một lần**, hai số liên tiếp luôn kề nhau.
 - Mỗi ô khay là 1–3 ô **kề nhau**, không chứa given.
 - **Giải được bằng suy luận** (bộ giải propagate: cung nhất quán + "chỉ còn một chỗ" + hình dạng ô khay) — không cần đoán. Level chỉ giải được bằng thử-sai, đa nghiệm hoặc vô nghiệm bị đánh dấu ✗.
-- 1 và N nên là given (GDD §2) — chỉ cảnh báo.
+- **N bắt buộc là given**; 1 có thể nằm trong khay. Từ level 5 đường giải không được xoắn ốc (xem mục 9).
 
 ---
 
 ## 6. Điều cần GD quyết
 
-1. **`strict` hay `loose`?** Mặc định `strict` vì `loose` cộng dồn các ô quanh *cả hai* given nên ô kẹp giữa hai given bị tính nhiều vị trí (dễ thành Trung bình / Khó) trong khi thực tế nó thuộc loại dễ nhất. Đổi ở tab *Phân tích* hoặc `tile.anchorMode`.
+1. **`strict` hay `loose`?** Mặc định `strict` vì `loose` cộng dồn các ô quanh *cả hai* given nên ô kẹp giữa hai given bị tính nhiều vị trí (dễ thành Trung bình / Khó) trong khi thực tế nó thuộc loại dễ nhất. Đổi ở thẻ **Luật** hoặc `tile.anchorMode`.
 2. **Ô mồ côi** tính là Khó (mặc định) hay loại khỏi thống kê? (`tile.orphanClass`: `hard` / `medium` / `easy`.)
 3. **Ngưỡng** `easyMax = 1`, `mediumMax = 3` (theo yêu cầu gốc) — có thể đổi.
 4. **Dải bậc level** ở 4.1 và cách chia bậc theo id level.
@@ -132,7 +135,7 @@ Chưa ràng buộc trong tier; xem mục 6.
 }
 ```
 
-## 8. Tạo level theo độ khó (tab "Tạo tự động")
+## 8. Tạo level theo độ khó (thẻ "Tạo level theo độ khó")
 
 Đầu vào: bản đồ hiện tại + **mục tiêu** `{Dễ%, TB%, Khó%}` (lấy trung điểm của một bậc hoặc kéo tay) + sai số, cỡ ô tối đa, dải % given, % mồ côi tối đa, cờ *giữ đường đi / given / cách cắt*.
 
@@ -143,7 +146,7 @@ Chưa ràng buộc trong tier; xem mục 6.
 
 ---
 
-## 7. Luật đường đi & given (bắt buộc từ level 5)
+## 9. Luật đường đi & given (bắt buộc từ level 5)
 
 1. **Không xoắn ốc.** Đường giải không được đi dần từ vòng ngoài vào tâm (hay ngược lại) — quá dễ đoán, level nào cũng giống nhau.
    Tool đo bằng `HB.spiralScore` / `HB.isSpiral` (`js/model.js`): |tương quan(bước, vòng)| > 0.45 hoặc số lần đổi hướng vòng < N/6 ⇒ xoắn ốc.

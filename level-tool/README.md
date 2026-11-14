@@ -28,6 +28,16 @@ node level-tool/analyze.mjs --loose          # đếm kiểu "chạm một mốc
 node level-tool/analyze.mjs path/to/levels.json
 ```
 
+## Script sửa hàng loạt (ghi đè `src/levels.json` — commit trước khi chạy)
+
+```bash
+node level-tool/regen.mjs [fromId=5]           # giữ map + đường đi, sinh lại given + cắt ô theo mục tiêu độ khó từng level
+node level-tool/regen-paths.mjs [fromId=5]     # thay đường giải xoắn ốc (thêm --check để chỉ kiểm tra)
+node level-tool/regen-boss.mjs [--write]       # level boss 5 / 10 / 15: ít ô dễ, nhiều ô khó / mồ côi, nhãn "hard"
+```
+
+Sau khi đổi level, chạy bot để xem độ khó thực tế với nhiều kiểu người chơi: `npm run sim -- --only lab` (xem [`../sim/README.md`](../sim/README.md)). Kết quả hiện tại: [`ANALYSIS_15_LEVELS.md`](ANALYSIS_15_LEVELS.md).
+
 ## Cấu trúc
 
 ```
@@ -40,6 +50,7 @@ level-tool/
   js/generator.js đường đi / given / cắt ô / sinh theo độ khó
   js/view.js  js/playtest.js  js/app.js
   analyze.mjs  serve.mjs
+  regen.mjs  regen-paths.mjs  regen-boss.mjs   script sửa hàng loạt
   DIFFICULTY_RULES.md   ANALYSIS_15_LEVELS.md
 ```
 
