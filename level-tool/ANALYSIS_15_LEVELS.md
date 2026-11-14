@@ -68,7 +68,7 @@ Ba level boss (5, 10, 15) lệch rule *cố ý*: chúng được làm khó hơn 
 | Ô khóa | **Không tính** (khóa chỉ đổi thứ tự đặt, không đổi số vị trí kéo vào được). `compile` kiểm `need` ≤ số ô giải được khi chưa mở khóa. | Mảnh nằm sau ổ khóa chờ tới khi đã giải đủ số ô; thả vào ô khóa không phạt. |
 | Solver | Số bí ẩn là số ẩn nằm ở một trong các ô "?"; cổng là cạnh; khoảng cách tính trên đồ thị (nước và cổng đều tính). | – |
 
-Bot "người chơi thật" trong panel debug (phím `) chưa chạy lại sau lần xếp lại cơ chế này; chạy lại khi cần xác nhận luồng tut / màn giới thiệu của L9–L11.
+Bot "người chơi thật" trong panel debug (phím `) đã chạy lại sau lần xếp lại cơ chế này (2026-11-14): thắng cả 15 level qua giao diện thật, không có lỗi console, kể cả tut và màn giới thiệu của L7, L9, L11.
 
 ## 4. Đề xuất
 - Làm mềm L15 trước tiên (mục tiêu khoảng 50–60% thắng lần đầu theo mix), thêm ô 3 số cho đủ dải, rồi chạy lại `npm run sim` và `analysis-table.mjs --write`.

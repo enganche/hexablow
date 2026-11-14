@@ -94,7 +94,7 @@ src/                  game (Three.js + HTML/CSS)
   mechanics.js/.json    cơ chế level (hồ nước, số bí ẩn, cổng đôi, ô khóa): mức mở khóa, chữ màn giới thiệu, tính % tiến độ
   mechArt.js            hình SVG cho màn giới thiệu cơ chế và thanh tiến độ ở màn thắng
   debugBot.js           bot "người chơi thật" cho panel debug (chơi qua UI, theo tut)
-  profile.js, audio.js  hồ sơ người chơi, âm thanh tổng hợp (không dùng file âm thanh)
+  profile.js, audio.js  hồ sơ người chơi, âm thanh (file mp3 trong assets/, có synth WebAudio dự phòng)
   *.json                cấu hình: levels, economy, shop, cosmetics, collection, tuning (hằng số gameplay / bố cục / màu)
   assets/               ảnh WebP cho UI, booster, avatar, nền theme
 level-tool/           công cụ level + tài liệu độ khó

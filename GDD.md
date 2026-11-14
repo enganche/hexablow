@@ -60,10 +60,10 @@ Boosters never cost a heart. When you tap a booster you have none of, a buy popu
   - A mistake breaks the streak.
   - Waiting too long also breaks it. The time allowed shrinks from 10 s for the first step to 3 s near the top tier.
 - **Win:** a pixel-art garden grows across the board, then the result screen shows the art, the solved map, stars, the coin reward and any newly found species.
-- **Audio** (`audio.js`, synthesised, no files):
+- **Audio** (`audio.js`; mp3 files in `src/assets/` with a WebAudio synth as fallback if a file fails to load):
   - Placement pops rise in pitch with each placement.
-  - Mistake thud, win and lose jingles, heartbeat at 1 heart.
-  - A quiet pentatonic music loop.
+  - Mistake thud, win and lose jingles, heartbeat at 1 heart, UI click / close sounds.
+  - Looping background music (`bgm.mp3`); the synthesised pentatonic loop is the fallback.
 
 ### 5.3 Onboarding
 | When | Lesson |
@@ -209,7 +209,7 @@ Saves are versioned and validated on load. A corrupt save starts fresh. Old v1 s
 - Cozy garden: warm cream and green UI, honey-orange tiles, pond water.
 - The gardener character guides the tutorial, and a gardener / seed-shop theme runs through the nav icons.
 - Rounded heavy numerals. The last number N has its own pink tile.
-- All sound is synthesised: soft pops, chimes and a calm pentatonic loop. Vibration is used for placing, mistakes and wins (it can be turned off).
+- Sound: soft pops, chimes and a calm music loop, from mp3 files with a synthesised fallback. Vibration is used for placing, mistakes and wins (it can be turned off).
 - Rule from the team: **no visual redesign without a new request** from Tuan.
 
 ## 12. Not built yet / open questions
