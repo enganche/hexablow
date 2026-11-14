@@ -43,7 +43,8 @@ export function pickHint(level, placed, pieces, opts = {}) {
         const vc = grid.get(v);
         const hooks = DIRS.map(([dq, dr]) => [vc[0] + dq, vc[1] + dr]); // cells where m could sit: the 6 neighbours...
         const gate = portals.get(key(vc[0], vc[1]));
-        if (gate) hooks.push(gate.to); // ...plus the other end of a portal
+        // ...plus across a portal: v+1 comes out of v's entrance, v-1 sits on the entrance leading to v's exit
+        if (gate && gate.role === (m > v ? 'in' : 'out')) hooks.push(gate.to);
         for (const hook of hooks) {
           const t = [hook[0] - p.offsets[i][0], hook[1] - p.offsets[i][1]]; // where numbers[0] would sit
           const tk = key(t[0], t[1]);
@@ -53,7 +54,7 @@ export function pickHint(level, placed, pieces, opts = {}) {
           if (!cells.every((c) => cellSet.has(key(c[0], c[1])) && !occ.has(key(c[0], c[1])) && !closed.has(key(c[0], c[1])))) continue; // covered / blocked / shape / locked
           let ok = true;
           p.numbers.forEach((n, j) => {
-            for (const w of [n - 1, n + 1]) if (grid.has(w) && !p.numbers.includes(w) && !linked(portals, cells[j], grid.get(w))) ok = false;
+            for (const w of [n - 1, n + 1]) if (grid.has(w) && !p.numbers.includes(w) && !(w < n ? linked(portals, grid.get(w), cells[j]) : linked(portals, cells[j], grid.get(w)))) ok = false;
           });
           if (ok) count++;
         }

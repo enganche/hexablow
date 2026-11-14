@@ -67,7 +67,16 @@ const portalRingShape = (outer, inner, corner) => {
   s.holes.push(new THREE.Path(roundedHexShape(inner, corner).getPoints(6)));
   return new THREE.ShapeGeometry(s, 6);
 };
-const PORTAL_RING_TILE_GEO = portalRingShape(1, 0.9, 0);
+// a tile is a base hex plus a rim lifted by LIFT, so its silhouette is the two hexes joined: the ring hugs that whole outline
+const tileOutline = (r) => {
+  const w = 0.866 * r;
+  return [[0, r + LIFT], [-w, 0.5 * r + LIFT], [-w, -0.5 * r], [0, -r], [w, -0.5 * r], [w, 0.5 * r + LIFT]].map(([x, y]) => new THREE.Vector2(x, y));
+};
+const PORTAL_RING_TILE_GEO = (() => {
+  const sh = new THREE.Shape(tileOutline(1));
+  sh.holes.push(new THREE.Path(tileOutline(0.9)));
+  return new THREE.ShapeGeometry(sh);
+})();
 const PORTAL_RING_SOCKET_GEO = portalRingShape(0.88, 0.78, 0.18);
 // wrong-move pulse: a ring hugging the outside of a placed tile
 const TILE_RING = roundedHexShape(1.1);
@@ -449,31 +458,33 @@ function makeTile(n, directions, isFinish = false, connected = false, mystery = 
 const PORTAL_COLORS = ['#18b5ae', '#e0529c', '#4d86ee'];
 const PORTAL_HEX = [0x18b5ae, 0xe0529c, 0x4d86ee];
 const portalCache = new Map();
-/** Swirl glyph for portal pair `idx`, drawn on a transparent canvas. */
-function portalMaterial(idx) {
-  const ck = idx % PORTAL_COLORS.length;
+/**
+ * Glyph for one end of portal pair `idx`: two short chevrons in the pair colour, pointing down for the entrance ('in'), up for the exit ('out').
+ */
+function portalMaterial(idx, role) {
+  const ck = (idx % PORTAL_COLORS.length) + role;
   if (portalCache.has(ck)) return portalCache.get(ck);
-  const S = 256, m = S / 2, col = PORTAL_COLORS[ck];
+  const S = 256, m = S / 2, col = PORTAL_COLORS[idx % PORTAL_COLORS.length], isIn = role === 'in';
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d');
   g.lineCap = 'round';
-  g.strokeStyle = '#ffffff';
-  g.lineWidth = 30;
-  g.beginPath();
-  for (let t = 0; t <= 1; t += 0.02) {
-    const a = t * Math.PI * 4.2, r = 14 + t * 84;
-    g[t === 0 ? 'moveTo' : 'lineTo'](m + Math.cos(a) * r, m + Math.sin(a) * r);
+  g.lineJoin = 'round';
+  // two short chevrons in the pair colour: pointing down = entrance, up = exit (canvas y grows downwards)
+  g.translate(m, m);
+  if (!isIn) g.scale(1, -1);
+  g.globalAlpha = 0.75;
+  for (const [w, style] of [[46, '#ffffff'], [26, col]]) {
+    g.lineWidth = w;
+    g.strokeStyle = style;
+    for (const y of [-34, 30]) {
+      g.beginPath();
+      g.moveTo(-52, y - 22);
+      g.lineTo(0, y + 26);
+      g.lineTo(52, y - 22);
+      g.stroke();
+    }
   }
-  g.stroke();
-  g.strokeStyle = col;
-  g.lineWidth = 17;
-  g.beginPath();
-  for (let t = 0; t <= 1; t += 0.02) {
-    const a = t * Math.PI * 4.2, r = 14 + t * 84;
-    g[t === 0 ? 'moveTo' : 'lineTo'](m + Math.cos(a) * r, m + Math.sin(a) * r);
-  }
-  g.stroke();
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
@@ -537,7 +548,9 @@ function lockMaterial(left) {
     g.fill();
     g.fillRect(m - 6, by + 66, 12, 28);
   } else {
-    g.font = `900 ${left >= 10 ? 84 : 100}px "Nunito", ui-rounded, system-ui, sans-serif`;
+    // faint and a bit smaller than a tile number, so it reads as a counter on the padlock, not as the cell's number
+    g.fillStyle = 'rgba(255,246,220,.62)';
+    g.font = `900 ${left >= 10 ? 76 : 90}px "Nunito", ui-rounded, system-ui, sans-serif`;
     g.fillText(String(left), m, by + 72);
   }
   const tex = new THREE.CanvasTexture(c);
@@ -1178,7 +1191,7 @@ export class Game {
     };
     for (let n = 1; n <= lastN; n++) {
       if (!pos.has(n) || this._isHidden(n)) { flush(); continue; } // a hidden "?" never joins a green run
-      if (run.length && !linkedCells(this.portals, pos.get(n), pos.get(n - 1))) flush();
+      if (run.length && !linkedCells(this.portals, pos.get(n - 1), pos.get(n))) flush();
       run.push(n);
     }
     flush();
@@ -1244,11 +1257,15 @@ export class Game {
       const ring = hexLayer(covered ? PORTAL_RING_TILE_GEO : PORTAL_RING_SOCKET_GEO, basicMat(PORTAL_HEX[p.idx % PORTAL_HEX.length], 0.95), 1, 0, 0.62);
       g.add(ring);
       if (!covered) g.add(hexLayer(HEX_GEO, basicMat(PORTAL_HEX[p.idx % PORTAL_HEX.length], 0.22), 0.8, 0, 0.1));
-      const glyph = new THREE.Mesh(LABEL_GEO, portalMaterial(p.idx));
-      glyph.scale.setScalar(covered ? 0.3 : 0.62);
-      glyph.position.set(covered ? 0.58 : 0, covered ? -0.5 : 0, 0.65);
+      const glyph = new THREE.Mesh(LABEL_GEO, portalMaterial(p.idx, p.role).clone()); // own material: it fades while it drifts
+      glyph.scale.setScalar(covered ? 0.46 : 0.78);
+      glyph.position.set(covered ? 0.47 : 0, covered ? LIFT - 0.3 : 0, 0.65); // covered: tucked inside the tile's lower-right corner
       g.add(glyph);
-      g.position.copy(this._w(s.x, s.y - (covered ? LIFT : 0) * this.R, this._tileZ(s.y)));
+      g.userData.glyph = glyph;
+      g.userData.baseY = glyph.position.y;
+      g.userData.amp = covered ? 0.12 : 0.24;
+      g.userData.dir = p.role === 'in' ? -1 : 1; // drift the way the chevrons point (screen up is +y)
+      g.position.copy(this._w(s.x, s.y, this._tileZ(s.y)));
       g.scale.setScalar(this.R);
       this.contentGroup.add(g);
       this.portalMarks.set(k, g);
@@ -2632,6 +2649,13 @@ export class Game {
       const f = m.userData.flash || 0; // 1 right after Reveal, fades to 0: the new mark starts bold, then settles to a clear ghost
       m.userData.fill.material.opacity = 0.26 + 0.1 * Math.sin(now / 420) + f * 0.5;
       m.userData.label.material.opacity = 0.62 + f * 0.38;
+    }
+    // portal chevrons drift gently the way they point (down into the entrance, up out of the exit) and fade at both ends
+    for (const g of this.portalMarks?.values() ?? []) {
+      if (!g.userData.glyph) continue;
+      const u = (now % 1800) / 1800;
+      g.userData.glyph.position.y = g.userData.baseY + g.userData.dir * (u - 0.5) * g.userData.amp;
+      g.userData.glyph.material.opacity = 0.15 + 0.85 * Math.sin(Math.PI * u);
     }
     for (const w of this.waves || []) {
       const t = now / 1600 + w.ph;

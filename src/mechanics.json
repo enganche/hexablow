@@ -24,8 +24,9 @@
     "intro": true,
     "title": "Twin portals",
     "lines": [
-      "Two cells with the same glowing ring are linked.",
-      "They count as neighbours, so the path can jump from one to the other."
+      "Two portals of the same colour are linked, one-way.",
+      "A down arrow marks the entrance, an up arrow marks the exit.",
+      "The smaller number sits on the entrance and the next number comes out of the exit."
     ]
   },
   "lock": {

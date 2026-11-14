@@ -40,19 +40,30 @@ export function unlockProgress(cleared) {
   return { id: next.id, at: next.at, filled, total, left: next.at - 1 - cleared };
 }
 
-/** Map cell key -> { to: [q,r], idx } for every portal cell. */
+/**
+ * Map cell key -> { to: [q,r], idx, role } for every portal cell.
+ * A portal is one-way for the number chain: the end holding the smaller solution number is the entrance
+ * (role 'in'), the other the exit (role 'out'). Without a solution the pair's listed order decides.
+ */
 export function portalMap(level) {
   const m = new Map();
+  const sol = level.solution || {};
+  const numAt = (c) => Object.keys(sol).find((n) => sol[n][0] === c[0] && sol[n][1] === c[1]);
   (level.portals || []).forEach(([a, b], idx) => {
-    m.set(key(a[0], a[1]), { to: b, idx });
-    m.set(key(b[0], b[1]), { to: a, idx });
+    const na = Number(numAt(a)), nb = Number(numAt(b));
+    const [from, to] = Number.isFinite(na) && Number.isFinite(nb) && na > nb ? [b, a] : [a, b];
+    m.set(key(from[0], from[1]), { to, idx, role: 'in' });
+    m.set(key(to[0], to[1]), { to: from, idx, role: 'out' });
   });
   return m;
 }
 
-/** Neighbours for the number chain: touching on the grid, or the two ends of a portal pair. */
-export function linked(portals, a, b) {
-  if (areAdjacent(a, b)) return true;
-  const p = portals.get(key(a[0], a[1]));
-  return !!p && p.to[0] === b[0] && p.to[1] === b[1];
+/**
+ * Neighbours for the number chain: touching on the grid, or `lo` (the smaller number's cell) sitting on a
+ * portal entrance whose exit holds `hi` (the next number). Never the other way round.
+ */
+export function linked(portals, lo, hi) {
+  if (areAdjacent(lo, hi)) return true;
+  const p = portals.get(key(lo[0], lo[1]));
+  return !!p && p.role === 'in' && p.to[0] === hi[0] && p.to[1] === hi[1];
 }

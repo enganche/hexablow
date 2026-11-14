@@ -31,7 +31,7 @@ Công cụ **độc lập với game** dùng để vẽ, kiểm tra và chỉnh 
   node level-tool/check-mechanics.mjs    # luật cơ chế: <= 2 cơ chế / level, giải được, cổng được dùng, "?" mở được, khóa đạt được
   node level-tool/analysis-table.mjs --write   # ghi lại bảng trong ANALYSIS_15_LEVELS.md (cần sim/out/report.json từ npm run sim)
   ```
-- **Cơ chế level:** ngoài hồ nước còn có số bí ẩn (Lv 7), cổng đôi (Lv 9), ô khóa (Lv 11); editor có công cụ Số ẩn / Cổng / Khóa. Xem GDD §6.1.
+- **Cơ chế level:** ngoài hồ nước còn có số bí ẩn (Lv 7), cổng đôi một chiều (Lv 9; đầu số nhỏ là vào, đầu số lớn là ra), ô khóa (Lv 11); editor có công cụ Số ẩn / Cổng / Khóa. Xem GDD §6.1.
 - **Sửa hàng loạt** (ghi đè `src/levels.json` — commit trước khi chạy):
   ```bash
   node level-tool/regen.mjs [fromId=5]        # sinh lại given + cắt mảnh theo mục tiêu độ khó
