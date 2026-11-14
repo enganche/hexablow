@@ -23,7 +23,8 @@ Công việc đang làm tự lưu trong trình duyệt (localStorage). *Lưu lev
 
 ```bash
 node level-tool/analyze.mjs                  # 15 level trong src/levels.json, chế độ strict
-node level-tool/analyze.mjs --detail         # kèm từng ô khay + play-through
+node level-tool/analyze.mjs --detail         # kèm từng ô khay + play-through (có cột cơ chế: nước / ẩn / cổng / khóa)
+node level-tool/analysis-table.mjs [--write] # bảng của ANALYSIS_15_LEVELS.md = rule tĩnh + kết quả bot (sim/out/report.json)
 node level-tool/analyze.mjs --loose          # đếm kiểu "chạm một mốc là đủ"
 node level-tool/analyze.mjs path/to/levels.json
 ```
@@ -51,7 +52,7 @@ level-tool/
   js/model.js     draft chỉnh sửa <-> định dạng level của game
   js/generator.js đường đi / given / cắt ô / sinh theo độ khó
   js/view.js  js/playtest.js  js/app.js
-  analyze.mjs  serve.mjs
+  analyze.mjs  analysis-table.mjs  serve.mjs
   regen.mjs  regen-paths.mjs  regen-boss.mjs  regen-mechanics.mjs  check-mechanics.mjs   script sửa hàng loạt / kiểm tra
   DIFFICULTY_RULES.md   ANALYSIS_15_LEVELS.md
 ```

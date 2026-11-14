@@ -16,6 +16,17 @@
 (function () {
   const M = {};
 
+  M['mechanics.json'] = {
+    description: 'Level mechanics (pond, mystery numbers, twin portals, locked cells): unlock level and the intro screen text. Read by mechanics.js and main.js. Keep the unlock levels in sync with HB.MECH_UNLOCK in level-tool/js/model.js (the level tool warns with it).',
+    fields: [
+      { path: 'order', label: 'Unlock order', tip: 'Order the mechanics unlock in; the win-screen progress bar follows it.', readonly: true },
+      { path: '*.unlockLevel', label: 'Unlock level', tip: 'The level where the mechanic first appears (the intro screen opens before it). The win-screen bar counts levels up to this one.', int: true, min: 1, max: 99 },
+      { path: '*.intro', label: 'Show intro screen', tip: 'Show the intro screen once per save before the unlock level.' },
+      { path: '*.title', label: 'Intro title' },
+      { path: '*.lines', label: 'Intro lines', tip: 'One line per bullet on the intro screen.' },
+    ],
+  };
+
   M['tuning.json'] = {
     description: 'Constants that used to be hard-coded in game code: hearts, hint timing, combo praise, layout and board colours. Read by game.js, hint.js, praise.js, profile.js, main.js.',
     fields: [
@@ -162,6 +173,7 @@
   // Files the tool edits. `path` is relative to the project root.
   window.CONFIG_FILES = [
     { name: 'tuning.json', path: 'src/tuning.json', group: 'Game' },
+    { name: 'mechanics.json', path: 'src/mechanics.json', group: 'Game' },
     { name: 'economy.json', path: 'src/economy.json', group: 'Game' },
     { name: 'shop.json', path: 'src/shop.json', group: 'Game' },
     { name: 'cosmetics.json', path: 'src/cosmetics.json', group: 'Game' },

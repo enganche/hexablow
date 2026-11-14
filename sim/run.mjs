@@ -46,7 +46,10 @@ const hashSeed = (...xs) => xs.reduce((h, x) => (Math.imul(h ^ x, 2654435761) >>
 const mixOf = (byPersona, f) => personas.reduce((a, p) => a + W[p.id] * f(byPersona[p.id]), 0);
 
 const t0 = Date.now();
-const report = { meta: { date: new Date().toISOString(), seed: SEED, plays: PLAYS, bots: BOTS, personas: personas.map(({ id, name, share }) => ({ id, name, share: W[id] })), levels: levels.map((l) => ({ id: l.id, difficulty: l.difficulty, cells: l.cells.length, pieces: l.pieces.length })) } };
+const MECH_LABEL = { water: 'nước', mystery: 'ẩn', portal: 'cổng', lock: 'khóa' };
+/** Mechanics a level uses (the pond counts), in unlock order. */
+const mechOf = (l) => [(l.blocked || []).length && 'water', (l.mystery || []).length && 'mystery', (l.portals || []).length && 'portal', (l.locks || []).length && 'lock'].filter(Boolean).map((m) => MECH_LABEL[m]);
+const report = { meta: { date: new Date().toISOString(), seed: SEED, plays: PLAYS, bots: BOTS, personas: personas.map(({ id, name, share }) => ({ id, name, share: W[id] })), levels: levels.map((l) => ({ id: l.id, difficulty: l.difficulty, cells: l.cells.length, pieces: l.pieces.length, mech: mechOf(l) })) } };
 
 // ------------------------------------------------------------------ LAB: pure difficulty
 // Every persona plays every level PLAYS times from a clean state: no boosters, no revive, hearts on
@@ -54,7 +57,7 @@ const report = { meta: { date: new Date().toISOString(), seed: SEED, plays: PLAY
 if (ONLY === 'all' || ONLY === 'lab') {
   const lab = [];
   for (const lv of levels) {
-    const row = { level: lv.id, difficulty: lv.difficulty, cells: lv.cells.length, by: {} };
+    const row = { level: lv.id, difficulty: lv.difficulty, cells: lv.cells.length, mech: mechOf(lv), by: {} };
     for (const per of personas) {
       const firstWin = [], attempts = [], mistakes = [], time = [], timeToWin = [], guesses = [], peak = [], three = [], lostAt = [];
       for (let i = 0; i < PLAYS; i++) {
@@ -110,10 +113,10 @@ if (ONLY === 'all' || ONLY === 'lab') {
   report.lab = lab;
 
   console.log(`\n== LAB: độ khó thuần (${PLAYS} lượt/persona/level, không booster, không revive)`);
-  console.log('Lv  diff   cells | thắng lần 1 (mix) | lần thử | sai/lượt | 3★ | t.gian thắng | ' + personas.map((p) => p.id.slice(0, 7).padStart(7)).join(' ') + ' | cờ');
+  console.log('Lv  diff   cells cơ chế           | thắng lần 1 (mix) | lần thử | sai/lượt | 3★ | t.gian thắng | ' + personas.map((p) => p.id.slice(0, 7).padStart(7)).join(' ') + ' | cờ');
   for (const r of lab) {
     console.log(
-      `${String(r.level).padStart(2)}  ${r.difficulty.padEnd(6)} ${String(r.cells).padStart(5)} | ` +
+      `${String(r.level).padStart(2)}  ${r.difficulty.padEnd(6)} ${String(r.cells).padStart(5)} ${r.mech.join('+').padEnd(15)} | ` +
       `${(r.mix.firstWin * 100).toFixed(0).padStart(16)}% | ${r.mix.attempts.toFixed(2).padStart(7)} | ${r.mix.mistakes.toFixed(2).padStart(8)} | ` +
       `${(r.mix.threeStar * 100).toFixed(0).padStart(2)}% | ${(r.mix.timeToWin / 60).toFixed(1).padStart(9)} ph | ` +
       personas.map((p) => ((r.by[p.id].firstWin * 100).toFixed(0) + '%').padStart(7)).join(' ') + ` | ${r.flags.join('; ')}`

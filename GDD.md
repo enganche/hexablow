@@ -218,4 +218,5 @@ Saves are versioned and validated on load. A corrupt save starts fresh. Old v1 s
 - Daily Challenge puzzle mode (timed, separate from the daily gift).
 - More content beyond 15 levels and 3 chapters. A live level pipeline.
 - Native wrappers (store builds), cloud save, localisation (the UI is English only).
-- Smoothing the difficulty: the bot data shows spikes at levels 5, 10 and 15 and a flat stretch at levels 6–9 (see the analysis).
+- Smoothing the difficulty: the bot data shows spikes at levels 5, 10 and 15 (L15 is a wall: about 29% win on the first try) and a flat stretch at levels 6–9, where the intro levels of the new mechanics (7, 9) stay easy by design (see the analysis).
+- Bot simulator: it does not use elimination to guess a "?" number, so numbers for levels with mystery numbers are an upper bound of the difficulty.

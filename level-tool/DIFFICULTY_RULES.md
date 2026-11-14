@@ -14,6 +14,7 @@
 | Từ | Nghĩa |
 |---|---|
 | **Lưới / grid** | Bản đồ hex. Mỗi ô lưới là *trống*, *đã có số*, hoặc *bị chắn* (nước / ngoài bản đồ). |
+| **Cơ chế mở rộng** | Số bí ẩn ("?"), cổng đôi, ô khóa — xem mục 10. Chúng đổi cách tính mốc / liền kề nhưng không đổi định nghĩa Dễ / TB / Khó. |
 | **Given** | Ô số cho sẵn trên lưới, cố định. |
 | **Ô khay / tile** | Một mảnh trong khay (list giải): 1, 2 hoặc 3 số, **giữ nguyên hình dạng, không xoay**. Mảnh 2–3 số được cắt theo *vị trí*, nên có thể chứa số không liên tiếp (vd `2+14`). |
 | **Mốc / anchor** | Một số đang nằm trên lưới mà liền kề (n−1 hoặc n+1) với một số của ô khay. Ô khay `5` có mốc nếu `4` hoặc `6` đang trên lưới. |
@@ -152,3 +153,21 @@ Chưa ràng buộc trong tier; xem mục 6.
    Tool đo bằng `HB.spiralScore` / `HB.isSpiral` (`js/model.js`): |tương quan(bước, vòng)| > 0.45 hoặc số lần đổi hướng vòng < N/6 ⇒ xoắn ốc.
    `compile` cảnh báo, `autoPath`/`generate` tự loại đường xoắn ốc. Kiểm tra / sinh lại: `node level-tool/regen-paths.mjs [fromId=5] [--check]`.
 2. **Chỉ số cuối N bắt buộc là given.** Số 1 *không* bắt buộc — có thể nằm trong khay; generator (`freeStart`, mặc định bật) tự quyết ngẫu nhiên, miễn đạt độ khó của bậc.
+
+---
+
+## 10. Cơ chế mở rộng (từ level 7) và ảnh hưởng tới rule
+
+Ngoài hồ nước còn ba cơ chế (mỗi level tối đa **2**, hồ nước tính 1; xem GDD §6.1). Rule tĩnh và bộ giải xử lý như sau:
+
+| Cơ chế | Trong định nghĩa "vị trí kéo vào được" (mục 2) | Trong bộ giải (mục 5) |
+|---|---|---|
+| **Số bí ẩn** (`mystery`) | Ô vẫn *che* (bị chiếm) nhưng số của nó **không phải mốc** — ô khay `n±1` của nó không có mốc từ ô này. Trong play-through, ô "?" mở ra (thành mốc) ngay khi một ô khay chứa `n−1` hoặc `n+1` được đặt. | Số bí ẩn là *số ẩn nằm ở một trong các ô "?"* (suy ra bằng loại trừ: là số không có trong khay và không phải given hiện); các số khác không được dùng ô "?". Đường đi vẫn phải giải được. |
+| **Cổng đôi** (`portals`) | Đầu kia của cổng được thêm vào 6 ô quanh mốc làm chỗ đặt, và điều kiện *strict* coi hai đầu cổng là **liền kề**. | Hai đầu cổng là một cạnh của đồ thị; khoảng cách cắt tỉa tính trên đồ thị (nước và cổng đều tính). Đường giải **bắt buộc đi qua** mọi cổng. |
+| **Ô khóa** (`locks`) | **Không tính.** Khóa chỉ đổi thứ tự đặt (ô chưa mở không nhận mảnh), không đổi số vị trí kéo vào được. | Không ảnh hưởng. `compile` kiểm `need` ≤ số ô giải được khi chưa mở khóa. |
+
+Các chỉ số mục 4 vẫn dùng nguyên: `givenPct` đếm cả given bị che; ô khay không bao giờ chứa số bí ẩn (nó là given). Luật bổ sung cho level có cơ chế:
+- Số cuối N **không** được là số bí ẩn; mỗi "?" phải có ít nhất một ô khay liền kề (n−1 hoặc n+1) để có thể mở.
+- Mỗi cổng phải được lời giải dùng (n và n+1 nằm ở hai đầu) và hai đầu không liền kề.
+- Ô khóa không phải given; cơ chế chỉ xuất hiện từ level mở khóa của nó (số bí ẩn 7, cổng 9, ô khóa 11).
+- Kiểm bằng `node level-tool/check-mechanics.mjs`.

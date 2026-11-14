@@ -99,8 +99,8 @@ if (R.lab) {
   const lab = R.lab;
   legend($('lg1'));
   lineChart($('c1'), lab.map((r) => r.level), P.map((p, i) => ({ name: p.name, color: COL(i), values: lab.map((r) => r.by[p.id].firstWin) })), { max: 1, fmt: pct, xName: 'Level', label: 'Tỉ lệ thắng lần đầu theo level' });
-  table($('t1'), ['Lv', 'Nhãn', 'Ô', 'Thắng lần 1', 'Lần thử TB', 'Sai / lượt', '3★ khi thắng', 'T.gian tới thắng', ...P.map((p) => esc(p.name)), 'Cờ'],
-    lab.map((r) => [r.level, r.difficulty, r.cells, { v: pct(r.mix.firstWin), cls: r.mix.firstWin < 0.5 ? 'bad' : '' }, r.mix.attempts.toFixed(2), r.mix.mistakes.toFixed(2), pct(r.mix.threeStar), (r.mix.timeToWin / 60).toFixed(1) + ' ph',
+  table($('t1'), ['Lv', 'Nhãn', 'Ô', 'Cơ chế', 'Thắng lần 1', 'Lần thử TB', 'Sai / lượt', '3★ khi thắng', 'T.gian tới thắng', ...P.map((p) => esc(p.name)), 'Cờ'],
+    lab.map((r) => [r.level, r.difficulty, r.cells, (r.mech || []).join(' + ') || '–', { v: pct(r.mix.firstWin), cls: r.mix.firstWin < 0.5 ? 'bad' : '' }, r.mix.attempts.toFixed(2), r.mix.mistakes.toFixed(2), pct(r.mix.threeStar), (r.mix.timeToWin / 60).toFixed(1) + ' ph',
       ...P.map((p) => pct(r.by[p.id].firstWin)), { v: r.flags.map(esc).join('<br>'), cls: 'l flag' }]));
   const hardest = [...lab].sort((a, b) => a.mix.firstWin - b.mix.firstWin)[0];
   kpis.push(['Level khó nhất', 'Lv ' + hardest.level, pct(hardest.mix.firstWin) + ' thắng lần đầu']);

@@ -14,6 +14,7 @@ Tool HTML để **chỉnh mọi thông số của game** theo kiểu Inspector /
 | File | Nội dung |
 |---|---|
 | `src/tuning.json` | Hằng số trước đây nằm cứng trong code: số tim tối đa, thời gian chờ trước khi hiện gợi ý, level mở quà hằng ngày, giá avatar, thời gian combo và các bậc khen, khoảng cách bố cục bàn / khay, màu bàn chơi (nền, nước, gợi ý, preview thả). |
+| `src/mechanics.json` | Cơ chế level (hồ nước, số bí ẩn, cổng đôi, ô khóa): level mở khóa, bật/tắt màn giới thiệu và chữ trên màn đó. Mức mở khóa cũng nằm trong `HB.MECH_UNLOCK` của level tool nên đổi cả hai chỗ. |
 | `src/economy.json` | Xu khởi đầu, thưởng thắng và thưởng sao, giá revive, booster (giá, gói, level mở khoá), bảng quà 7 ngày và rương chuỗi 7 / 14 / 21 / 28 ngày. |
 | `src/shop.json` | Gói khởi đầu, bundle, gói xu, quà miễn phí hằng ngày (giá USD của bản mua giả). |
 | `src/cosmetics.json` | Skin ô / theme: giá, màu ô, màu ô trống, toàn bộ biến CSS của giao diện. |

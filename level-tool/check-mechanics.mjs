@@ -12,7 +12,8 @@ const file = resolve(process.argv[2] || join(here, '..', 'src', 'levels.json'));
 const levels = JSON.parse(readFileSync(file, 'utf8'));
 const key = (c) => c[0] + ',' + c[1];
 let bad = 0;
-const UNLOCK = { mystery: 7, portal: 9, lock: 11 }; // keep in sync with src/mechanics.json
+const cfg = JSON.parse(readFileSync(join(here, '..', 'src', 'mechanics.json'), 'utf8'));
+const UNLOCK = Object.fromEntries(['mystery', 'portal', 'lock'].map((m) => [m, cfg[m].unlockLevel])); // single source: src/mechanics.json
 for (const lv of levels) {
   const used = [];
   if ((lv.blocked || []).length) used.push('water');

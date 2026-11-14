@@ -12,7 +12,7 @@ node sim/run.mjs --persona newbie,casual       # chọn persona
 node sim/run.mjs --levels path/to/levels.json  # thử bộ level khác trước khi chép vào src/
 node sim/run.mjs --seed 7                      # đổi seed (cùng seed = cùng kết quả)
 ```
-Kết quả: bảng trên console + `sim/out/report.html` (biểu đồ, mở bằng trình duyệt) + `sim/out/report.json` (dữ liệu thô). `sim/out/` không commit.
+Bảng lab có cột **Cơ chế** (nước / ẩn / cổng / khóa) cho từng level, cả trên console lẫn trong `report.html`. Kết quả: bảng trên console + `sim/out/report.html` (biểu đồ, mở bằng trình duyệt) + `sim/out/report.json` (dữ liệu thô). `sim/out/` không commit.
 
 > Cơ chế level 7+ (số bí ẩn, cổng đôi, ô khóa): `board.mjs` đã xử lý — "?" chiếm ô và không là mốc cho tới khi mở, cổng là cạnh liền kề, mảnh sau ổ khóa chờ đủ số ô đã giải. Bộ suy luận `domains()` vẫn chưa biết rằng số "?" nằm trong tập số bị thiếu (bot không tận dụng phép loại trừ).
 

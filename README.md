@@ -27,13 +27,17 @@ Công cụ **độc lập với game** dùng để vẽ, kiểm tra và chỉnh 
 - **Phân tích bằng dòng lệnh:**
   ```bash
   node level-tool/analyze.mjs            # kiểm tra 15 level trong src/levels.json
-  node level-tool/analyze.mjs --detail   # kèm từng mảnh và play-through
+  node level-tool/analyze.mjs --detail   # kèm từng mảnh và play-through (có cột cơ chế)
+  node level-tool/check-mechanics.mjs    # luật cơ chế: <= 2 cơ chế / level, giải được, cổng được dùng, "?" mở được, khóa đạt được
+  node level-tool/analysis-table.mjs --write   # ghi lại bảng trong ANALYSIS_15_LEVELS.md (cần sim/out/report.json từ npm run sim)
   ```
+- **Cơ chế level:** ngoài hồ nước còn có số bí ẩn (Lv 7), cổng đôi (Lv 9), ô khóa (Lv 11); editor có công cụ Số ẩn / Cổng / Khóa. Xem GDD §6.1.
 - **Sửa hàng loạt** (ghi đè `src/levels.json` — commit trước khi chạy):
   ```bash
   node level-tool/regen.mjs [fromId=5]        # sinh lại given + cắt mảnh theo mục tiêu độ khó
   node level-tool/regen-paths.mjs [fromId=5]  # thay đường giải xoắn ốc (--check để chỉ kiểm tra)
   node level-tool/regen-boss.mjs [--write]    # level boss 5 / 10 / 15
+  node level-tool/regen-mechanics.mjs [--write]  # level 7–15: thêm số bí ẩn / cổng đôi / ô khóa
   ```
 
 Chi tiết: [level-tool/README.md](level-tool/README.md).
@@ -87,6 +91,9 @@ src/                  game (Three.js + HTML/CSS)
   game.js               bàn cờ và khay: layout, kéo-thả / chạm, đặt mảnh, tim, booster, nước, khu vườn khi thắng
   progress.js           dữ liệu lưu và luật kinh tế
   hint.js, praise.js    gợi ý tự động, combo khen
+  mechanics.js/.json    cơ chế level (hồ nước, số bí ẩn, cổng đôi, ô khóa): mức mở khóa, chữ màn giới thiệu, tính % tiến độ
+  mechArt.js            hình SVG cho màn giới thiệu cơ chế và thanh tiến độ ở màn thắng
+  debugBot.js           bot "người chơi thật" cho panel debug (chơi qua UI, theo tut)
   profile.js, audio.js  hồ sơ người chơi, âm thanh tổng hợp (không dùng file âm thanh)
   *.json                cấu hình: levels, economy, shop, cosmetics, collection, tuning (hằng số gameplay / bố cục / màu)
   assets/               ảnh WebP cho UI, booster, avatar, nền theme
@@ -101,6 +108,7 @@ Gameplay và kinh tế được chỉnh bằng các file JSON trong `src/`; code
 ## 5. Debug trong game
 
 - Nhấn **`** (backtick) để mở bảng debug (`[` và `]` để chuyển level): nhảy tới level bất kỳ, quà hằng ngày, xu, booster, tự giải, thắng/thua tức thì, mở khoá tất cả level, reset tiến trình.
-- `window.__hexablow` lộ `game`, `levels`, `startLevel`, `progress`, `resetProgress` trong console.
+- Hàng **Human bot** trong bảng debug: bot chơi qua giao diện thật (bấm nút, kéo thả, làm theo từng tut, đóng popup, bấm Continue / Try again), có tốc độ x1/x4/x10 và Copy log. Dừng tự động sau khi thắng level cuối.
+- `window.__hexablow` lộ `game`, `tut`, `levels`, `startLevel`, `progress`, `bot`, `resetProgress` trong console.
 - Chế độ dev: `?today=YYYY-MM-DD` giả lập ngày để kiểm tra chuỗi quà hằng ngày.
 - Mua tiền thật và quảng cáo thưởng hiện chỉ là bản giả (hộp xác nhận và popup). Chưa có SDK thanh toán hay quảng cáo.
