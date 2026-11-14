@@ -476,8 +476,9 @@ body {
 }
 #tut-text {
   position: relative;
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 100%;
   margin: 0;
   padding: 12px 14px;
   border: 2px solid var(--ui-edge, #aec77a);

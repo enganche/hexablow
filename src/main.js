@@ -566,10 +566,11 @@ const tut = {
   active: false,
   steps: [],
   texts: {
-    first: 'Drag 2 next to 1',
-    next: '{n} goes after {p}',
-    last: '{n} goes between {p} and {s}',
+    intro: 'Every number connects to the next.', // opening dialog, shown before the first step
+    connect: "Let's connect {p} to {s}!",
+    last: 'All cells in the grid must be filled.',
   },
+  introUntil: 0, // level 1: the opening dialog holds (and the tray is locked) until this time
   kind: 'place', // 'place' (level 1) | 'jump' (level 2) | 'hearts' (level 3) | 'booster' (levels that unlock a booster)
   booster: null,
   boosterTexts: {
@@ -600,6 +601,7 @@ const tut = {
       if (missing > 0) { grantBooster(progress, bid, missing); renderBoosters(); }
     } else {
       this.steps = level.id === 1 && first ? Object.keys(level.solution).map(Number).filter((n) => !level.givens[n]) : [];
+      this.introUntil = this.steps.length ? performance.now() + 2600 : 0;
     }
     this.active = this.steps.length > 0;
     clearTimeout(this.fadeT);
@@ -682,7 +684,7 @@ const tut = {
     const from = $('tut-from'), to = $('tut-to'), hand = $('tut-hand');
     const setText = (text) => { if ($('tut-text').textContent !== text) $('tut-text').textContent = text; };
     if (this.jumpPhase === 'tap') {
-      setText(`Tap ${tapN} to find the tile next to it`);
+      setText(this.jumpIdx === 0 ? 'Tapping a number moves the tray to nearby numbers.' : `Tap ${tapN} to find the tile next to it`);
       const c = game.level.givens[tapN] ?? game.placed.get(tapN);
       const s = game._cellScreen(c[0], c[1]);
       from.style.display = 'none';
@@ -729,7 +731,7 @@ const tut = {
     const k = (((performance.now() - this.t0) % 1800) / 1800);
     const e = Math.min(1, k / 0.7);
     const sm = e * e * (3 - 2 * e);
-    const x = game.W * (0.72 - 0.44 * sm);
+    const x = game.W * (0.28 + 0.44 * sm); // drag the list left to right, same way the hand moves
     const y = game.trayCenterY;
     hand.style.transform = `translate(${x - 14}px, ${y - 4}px)`;
     hand.style.opacity = k > 0.9 ? String((1 - k) * 10) : '1';
@@ -776,6 +778,7 @@ const tut = {
   target() {
     if (!this.active) return null;
     let n = null;
+    if (this.kind === 'place' && performance.now() < this.introUntil) return null; // opening dialog: nothing to drag yet
     if (this.kind === 'place') n = this.steps.find((s) => !game.placed.has(s));
     else if (this.kind === 'jump' && this.jumpPhase === 'focus') n = this.jumpSteps[this.jumpIdx]?.[1];
     return n == null ? null : { n, cell: game.level.solution[n] };
@@ -836,8 +839,7 @@ const tut = {
     const n = todo[0];
     const info = game.tutorialInfo(n);
     if (!info) return; // mid-drag
-    const done = this.steps.length - todo.length;
-    const key = done === 0 ? 'first' : todo.length === 1 ? 'last' : 'next';
+    const key = performance.now() < this.introUntil ? 'intro' : todo.length === 1 ? 'last' : 'connect';
     const text = this.texts[key].replace('{n}', n).replace('{p}', n - 1).replace('{s}', n + 1);
     if ($('tut-text').textContent !== text) $('tut-text').textContent = text;
     const place = (el, p) => { el.style.left = `${p.x}px`; el.style.top = `${p.y}px`; };
