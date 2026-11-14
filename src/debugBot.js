@@ -85,6 +85,14 @@ export function createHumanBot({ game, tut, $, onChange, lastLevelId }) {
     if (reward) { await sleep(500); say('reward popup: Collect'); click(reward); await wait(400); return true; }
     const album = $('album-pop');
     if (shown(album) && album.querySelector('.fp-btn')) { await sleep(500); say('album claim'); click(album.querySelector('.fp-btn')); await wait(500); return true; }
+    const rules = document.getElementById('rules-recap');
+    if (rules) {
+      await sleep(1200);
+      say('rules recap: tap to continue');
+      rules.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      await wait(500);
+      return true;
+    }
     const intro = $('mech-intro');
     if (shown(intro) && intro.querySelector('.fp-btn')) {
       const title = intro.querySelector('h4')?.textContent;
@@ -201,7 +209,15 @@ export function createHumanBot({ game, tut, $, onChange, lastLevelId }) {
     }
     if (tut.kind === 'jump') {
       const step = tut.jumpSteps[tut.jumpIdx];
-      if (!step) return true;
+      if (!step) {
+        // last step: drag the list by hand (the bot just nudges the scroll)
+        say('tutorial: drag the list');
+        await sleep(900);
+        game.scroll = Math.min(game.maxScroll, Math.max(0, game.scroll + (game.scroll > 100 ? -120 : 120)));
+        game._positionTray();
+        await sleep(300);
+        return true;
+      }
       if (tut.jumpPhase === 'tap') {
         const c = game.level.givens[step[0]] ?? game.placed.get(step[0]);
         const s = game._cellScreen(c[0], c[1]);

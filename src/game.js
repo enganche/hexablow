@@ -1668,6 +1668,13 @@ export class Game {
     this._jumpIdx = i;
     const p = opts[i];
     const from = this.scroll;
+    const sx = p.slotX - from;
+    if (sx - p.w / 2 >= 0 && sx + p.w / 2 <= this.W) {
+      // already on screen: no need to scroll, just shake it gently so the eye finds it
+      this._shakePiece(p);
+      this.hooks.onCellJump?.(n, p.numbers[0]);
+      return;
+    }
     const to = clamp(p.slotX - this.W / 2, 0, this.maxScroll);
     const id = (this._scrollTween = (this._scrollTween || 0) + 1);
     this._tween(380, (t) => {
@@ -1676,6 +1683,15 @@ export class Game {
       this._positionTray();
     });
     this.hooks.onCellJump?.(n, p.numbers[0]);
+  }
+
+  /** Gentle sideways shake of a tray tile. */
+  _shakePiece(p) {
+    const base = p.group.position.x;
+    this._tween(420, (k) => {
+      if (p === this.dragPiece) return;
+      p.group.position.x = base + Math.sin(k * Math.PI * 4) * this.Rt * 0.12 * (1 - k);
+    }, () => { if (p !== this.dragPiece) p.group.position.x = this._w(this._trayPivot(p).x, 0).x; });
   }
 
   _select(p) {
@@ -1958,6 +1974,13 @@ export class Game {
       this.mystery.forEach((n) => this.mysteryOpen.add(n)); // show the real numbers on the finished board
       this._buildContent(null);
     }
+    // a lesson may hold the celebration until the player has read something (hooks.winGate(go))
+    const t0 = this._winToken;
+    const go = () => { if (this._winToken === t0) this._startWin(N); };
+    if (this.hooks.winGate) this.hooks.winGate(go);
+    else go();
+  }
+  _startWin(N) {
     const token = ++this._winToken;
     this.hooks.onWinStart?.();
     // 1) gentle wave pulse over the chain (as before)

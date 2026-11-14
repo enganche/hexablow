@@ -304,7 +304,9 @@ function leaveResult() {
 function mapRect() {
   const r = resMap.getBoundingClientRect();
   const c = $('game').getBoundingClientRect();
-  return { x: r.left - c.left, y: r.top - c.top, width: r.width, height: r.height };
+  // a little smaller than the slot and top-aligned: the new-collectible / unlock cards below overlap the slot's bottom edge
+  const h = r.height * 0.9 - r.width * 0.02;
+  return { x: r.left - c.left + r.width * 0.03, y: r.top - c.top - r.width * 0.09, width: r.width * 0.94, height: h };
 }
 
 function coinBurst(btn) {
@@ -444,6 +446,10 @@ const game = new Game($('game'), {
   onModeChange: () => syncModeUI(),
   onCellJump: (n, to) => { tut.cellJumped(n); hint.cellJumped(n, to); },
   gate: (type, data) => tut.allows(type, data),
+  // end of the level 1 lesson: show the two rules, and play the celebration once the player taps
+  winGate: (go) => {
+    if (game.level.id === 1 && starsFor(progress, 1) === 0) { tut.stop(); showRulesRecap(go); } else go();
+  },
   onBlocked: () => tut.nudge(),
   onBoosterUsed: (id) => {
     useBooster(progress, id);
@@ -670,7 +676,7 @@ const tut = {
   /** Level 2 lesson, 3 rounds: tap a board number -> the list jumps to its neighbour -> drag that tile in. */
   renderJump() {
     const step = this.jumpSteps[this.jumpIdx];
-    if (!step) return this.stop();
+    if (!step) return this.renderSwipe();
     const [tapN, goalN] = step;
     if (game.placed.has(goalN)) { this.jumpIdx++; this.jumpPhase = 'tap'; this.t0 = performance.now(); return; }
     const from = $('tut-from'), to = $('tut-to'), hand = $('tut-hand');
@@ -705,6 +711,29 @@ const tut = {
     hand.style.transform = `translate(${info.from.x + (info.to.x - info.from.x) * sm - 14}px, ${info.from.y + (info.to.y - info.from.y) * sm - 4}px)`;
     hand.style.opacity = k > 0.9 ? String((1 - k) * 10) : '1';
     $('tut-bubble').style.top = `${info.hudBottom + 4}px`;
+  },
+  /** Level 2 last step: the player drags the list by hand. Done once it has moved a little. */
+  renderSwipe() {
+    if (this.jumpPhase !== 'swipe') {
+      this.jumpPhase = 'swipe';
+      this.t0 = performance.now();
+      this.swipeFrom = game.scroll;
+    }
+    if (Math.abs(game.scroll - this.swipeFrom) > 50) return this.stop();
+    const text = 'Drag the list sideways to browse the tiles';
+    if ($('tut-text').textContent !== text) $('tut-text').textContent = text;
+    $('tut-from').style.display = 'none';
+    $('tut-to').style.display = 'none';
+    const hand = $('tut-hand');
+    hand.style.display = '';
+    const k = (((performance.now() - this.t0) % 1800) / 1800);
+    const e = Math.min(1, k / 0.7);
+    const sm = e * e * (3 - 2 * e);
+    const x = game.W * (0.72 - 0.44 * sm);
+    const y = game.trayCenterY;
+    hand.style.transform = `translate(${x - 14}px, ${y - 4}px)`;
+    hand.style.opacity = k > 0.9 ? String((1 - k) * 10) : '1';
+    $('tut-bubble').style.top = `${game._hudBottom() + 4}px`;
   },
   /** Level 3 lesson: ring + hand on the hearts. Over once the player places (or misplaces) a tile. */
   renderHearts() {
@@ -762,7 +791,7 @@ const tut = {
     switch (type) {
       case 'grab': return !!t && data.piece.numbers[0] === t.n;
       case 'drop': return !!t && data.piece.numbers[0] === t.n && data.cell[0] === t.cell[0] && data.cell[1] === t.cell[1];
-      case 'scroll': return this.kind === 'place' || (this.kind === 'jump' && this.jumpPhase === 'focus');
+      case 'scroll': return this.kind === 'place' || (this.kind === 'jump' && (this.jumpPhase === 'focus' || this.jumpPhase === 'swipe'));
       case 'cell': return this.kind === 'jump' && this.jumpPhase === 'tap' && data.n === this.jumpSteps[this.jumpIdx]?.[0];
       case 'find': {
         const p = game.pieces[0];
@@ -930,6 +959,7 @@ function startLevel(i) {
   pendingWin = null;
   stopFireworks();
   clearHardWarning();
+  closeRulesRecap();
   revivesUsed = 0;
   leaveResult();
   boostBar.classList.remove('hidden');
@@ -996,6 +1026,53 @@ function showMechIntro(id, done) {
   };
 }
 
+/** After the level 1 lesson: the two rules of the game on one panel; a tap anywhere dismisses it. */
+// pointy-top hexagons, like the board's
+const RULE_HEX = (cx, cy, r) => [0, 1, 2, 3, 4, 5].map((i) => `${(cx + r * Math.cos((30 + 60 * i) * Math.PI / 180)).toFixed(1)},${(cy + r * Math.sin((30 + 60 * i) * Math.PI / 180)).toFixed(1)}`).join(' ');
+const RULE_POLY = (cx, cy, r, fill, extra = '') => `<polygon points="${RULE_HEX(cx, cy, r - 1.5)}" fill="${fill}" stroke="var(--leaf-edge,#4c8f1f)" stroke-width="3" stroke-linejoin="round" ${extra}/>`;
+const RULE_TILE = 'var(--leaf-hi,#d4f07a)';
+const RULE_NUM = (x, y, t) => `<text x="${x}" y="${y + 7}" text-anchor="middle" font-size="20" font-weight="900" fill="var(--ui-ink,#2f5a1a)" font-family="Nunito,sans-serif">${t}</text>`;
+const RULE_SPARK = (d) => `<path d="${d}" stroke="var(--btn-edge,#c98a1a)" stroke-width="3" stroke-linecap="round" fill="none"/>`;
+const RULES_ART = {
+  touch:
+    '<svg viewBox="0 0 90 66" aria-hidden="true">' +
+    RULE_POLY(29, 38, 19.5, RULE_TILE) + RULE_POLY(61, 38, 19.5, RULE_TILE) + RULE_NUM(29, 38, 1) + RULE_NUM(61, 38, 2) +
+    RULE_SPARK('M45 4v8M33 8l3 6M57 8l-3 6') + '</svg>',
+  fill:
+    '<svg viewBox="0 0 90 66" aria-hidden="true">' +
+    RULE_POLY(26, 23, 16.5, RULE_TILE) + RULE_POLY(58, 23, 16.5, 'var(--btn-hi,#ffd84a)') +
+    RULE_POLY(10, 51, 16.5, RULE_TILE) + RULE_POLY(42, 51, 16.5, RULE_TILE) +
+    RULE_POLY(74, 51, 16.5, 'var(--ui-card,#fffef7)', 'stroke-dasharray="5 4"') +
+    RULE_SPARK('M78 5l-4 5M85 17h-6') + '</svg>',
+};
+let rulesEl = null;
+function showRulesRecap(done) {
+  rulesEl?.remove();
+  const el = (rulesEl = document.createElement('div'));
+  el.id = 'rules-recap';
+  el.setAttribute('role', 'dialog');
+  el.innerHTML =
+    '<div class="rr-row"><img class="rr-farmer" src="/src/assets/farmer.webp" alt="" aria-hidden="true"><div class="rr-bubble">' +
+    '<p class="rr-say">Well done! Remember the rules of the garden:</p><div class="rr-rules">' +
+    `<div class="rr-card">${RULES_ART.touch}<b>Consecutive numbers touch</b></div><i class="rr-div"></i>` +
+    `<div class="rr-card">${RULES_ART.fill}<b>No empty cells</b></div></div>` +
+    '<small class="rr-tap">Tap to continue</small></div></div>';
+  el.firstElementChild.style.top = `${game._hudBottom() + 4}px`;
+  $('stage').appendChild(el);
+  audio.win();
+  let ready = false;
+  setTimeout(() => { ready = true; }, 500); // ignore the tap that dropped the last tile
+  const close = () => {
+    if (!ready || el !== rulesEl) return;
+    rulesEl = null;
+    audio.tap();
+    el.classList.add('out');
+    setTimeout(() => { el.remove(); done(); }, 240);
+  };
+  el.addEventListener('pointerup', close);
+}
+function closeRulesRecap() { rulesEl?.remove(); rulesEl = null; }
+
 /** Where Continue goes: the first level not yet cleared (or the last one when everything is cleared). */
 function continueIndex() {
   const i = levels.findIndex((l) => starsFor(progress, l.id) === 0);
@@ -1006,6 +1083,7 @@ function continueIndex() {
 const home = $('home');
 function showHome() {
   tut.stop();
+  closeRulesRecap();
   stopFireworks();
   clearHardWarning();
   stageEl.classList.remove('bare-level');

@@ -1,40 +1,21 @@
 // Result-screen artwork (inline SVG, drawn in the Gardendoku candy style).
 // winArt: soft rays + leafy sprigs + kawaii stars + green ribbon.  loseArt: sad cracked heart + purple ribbon.
 
+import starOn from './assets/star-on.webp';
+import starOff from './assets/star-off.webp';
+import winBanner from './assets/win-banner.webp';
+
 const rad = (d) => (d * Math.PI) / 180;
 const f1 = (n) => n.toFixed(1);
 
 // ---- cute kit: chubby rounded shapes, kawaii faces, soft pastel rays ----
 const FACE = '#8a4a12';
 
-function starPts(cx, cy, R, inner = 0.6) {
-  return Array.from({ length: 10 }, (_, i) => {
-    const a = rad(-90 + i * 36);
-    const r = i % 2 ? R * inner : R;
-    return `${f1(cx + Math.cos(a) * r)},${f1(cy + Math.sin(a) * r)}`;
-  }).join(' ');
-}
-
-function starFace(cx, cy, R, on) {
-  const ex = R * 0.27, ey = cy + R * 0.08, er = R * 0.1;
-  const eyes = on
-    ? `<ellipse cx="${f1(cx - ex)}" cy="${f1(ey)}" rx="${f1(er)}" ry="${f1(er * 1.25)}" fill="${FACE}"/><ellipse cx="${f1(cx + ex)}" cy="${f1(ey)}" rx="${f1(er)}" ry="${f1(er * 1.25)}" fill="${FACE}"/>
-       <circle cx="${f1(cx - ex + er * 0.35)}" cy="${f1(ey - er * 0.5)}" r="${f1(er * 0.38)}" fill="#fff"/><circle cx="${f1(cx + ex + er * 0.35)}" cy="${f1(ey - er * 0.5)}" r="${f1(er * 0.38)}" fill="#fff"/>
-       <path d="M${f1(cx - R * 0.13)} ${f1(cy + R * 0.28)}q${f1(R * 0.13)} ${f1(R * 0.16)} ${f1(R * 0.26)} 0" fill="#e8665d" stroke="${FACE}" stroke-width="${f1(R * 0.06)}" stroke-linecap="round" stroke-linejoin="round"/>`
-    : `<path d="M${f1(cx - ex - er)} ${f1(ey)}q${f1(er)} ${f1(er)} ${f1(er * 2)} 0M${f1(cx + ex - er)} ${f1(ey)}q${f1(er)} ${f1(er)} ${f1(er * 2)} 0" fill="none" stroke="#9a8d72" stroke-width="${f1(R * 0.07)}" stroke-linecap="round"/>
-       <circle cx="${f1(cx)}" cy="${f1(cy + R * 0.3)}" r="${f1(R * 0.05)}" fill="#9a8d72"/>`;
-  const blush = on ? '#ff8fa8' : '#e3b9a8';
-  return `${eyes}<ellipse cx="${f1(cx - R * 0.46)}" cy="${f1(cy + R * 0.24)}" rx="${f1(R * 0.12)}" ry="${f1(R * 0.08)}" fill="${blush}" opacity=".7"/><ellipse cx="${f1(cx + R * 0.46)}" cy="${f1(cy + R * 0.24)}" rx="${f1(R * 0.12)}" ry="${f1(R * 0.08)}" fill="${blush}" opacity=".7"/>`;
-}
-
+/** A result star: the candy star artwork (gold when earned, grey and asleep when not), drop-shadowed. */
 function star(cx, cy, R, tilt, on, i) {
-  const fill = on ? 'url(#ra-gold)' : 'url(#ra-grey)';
-  const edge = on ? '#e08e1b' : '#bdb198';
+  const S = R * 2.5; // the artwork has a little padding around the star itself
   return `<g transform="rotate(${tilt} ${cx} ${cy})"><g class="ra-star" style="--i:${i};transform-origin:${cx}px ${cy}px">
-    <polygon points="${starPts(cx, cy + 5, R)}" fill="${edge}" stroke="${edge}" stroke-width="14" stroke-linejoin="round" opacity=".5"/>
-    <polygon points="${starPts(cx, cy, R)}" fill="${fill}" stroke="${edge}" stroke-width="9" stroke-linejoin="round"/>
-    ${on ? `<path d="M${f1(cx - R * 0.5)} ${f1(cy - R * 0.2)}q${f1(R * 0.08)}-${f1(R * 0.3)} ${f1(R * 0.34)}-${f1(R * 0.4)}" fill="none" stroke="#fffbe6" stroke-width="${f1(R * 0.1)}" stroke-linecap="round" opacity=".95"/>` : ''}
-    ${starFace(cx, cy, R, on)}
+    <image href="${on ? starOn : starOff}" x="${f1(cx - S / 2)}" y="${f1(cy - S / 2)}" width="${f1(S)}" height="${f1(S)}" style="filter:drop-shadow(0 4px 0 ${on ? 'rgba(224,142,27,.45)' : 'rgba(150,140,115,.4)'})"/>
   </g></g>`;
 }
 
@@ -124,20 +105,25 @@ const DEFS = `<defs>
 
 /** @param {{title:string, stars:number}} o */
 export function winArt({ title, stars }) {
-  return `<svg viewBox="0 0 400 260" class="ra" role="img" aria-label="${title}">
+  // the banner artwork has "Level Complete!" baked in; any other title (e.g. the final level) keeps the drawn ribbon
+  const baked = title === 'Level Complete!';
+  const cy = baked ? 96 : 118;
+  const sideY = baked ? 114 : 122, sideX = baked ? 140 : 122, sideR = baked ? 32 : 36;
+  const topY = baked ? 84 : 92, topR = baked ? 50 : 54;
+  return `<svg viewBox="${baked ? '0 -40 400 300' : '0 0 400 260'}" class="ra" role="img" aria-label="${title}">
   ${DEFS}
-  <g transform="translate(200 118)">
+  <g transform="translate(200 ${cy})">
     <circle r="150" fill="url(#ra-glow)"/>
     <g class="ra-rays">${rays(10, 'rgba(255,250,200,.4)')}</g>
   </g>
-  <circle cx="200" cy="118" r="92" fill="#fffbe0" opacity=".45"/>
-  <circle cx="200" cy="118" r="92" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" opacity=".8"/>
+  <circle cx="200" cy="${cy}" r="92" fill="#fffbe0" opacity=".45"/>
+  <circle cx="200" cy="${cy}" r="92" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" opacity=".8"/>
   <g>${sparkle(52, 70, 1, 0)}${sparkle(352, 48, 1.1, 0.4)}${sparkle(330, 128, 0.7, 0.8)}${sparkle(102, 28, 0.8, 1.2)}${sparkle(300, 20, 0.6, 0.2)}</g>
-  <g class="ra-laurel">${sprig(-1)}${sprig(1)}</g>
-  ${star(122, 122, 36, -14, stars >= 1, 0)}
-  ${star(278, 122, 36, 14, stars >= 3, 2)}
-  ${star(200, 92, 54, 0, stars >= 2, 1)}
-  ${ribbon(title, '#9ae05f', '#46a653', '#2d6f45', '#3f8a52', 29)}
+  ${baked ? `<image class="ra-banner" href="${winBanner}" x="0" y="-40" width="400" height="300"/>` : `<g class="ra-laurel">${sprig(-1)}${sprig(1)}</g>`}
+  ${star(sideX, sideY, sideR, -14, stars >= 1, 0)}
+  ${star(400 - sideX, sideY, sideR, 14, stars >= 3, 2)}
+  ${star(200, topY, topR, 0, stars >= 2, 1)}
+  ${baked ? '' : ribbon(title, '#9ae05f', '#46a653', '#2d6f45', '#3f8a52', 29)}
 </svg>`;
 }
 
