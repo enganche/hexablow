@@ -1758,3 +1758,7 @@ button.album-card:active { transform:translateY(.8cqw); }
 .mech-intro .si-list { margin:0 0 2cqw; padding:0 2cqw; }
 .mech-intro .si-list li { text-align:center; text-wrap:balance; line-height:1.25; }
 .mech-intro .fp-new { background:var(--leaf-lo,#59b238); box-shadow:0 1cqw 0 var(--leaf-edge,#367b32); }
+
+/* win button: label + coin chip centred as one group (the old margin-left:auto pushed them to the right) */
+#result[data-outcome=win] #result-btn { justify-content:center; gap:4cqw; }
+#result[data-outcome=win] #result-btn > span { margin:0; }
